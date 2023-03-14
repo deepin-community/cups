@@ -699,15 +699,15 @@ else
 	echo "Scheduler is PID $cupsd."
 	sleep 2
 fi
-
-while true; do
+tries=0
+while test $tries -lt 30; do
 	running=`$runcups ../systemv/lpstat -r 2>/dev/null`
 	if test "x$running" = "xscheduler is running"; then
 		break
 	fi
-
 	echo "Waiting for scheduler to become ready..."
 	sleep 10
+	tries=`expr $tries + 1`
 done
 
 #
@@ -806,13 +806,15 @@ echo "`date '+[%d/%b/%Y:%H:%M:%S %z]'` \"5.10-restart\":" >>$strfile
 
 kill -HUP $cupsd
 
-while true; do
+tries=0
+while test $tries -lt 30; do
 	sleep 10
 
 	running=`$runcups ../systemv/lpstat -r 2>/dev/null`
 	if test "x$running" = "xscheduler is running"; then
 		break
 	fi
+	tries=`expr $tries + 1`
 done
 
 description="`$runcups ../systemv/lpstat -l -p Test1 | grep Description | sed -e '1,$s/^[^:]*: //g'`"

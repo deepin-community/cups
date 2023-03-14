@@ -1,3 +1,9 @@
+cups (2.3.3op2-3deepin1) unstable; urgency=medium
+
+  * update test/run-stp-tests.sh Delete infinite loop.
+
+ -- LiChengGang <lichenggang@uniontech.com>  Tue, 14 Mar 2023 14:54:42 +0800
+
 cups (2.3.3op2-deepin) stable; urgency=medium
 
   * ['Rebuild  against by  current gcc 11.2']
