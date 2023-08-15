@@ -1,6 +1,7 @@
 /*
  * Log file routines for the CUPS scheduler.
  *
+ * Copyright © 2021-2022 by OpenPrinting.
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -569,11 +570,7 @@ cupsdLogJob(cupsd_job_t *job,		/* I - Job */
   * Format and write the log message...
   */
 
-#ifdef HAVE_SYSTEMD_SD_JOURNAL_H
-  if (job && strcmp(ErrorLog, "syslog"))
-#else
   if (job)
-#endif /* HAVE_SYSTEMD_SD_JOURNAL_H */
     snprintf(jobmsg, sizeof(jobmsg), "[Job %d] %s", job->id, message);
   else
     strlcpy(jobmsg, message, sizeof(jobmsg));
@@ -919,8 +916,11 @@ cupsdLogPage(cupsd_job_t *job,		/* I - Job being printed */
 			  {
 			    pwg_media_t *pwg = pwgMediaForSize(ippGetInteger(x_dimension, 0), ippGetInteger(y_dimension, 0));
 			    		/* PWG media name */
-			    strlcpy(bufptr, pwg->pwg, sizeof(buffer) - (size_t)(bufptr - buffer));
-			    break;
+			    if (pwg)
+			    {
+			      strlcpy(bufptr, pwg->pwg, sizeof(buffer) - (size_t)(bufptr - buffer));
+			      break;
+			    }
 			  }
 			}
 

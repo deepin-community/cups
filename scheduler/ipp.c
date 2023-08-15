@@ -1,8 +1,8 @@
 /*
  * IPP routines for the CUPS scheduler.
  *
- * Copyright © 2020 by Michael R Sweet
- * Copyright © 2007-2019 by Apple Inc.
+ * Copyright © 2020-2022 by OpenPrinting
+ * Copyright © 2007-2021 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
  * This file contains Kerberos support code, copyright 2006 by
@@ -73,6 +73,7 @@ static void	copy_subscription_attrs(cupsd_client_t *con,
 					cups_array_t *ra,
 					cups_array_t *exclude);
 static void	create_job(cupsd_client_t *con, ipp_attribute_t *uri);
+static void	*create_local_bg_thread(cupsd_printer_t *printer);
 static void	create_local_printer(cupsd_client_t *con);
 static cups_array_t *create_requested_array(ipp_t *request);
 static void	create_subscriptions(cupsd_client_t *con, ipp_attribute_t *uri);
@@ -881,7 +882,7 @@ add_class(cupsd_client_t  *con,		/* I - Client connection */
     * Class doesn't exist; see if we have a printer of the same name...
     */
 
-    if ((pclass = cupsdFindPrinter(resource + 9)) != NULL)
+    if (cupsdFindPrinter(resource + 9))
     {
      /*
       * Yes, return an error...
@@ -1279,7 +1280,7 @@ add_job(cupsd_client_t  *con,		/* I - Client connection */
     send_http_error(con, HTTP_UNAUTHORIZED, printer);
     return (NULL);
   }
-#ifdef HAVE_SSL
+#ifdef HAVE_TLS
   else if (auth_info && !con->http->tls &&
            !httpAddrLocalhost(con->http->hostaddr))
   {
@@ -1290,7 +1291,7 @@ add_job(cupsd_client_t  *con,		/* I - Client connection */
     send_http_error(con, HTTP_UPGRADE_REQUIRED, printer);
     return (NULL);
   }
-#endif /* HAVE_SSL */
+#endif /* HAVE_TLS */
 
  /*
   * See if the printer is accepting jobs...
@@ -2206,7 +2207,7 @@ add_printer(cupsd_client_t  *con,	/* I - Client connection */
             ipp_attribute_t *uri)	/* I - URI of printer */
 {
   http_status_t	status;			/* Policy status */
-  int		i;			/* Looping var */
+  int		i = 0;			/* Looping var */
   char		scheme[HTTP_MAX_URI],	/* Method portion of URI */
 		username[HTTP_MAX_URI],	/* Username portion of URI */
 		host[HTTP_MAX_URI],	/* Host portion of URI */
@@ -2274,7 +2275,7 @@ add_printer(cupsd_client_t  *con,	/* I - Client connection */
     * Printer doesn't exist; see if we have a class of the same name...
     */
 
-    if ((printer = cupsdFindClass(resource + 10)) != NULL)
+    if (cupsdFindClass(resource + 10))
     {
      /*
       * Yes, return an error...
@@ -2692,7 +2693,22 @@ add_printer(cupsd_client_t  *con,	/* I - Client connection */
     need_restart_job = 1;
     changed_driver   = 1;
 
-    if (!strcmp(ppd_name, "raw"))
+    if (!strcmp(ppd_name, "everywhere"))
+    {
+      // Create IPP Everywhere PPD...
+      if (!printer->device_uri || (strncmp(printer->device_uri, "dnssd://", 8) && strncmp(printer->device_uri, "ipp://", 6) && strncmp(printer->device_uri, "ipps://", 7) && strncmp(printer->device_uri, "ippusb://", 9)))
+      {
+	send_ipp_status(con, IPP_INTERNAL_ERROR, _("IPP Everywhere driver requires an IPP connection."));
+	if (!modify)
+	  cupsdDeletePrinter(printer, 0);
+
+	return;
+      }
+
+      // Run a background thread to create the PPD...
+      _cupsThreadCreate((_cups_thread_func_t)create_local_bg_thread, printer);
+    }
+    else if (!strcmp(ppd_name, "raw"))
     {
      /*
       * Raw driver, remove any existing PPD file.
@@ -2719,7 +2735,6 @@ add_printer(cupsd_client_t  *con,	/* I - Client connection */
 
       if (copy_model(con, ppd_name, dstfile))
       {
-        send_ipp_status(con, IPP_INTERNAL_ERROR, _("Unable to copy PPD file."));
 	if (!modify)
 	  cupsdDeletePrinter(printer, 0);
 
@@ -4468,9 +4483,15 @@ copy_model(cupsd_client_t *con,		/* I - Client connection */
 
   snprintf(buffer, sizeof(buffer), "%s/daemon/cups-driverd", ServerBin);
   snprintf(tempfile, sizeof(tempfile), "%s/%d.ppd", TempDir, con->number);
-  tempfd = open(tempfile, O_WRONLY | O_CREAT | O_TRUNC, 0600);
-  if (tempfd < 0 || cupsdOpenPipe(temppipe))
+  if ((tempfd = open(tempfile, O_WRONLY | O_CREAT | O_TRUNC, 0600)) < 0)
     return (-1);
+  if (cupsdOpenPipe(temppipe))
+  {
+    close(tempfd);
+    unlink(tempfile);
+
+    return (-1);
+  }
 
   cupsdLogMessage(CUPSD_LOG_DEBUG,
                   "copy_model: Running \"cups-driverd cat %s\"...", from);
@@ -4478,6 +4499,7 @@ copy_model(cupsd_client_t *con,		/* I - Client connection */
   if (!cupsdStartProcess(buffer, argv, envp, -1, temppipe[1], CGIPipes[1],
                          -1, -1, 0, DefaultProfile, NULL, &temppid))
   {
+    send_ipp_status(con, IPP_INTERNAL_ERROR, _("Unable to run cups-driverd: %s"), strerror(errno));
     close(tempfd);
     unlink(tempfile);
 
@@ -4557,6 +4579,7 @@ copy_model(cupsd_client_t *con,		/* I - Client connection */
     */
 
     cupsdLogMessage(CUPSD_LOG_ERROR, "copy_model: empty PPD file");
+    send_ipp_status(con, IPP_INTERNAL_ERROR, _("cups-driverd failed to get PPD file - see error_log for details."));
     unlink(tempfile);
     return (-1);
   }
@@ -4650,6 +4673,7 @@ copy_model(cupsd_client_t *con,		/* I - Client connection */
 
   if ((dst = cupsdCreateConfFile(to, ConfigFilePerm)) == NULL)
   {
+    send_ipp_status(con, IPP_INTERNAL_ERROR, _("Unable to save PPD file: %s"), strerror(errno));
     cupsFreeOptions(num_defaults, defaults);
     cupsFileClose(src);
     unlink(tempfile);
@@ -4703,7 +4727,15 @@ copy_model(cupsd_client_t *con,		/* I - Client connection */
 
   unlink(tempfile);
 
-  return (cupsdCloseCreatedConfFile(dst, to));
+  if (cupsdCloseCreatedConfFile(dst, to))
+  {
+    send_ipp_status(con, IPP_INTERNAL_ERROR, _("Unable to commit PPD file: %s"), strerror(errno));
+    return (-1);
+  }
+  else
+  {
+    return (0);
+  }
 }
 
 
@@ -4906,7 +4938,7 @@ copy_printer_attrs(
   if (!ra || cupsArrayFind(ra, "printer-current-time"))
     ippAddDate(con->response, IPP_TAG_PRINTER, "printer-current-time", ippTimeToDate(curtime));
 
-#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+#ifdef HAVE_DNSSD
   if (!ra || cupsArrayFind(ra, "printer-dns-sd-name"))
   {
     if (printer->reg_name)
@@ -4914,7 +4946,7 @@ copy_printer_attrs(
     else
       ippAddInteger(con->response, IPP_TAG_PRINTER, IPP_TAG_NOVALUE, "printer-dns-sd-name", 0);
   }
-#endif /* HAVE_DNSSD || HAVE_AVAHI */
+#endif /* HAVE_DNSSD */
 
   if (!ra || cupsArrayFind(ra, "printer-error-policy"))
     ippAddString(con->response, IPP_TAG_PRINTER, IPP_TAG_NAME, "printer-error-policy", NULL, printer->error_policy);
@@ -5239,6 +5271,7 @@ create_local_bg_thread(
 		userpass[256],		/* User:pass */
 		host[256],		/* Hostname */
 		resource[1024],		/* Resource path */
+		uri[1024],		/* Resolved URI, if needed */
 		line[1024];		/* Line from PPD */
   int		port;			/* Port number */
   http_encryption_t encryption;		/* Type of encryption to use */
@@ -5259,6 +5292,20 @@ create_local_bg_thread(
   */
 
   cupsdLogMessage(CUPSD_LOG_DEBUG, "%s: Generating PPD file from \"%s\"...", printer->name, printer->device_uri);
+
+
+  if (strstr(printer->device_uri, "._tcp"))
+  {
+    cupsdLogMessage(CUPSD_LOG_DEBUG2, "%s: Resolving mDNS URI \"%s\".", printer->name, printer->device_uri);
+
+    if (!_httpResolveURI(printer->device_uri, uri, sizeof(uri), _HTTP_RESOLVE_DEFAULT, NULL, NULL))
+    {
+      cupsdLogMessage(CUPSD_LOG_ERROR, "%s: Couldn't resolve mDNS URI \"%s\".", printer->name, printer->device_uri);
+      return (NULL);
+    }
+
+    printer->device_uri = uri;
+  }
 
   if (httpSeparateURI(HTTP_URI_CODING_ALL, printer->device_uri, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource)) < HTTP_URI_STATUS_OK)
   {
@@ -6758,6 +6805,7 @@ get_jobs(cupsd_client_t  *con,		/* I - Client connection */
     {
       send_ipp_status(con, IPP_NOT_FOUND, _("Job #%d does not exist."),
                       job_ids->values[i].integer);
+      cupsArrayDelete(ra);
       return;
     }
 
@@ -9357,11 +9405,10 @@ restart_job(cupsd_client_t  *con,	/* I - Client connection */
     cupsdLogJob(job, CUPSD_LOG_DEBUG,
 		"Restarted by \"%s\" with job-hold-until=%s.",
                 username, attr->values[0].string.text);
-    cupsdSetJobHoldUntil(job, attr->values[0].string.text, 0);
-
-    cupsdAddEvent(CUPSD_EVENT_JOB_CONFIG_CHANGED | CUPSD_EVENT_JOB_STATE,
-                  NULL, job, "Job restarted by user with job-hold-until=%s",
-		  attr->values[0].string.text);
+    cupsdSetJobHoldUntil(job, attr->values[0].string.text, 1);
+    cupsdSetJobState(job, IPP_JOB_HELD, CUPSD_JOB_DEFAULT,
+		     "Job restarted by user with job-hold-until=%s",
+		     attr->values[0].string.text);
   }
   else
   {
@@ -11228,9 +11275,9 @@ validate_job(cupsd_client_t  *con,	/* I - Client connection */
 {
   http_status_t		status;		/* Policy status */
   ipp_attribute_t	*attr;		/* Current attribute */
-#ifdef HAVE_SSL
+#ifdef HAVE_TLS
   ipp_attribute_t	*auth_info;	/* auth-info attribute */
-#endif /* HAVE_SSL */
+#endif /* HAVE_TLS */
   ipp_attribute_t	*format,	/* Document-format attribute */
 			*name;		/* Job-name attribute */
   cups_ptype_t		dtype;		/* Destination type (printer/class) */
@@ -11350,9 +11397,9 @@ validate_job(cupsd_client_t  *con,	/* I - Client connection */
   * Check policy...
   */
 
-#ifdef HAVE_SSL
+#ifdef HAVE_TLS
   auth_info = ippFindAttribute(con->request, "auth-info", IPP_TAG_TEXT);
-#endif /* HAVE_SSL */
+#endif /* HAVE_TLS */
 
   if ((status = cupsdCheckPolicy(printer->op_policy_ptr, con, NULL)) != HTTP_OK)
   {
@@ -11366,7 +11413,7 @@ validate_job(cupsd_client_t  *con,	/* I - Client connection */
     send_http_error(con, HTTP_UNAUTHORIZED, printer);
     return;
   }
-#ifdef HAVE_SSL
+#ifdef HAVE_TLS
   else if (auth_info && !con->http->tls &&
            !httpAddrLocalhost(con->http->hostaddr))
   {
@@ -11377,7 +11424,7 @@ validate_job(cupsd_client_t  *con,	/* I - Client connection */
     send_http_error(con, HTTP_UPGRADE_REQUIRED, printer);
     return;
   }
-#endif /* HAVE_SSL */
+#endif /* HAVE_TLS */
 
  /*
   * Everything was ok, so return OK status...

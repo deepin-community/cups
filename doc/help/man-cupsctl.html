@@ -12,13 +12,13 @@ cupsctl - configure cupsd.conf options
 <h2 class="title"><a name="SYNOPSIS">Synopsis</a></h2>
 <b>cupsctl</b>
 [
+<b>-h</b>
+<i>server</i>[<b>:</b><i>port</i>]
+] [
 <b>-E</b>
 ] [
 <b>-U</b>
 <i>username</i>
-] [
-<b>-h</b>
-<i>server</i>[<b>:</b><i>port</i>]
 ] [
 <b>--</b>[<b>no-</b>]<b>debug-logging</b>
 ] [
@@ -45,6 +45,7 @@ The following options are recognized:
 <dd style="margin-left: 5.0em">Specifies an alternate username to use when authenticating with the scheduler.
 <dt><b>-h </b><i>server</i>[<b>:</b><i>port</i>]
 <dd style="margin-left: 5.0em">Specifies the server address.
+Note: This option must occur before all others.
 <dt><b>--</b>[<b>no-</b>]<b>debug-logging</b>
 <dd style="margin-left: 5.0em">Enables (disables) debug logging to the <i>error_log</i> file.
 <dt><b>--</b>[<b>no-</b>]<b>remote-admin</b>
@@ -59,36 +60,32 @@ The following options are recognized:
 <h2 class="title"><a name="EXAMPLES">Examples</a></h2>
 Display the current settings:
 <pre class="man">
-
     cupsctl
 
 </pre>
 Enable debug logging:
 <pre class="man">
-
     cupsctl --debug-logging
 
 </pre>
 Get the current debug logging state:
 <pre class="man">
-
     cupsctl | grep '^_debug_logging' | awk -F= '{print $2}'
 
 </pre>
 Disable printer sharing:
 <pre class="man">
-
     cupsctl --no-share-printers
 </pre>
 <h2 class="title"><a name="KNOWN_ISSUES">Known Issues</a></h2>
 You cannot set the Listen or Port directives using <b>cupsctl</b>.
 <h2 class="title"><a name="SEE_ALSO">See Also</a></h2>
-<b>cupsd.conf</b>(5),
-<b>cupsd</b>(8),
+<a href="man-cupsd.conf.html?TOPIC=Man+Pages"><b>cupsd.conf</b>(5),</a>
+<a href="man-cupsd.html?TOPIC=Man+Pages"><b>cupsd</b>(8),</a>
 <br>
 CUPS Online Help (<a href="http://localhost:631/help">http://localhost:631/help</a>)
 <h2 class="title"><a name="COPYRIGHT">Copyright</a></h2>
-Copyright &copy; 2007-2019 by Apple Inc.
+Copyright &copy; 2021-2022 by OpenPrinting.
 
 </body>
 </html>

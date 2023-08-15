@@ -8,12 +8,9 @@ Bug-Debian: https://bugs.debian.org/700961
 Bug: https://github.com/apple/cups/issues/4341
 Bug: https://github.com/OpenPrinting/cups/pull/27
 ---
- conf/mime.convs.in   | 3 +++
- conf/mime.types      | 3 +++
- scheduler/conf.c     | 2 +-
- scheduler/dirsvc.c   | 6 ++++++
- scheduler/printers.c | 4 +++-
- 5 files changed, 16 insertions(+), 2 deletions(-)
+ conf/mime.convs.in | 3 +++
+ conf/mime.types    | 3 +++
+ 2 files changed, 6 insertions(+)
 
 diff --git a/conf/mime.convs.in b/conf/mime.convs.in
 index 57b459d..e042e01 100644
@@ -43,48 +40,3 @@ index fcd6b6e..ebb0525 100644
  ########################################################################
  #
  # Text files...
-diff --git a/scheduler/conf.c b/scheduler/conf.c
-index 74531a8..bfd1b0b 100644
---- a/scheduler/conf.c
-+++ b/scheduler/conf.c
-@@ -750,7 +750,7 @@ cupsdReadConfiguration(void)
-   DefaultShared            = CUPS_DEFAULT_DEFAULT_SHARED;
- 
- #if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
--  cupsdSetString(&DNSSDSubTypes, "_cups,_print");
-+  cupsdSetString(&DNSSDSubTypes, "_cups,_print,_universal");
-   cupsdClearString(&DNSSDHostName);
- #endif /* HAVE_DNSSD || HAVE_AVAHI */
- 
-diff --git a/scheduler/dirsvc.c b/scheduler/dirsvc.c
-index ddd3701..fb2a305 100644
---- a/scheduler/dirsvc.c
-+++ b/scheduler/dirsvc.c
-@@ -440,6 +440,12 @@ dnssdBuildTxtRecord(
-     keyvalue[count  ][0] = "pdl";
-     keyvalue[count++][1] = p->pdl ? p->pdl : "application/postscript";
- 
-+    /* iOS 6 does not accept this printer as AirPrint printer if there is
-+       no URF txt record or "URF=none", "DM3" is the minimum needed found
-+       by try and error */
-+    keyvalue[count  ][0] = "URF";
-+    keyvalue[count++][1] = "DM3";
-+
-     if (get_auth_info_required(p, air_str, sizeof(air_str)))
-     {
-       keyvalue[count  ][0] = "air";
-diff --git a/scheduler/printers.c b/scheduler/printers.c
-index 7e9a9f2..3e00874 100644
---- a/scheduler/printers.c
-+++ b/scheduler/printers.c
-@@ -3733,7 +3733,9 @@ add_printer_formats(cupsd_printer_t *p)	/* I - Printer */
-       }
-       else if (!_cups_strcasecmp(type->super, "image"))
-       {
--        if (!_cups_strcasecmp(type->type, "jpeg"))
-+        if (!_cups_strcasecmp(type->type, "urf"))
-+	  strlcat(pdl, "image/urf,", sizeof(pdl));
-+	else if (!_cups_strcasecmp(type->type, "jpeg"))
- 	  strlcat(pdl, "image/jpeg,", sizeof(pdl));
- 	else if (!_cups_strcasecmp(type->type, "png"))
- 	  strlcat(pdl, "image/png,", sizeof(pdl));

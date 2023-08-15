@@ -1,8 +1,9 @@
 /*
  * Get/put file functions for CUPS.
  *
- * Copyright 2007-2018 by Apple Inc.
- * Copyright 1997-2006 by Easy Software Products.
+ * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2007-2018 by Apple Inc.
+ * Copyright © 1997-2006 by Easy Software Products.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
  * information.
@@ -156,7 +157,7 @@ cupsGetFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
 
       continue;
     }
-#ifdef HAVE_SSL
+#ifdef HAVE_TLS
     else if (status == HTTP_STATUS_UPGRADE_REQUIRED)
     {
       /* Flush any error message... */
@@ -175,7 +176,7 @@ cupsGetFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
       /* Try again, this time with encryption enabled... */
       continue;
     }
-#endif /* HAVE_SSL */
+#endif /* HAVE_TLS */
   }
   while (status == HTTP_STATUS_UNAUTHORIZED || status == HTTP_STATUS_UPGRADE_REQUIRED);
 
@@ -418,6 +419,7 @@ cupsPutFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
       DEBUG_printf(("2cupsPutFd: retry on status %d", status));
 
       retries ++;
+      status = HTTP_STATUS_NONE;
 
       /* Flush any error message... */
       httpFlush(http);
@@ -465,7 +467,7 @@ cupsPutFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
 
       continue;
     }
-#ifdef HAVE_SSL
+#ifdef HAVE_TLS
     else if (status == HTTP_STATUS_UPGRADE_REQUIRED)
     {
       /* Flush any error message... */
@@ -484,10 +486,9 @@ cupsPutFd(http_t     *http,		/* I - Connection to server or @code CUPS_HTTP_DEFA
       /* Try again, this time with encryption enabled... */
       continue;
     }
-#endif /* HAVE_SSL */
+#endif /* HAVE_TLS */
   }
-  while (status == HTTP_STATUS_UNAUTHORIZED || status == HTTP_STATUS_UPGRADE_REQUIRED ||
-         (status == HTTP_STATUS_ERROR && retries < 2));
+  while (status == HTTP_STATUS_UNAUTHORIZED || status == HTTP_STATUS_UPGRADE_REQUIRED || status == HTTP_STATUS_NONE);
 
  /*
   * See if we actually put the file or an error...

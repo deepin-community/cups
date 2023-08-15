@@ -1,8 +1,9 @@
 /*
  * User, system, and password routines for CUPS.
  *
- * Copyright 2007-2019 by Apple Inc.
- * Copyright 1997-2006 by Easy Software Products.
+ * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2007-2019 by Apple Inc.
+ * Copyright © 1997-2006 by Easy Software Products.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
  * information.
@@ -67,11 +68,11 @@ typedef struct _cups_client_conf_s	/**** client.conf config data ****/
 {
   _cups_digestoptions_t	digestoptions;	/* DigestOptions values */
   _cups_uatokens_t	uatokens;	/* UserAgentTokens values */
-#ifdef HAVE_SSL
+#ifdef HAVE_TLS
   int			ssl_options,	/* SSLOptions values */
 			ssl_min_version,/* Minimum SSL/TLS version */
 			ssl_max_version;/* Maximum SSL/TLS version */
-#endif /* HAVE_SSL */
+#endif /* HAVE_TLS */
   int			trust_first,	/* Trust on first use? */
 			any_root,	/* Allow any (e.g., self-signed) root */
 			expired_certs,	/* Allow expired certs */
@@ -92,7 +93,9 @@ typedef struct _cups_client_conf_s	/**** client.conf config data ****/
  */
 
 #ifdef __APPLE__
+#  ifdef HAVE_TLS
 static int	cups_apple_get_boolean(CFStringRef key, int *value);
+#  endif /* HAVE_TLS */
 static int	cups_apple_get_string(CFStringRef key, char *value, size_t valsize);
 #endif /* __APPLE__ */
 static int	cups_boolean_value(const char *value);
@@ -106,9 +109,9 @@ static void	cups_set_encryption(_cups_client_conf_t *cc, const char *value);
 static void	cups_set_gss_service_name(_cups_client_conf_t *cc, const char *value);
 #endif /* HAVE_GSSAPI */
 static void	cups_set_server_name(_cups_client_conf_t *cc, const char *value);
-#ifdef HAVE_SSL
+#ifdef HAVE_TLS
 static void	cups_set_ssl_options(_cups_client_conf_t *cc, const char *value);
-#endif /* HAVE_SSL */
+#endif /* HAVE_TLS */
 static void	cups_set_uatokens(_cups_client_conf_t *cc, const char *value);
 static void	cups_set_user(_cups_client_conf_t *cc, const char *value);
 
@@ -271,10 +274,10 @@ cupsSetCredentials(
   if (cupsArrayCount(credentials) < 1)
     return (-1);
 
-#ifdef HAVE_SSL
+#ifdef HAVE_TLS
   _httpFreeCredentials(cg->tls_credentials);
   cg->tls_credentials = _httpCreateCredentials(credentials);
-#endif /* HAVE_SSL */
+#endif /* HAVE_TLS */
 
   return (cg->tls_credentials ? 0 : -1);
 }
@@ -303,6 +306,43 @@ cupsSetEncryption(http_encryption_t e)	/* I - New encryption preference */
 
   if (cg->http)
     httpEncryption(cg->http, e);
+}
+
+
+/*
+ * 'cupsSetOAuthCB()' - Set the OAuth 2.0 callback for CUPS.
+ *
+ * This function sets the OAuth 2.0 callback for the various CUPS APIs that
+ * send HTTP requests. Pass @code NULL@ to restore the default (console-based)
+ * callback.
+ *
+ * The OAuth callback receives the HTTP connection, realm name, scope name (if
+ * any), resource path, and the "user_data" pointer for each request that
+ * requires an OAuth access token. The function then returns either the Bearer
+ * token string or `NULL` if no authorization could be obtained.
+ *
+ * Beyond reusing the Bearer token for subsequent requests on the same HTTP
+ * connection, no caching of the token is done by the CUPS library.  The
+ * callback can determine whether to refresh a cached token by examining any
+ * existing token returned by the @link httpGetAuthString@ function.
+ *
+ * Note: The current OAuth callback is tracked separately for each thread in a
+ * program. Multi-threaded programs that override the callback need to do so in
+ * each thread for the same callback to be used.
+ *
+ * @since CUPS 2.4@
+ */
+
+void
+cupsSetOAuthCB(
+    cups_oauth_cb_t cb,			/* I - Callback function */
+    void            *user_data)		/* I - User data pointer */
+{
+  _cups_globals_t *cg = _cupsGlobals();	/* Pointer to library globals */
+
+
+  cg->oauth_cb   = cb;
+  cg->oauth_data = user_data;
 }
 
 
@@ -1002,7 +1042,12 @@ _cupsSetDefaults(void)
     * Look for ~/.cups/client.conf...
     */
 
+#if _WIN32
+    snprintf(filename, sizeof(filename), "%s/AppData/Local/cups/client.conf", cg->home);
+#else
     snprintf(filename, sizeof(filename), "%s/.cups/client.conf", cg->home);
+#endif // _WIN32
+
     if ((fp = cupsFileOpen(filename, "r")) != NULL)
     {
       cups_read_client_conf(fp, &cc);
@@ -1047,13 +1092,14 @@ _cupsSetDefaults(void)
   if (cg->validate_certs < 0)
     cg->validate_certs = cc.validate_certs;
 
-#ifdef HAVE_SSL
+#ifdef HAVE_TLS
   _httpTLSSetOptions(cc.ssl_options | _HTTP_TLS_SET_DEFAULT, cc.ssl_min_version, cc.ssl_max_version);
-#endif /* HAVE_SSL */
+#endif /* HAVE_TLS */
 }
 
 
 #ifdef __APPLE__
+#  ifdef HAVE_TLS
 /*
  * 'cups_apple_get_boolean()' - Get a boolean setting from the CUPS preferences.
  */
@@ -1074,6 +1120,7 @@ cups_apple_get_boolean(
 
   return ((int)bval_set);
 }
+#  endif /* HAVE_TLS */
 
 
 /*
@@ -1209,9 +1256,10 @@ cups_finalize_client_conf(
     * Try the USER environment variable as the default username...
     */
 
-    const char *envuser = getenv("USER");
-					/* Default username */
-    struct passwd *pw = NULL;		/* Account information */
+    const char *envuser = getenv("USER");	/* Default username */
+    struct passwd pw;				/* Account information */
+    struct passwd *result = NULL;		/* Auxiliary pointer */
+    _cups_globals_t *cg = _cupsGlobals();	/* Pointer to library globals */
 
     if (envuser)
     {
@@ -1220,16 +1268,16 @@ cups_finalize_client_conf(
       * override things...  This makes sure that printing after doing su
       * or sudo records the correct username.
       */
-
-      if ((pw = getpwnam(envuser)) != NULL && pw->pw_uid != getuid())
-	pw = NULL;
+      getpwnam_r(envuser, &pw, cg->pw_buf, PW_BUF_SIZE, &result);
+      if (result && pw.pw_uid != getuid())
+        result = NULL;
     }
 
-    if (!pw)
-      pw = getpwuid(getuid());
+    if (!result)
+      getpwuid_r(getuid(), &pw, cg->pw_buf, PW_BUF_SIZE, &result);
 
-    if (pw)
-      strlcpy(cc->user, pw->pw_name, sizeof(cc->user));
+    if (result)
+      strlcpy(cc->user, pw.pw_name, sizeof(cc->user));
     else
 #endif /* _WIN32 */
     {
@@ -1266,10 +1314,10 @@ cups_init_client_conf(
   cups_set_user(cc, "mobile");
 #endif /* __APPLE__ && !TARGET_OS_OSX */
 
-#ifdef HAVE_SSL
+#ifdef HAVE_TLS
   cc->ssl_min_version = _HTTP_TLS_1_0;
   cc->ssl_max_version = _HTTP_TLS_MAX;
-#endif /* HAVE_SSL */
+#endif /* HAVE_TLS */
   cc->encryption      = (http_encryption_t)-1;
   cc->trust_first     = -1;
   cc->any_root        = -1;
@@ -1283,7 +1331,7 @@ cups_init_client_conf(
 
 #if defined(__APPLE__)
   char	sval[1024];			/* String value */
-#  ifdef HAVE_SSL
+#  ifdef HAVE_TLS
   int	bval;				/* Boolean value */
 
   if (cups_apple_get_boolean(kAllowAnyRootKey, &bval))
@@ -1319,7 +1367,7 @@ cups_init_client_conf(
 
   if (cups_apple_get_boolean(kValidateCertsKey, &bval))
     cc->validate_certs = bval;
-#  endif /* HAVE_SSL */
+#  endif /* HAVE_TLS */
 
   if (cups_apple_get_string(kDigestOptionsKey, sval, sizeof(sval)))
     cups_set_digestoptions(cc, sval);
@@ -1383,10 +1431,10 @@ cups_read_client_conf(
     else if (!_cups_strcasecmp(line, "GSSServiceName") && value)
       cups_set_gss_service_name(cc, value);
 #endif /* HAVE_GSSAPI */
-#ifdef HAVE_SSL
+#ifdef HAVE_TLS
     else if (!_cups_strcasecmp(line, "SSLOptions") && value)
       cups_set_ssl_options(cc, value);
-#endif /* HAVE_SSL */
+#endif /* HAVE_TLS */
   }
 }
 
@@ -1480,7 +1528,7 @@ cups_set_server_name(
  * 'cups_set_ssl_options()' - Set the SSLOptions value.
  */
 
-#ifdef HAVE_SSL
+#ifdef HAVE_TLS
 static void
 cups_set_ssl_options(
     _cups_client_conf_t *cc,		/* I - client.conf values */
@@ -1553,7 +1601,7 @@ cups_set_ssl_options(
 
   DEBUG_printf(("4cups_set_ssl_options(cc=%p, value=\"%s\") options=%x, min_version=%d, max_version=%d", (void *)cc, value, options, min_version, max_version));
 }
-#endif /* HAVE_SSL */
+#endif /* HAVE_TLS */
 
 
 /*

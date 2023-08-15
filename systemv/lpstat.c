@@ -1,6 +1,7 @@
 /*
  * "lpstat" command for CUPS.
  *
+ * Copyright © 2021-2022 by OpenPrinting.
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1997-2006 by Easy Software Products.
  *
@@ -32,7 +33,7 @@ static int	show_jobs(const char *dests, const char *users, int long_status,
 		          int ranking, const char *which);
 static int	show_printers(const char *printers, int num_dests,
 		              cups_dest_t *dests, int long_status);
-static void	show_scheduler(void);
+static int	show_scheduler(void);
 static void	usage(void) _CUPS_NORETURN;
 
 
@@ -84,13 +85,13 @@ main(int  argc,				/* I - Number of command-line arguments */
 	      break;
 
 	  case 'E' : /* Encrypt */
-#ifdef HAVE_SSL
+#ifdef HAVE_TLS
 	      cupsSetEncryption(HTTP_ENCRYPT_REQUIRED);
 #else
 	      _cupsLangPrintf(stderr,
 			      _("%s: Sorry, no encryption support."),
 			      argv[0]);
-#endif /* HAVE_SSL */
+#endif /* HAVE_TLS */
 	      break;
 
 	  case 'H' : /* Show server and port */
@@ -377,7 +378,8 @@ main(int  argc,				/* I - Number of command-line arguments */
 	  case 'r' : /* Show scheduler status */
 	      op = 'r';
 
-	      show_scheduler();
+	      if (!show_scheduler())
+		return (0);
 	      break;
 
 	  case 's' : /* Show summary */
@@ -419,7 +421,9 @@ main(int  argc,				/* I - Number of command-line arguments */
 		}
 	      }
 
-	      show_scheduler();
+	      if (!show_scheduler())
+		return (0);
+
 	      show_default(cupsGetDest(NULL, NULL, num_dests, dests));
 	      status |= show_classes(NULL);
 	      status |= show_devices(NULL, num_dests, dests);
@@ -634,7 +638,7 @@ match_list(const char *list,		/* I - List of names */
   if (!name)
     return (0);
 
-  while (*list)
+  do
   {
    /*
     * Skip leading whitespace and commas...
@@ -660,6 +664,7 @@ match_list(const char *list,		/* I - List of names */
     while (*list && !isspace(*list & 255) && *list != ',')
       list ++;
   }
+  while (*list);
 
   return (0);
 }
@@ -720,8 +725,13 @@ show_accepting(const char  *printers,	/* I - Destinations */
 
   response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/");
 
-  if (cupsLastError() == IPP_STATUS_ERROR_BAD_REQUEST ||
-      cupsLastError() == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED)
+  if (cupsLastError() == IPP_STATUS_ERROR_SERVICE_UNAVAILABLE)
+  {
+    _cupsLangPrintf(stderr, _("%s: Scheduler is not running."), "lpstat");
+    ippDelete(response);
+    return (1);
+  }
+  else if (cupsLastError() == IPP_STATUS_ERROR_BAD_REQUEST || cupsLastError() == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED)
   {
     _cupsLangPrintf(stderr,
 		    _("%s: Error - add '/version=1.1' to server name."),
@@ -810,8 +820,8 @@ show_accepting(const char  *printers,	/* I - Destinations */
 	  _cupsLangPrintf(stdout, _("%s not accepting requests since %s -"),
 			  printer, printer_state_time);
 	  _cupsLangPrintf(stdout, _("\t%s"),
-			  (message == NULL || !*message) ?
-			      "reason unknown" : message);
+			  (message && *message) ?
+			      message : "reason unknown");
         }
 
         for (i = 0; i < num_dests; i ++)
@@ -826,8 +836,8 @@ show_accepting(const char  *printers,	/* I - Destinations */
 	                      _("%s/%s not accepting requests since %s -"),
 			      printer, dests[i].instance, printer_state_time);
 	      _cupsLangPrintf(stdout, _("\t%s"),
-	        	      (message == NULL || !*message) ?
-			          "reason unknown" : message);
+	        	      (message && *message) ?
+			          message : "reason unknown");
             }
 	  }
       }
@@ -900,6 +910,12 @@ show_classes(const char *dests)		/* I - Destinations */
 
   response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/");
 
+  if (cupsLastError() == IPP_STATUS_ERROR_SERVICE_UNAVAILABLE)
+  {
+    _cupsLangPrintf(stderr, _("%s: Scheduler is not running."), "lpstat");
+    ippDelete(response);
+    return (1);
+  }
   if (cupsLastError() == IPP_STATUS_ERROR_BAD_REQUEST ||
       cupsLastError() == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED)
   {
@@ -950,7 +966,7 @@ show_classes(const char *dests)		/* I - Destinations */
       printer_uri = NULL;
       members     = NULL;
 
-      while (attr != NULL && attr->group_tag == IPP_TAG_PRINTER)
+      do
       {
         if (!strcmp(attr->name, "printer-name") &&
 	    attr->value_tag == IPP_TAG_NAME)
@@ -966,6 +982,7 @@ show_classes(const char *dests)		/* I - Destinations */
 
         attr = attr->next;
       }
+	  while (attr != NULL && attr->group_tag == IPP_TAG_PRINTER);
 
      /*
       * If this is a remote class, grab the class info from the
@@ -1157,6 +1174,12 @@ show_devices(const char  *printers,	/* I - Destinations */
 
   response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/");
 
+  if (cupsLastError() == IPP_STATUS_ERROR_SERVICE_UNAVAILABLE)
+  {
+    _cupsLangPrintf(stderr, _("%s: Scheduler is not running."), "lpstat");
+    ippDelete(response);
+    return (1);
+  }
   if (cupsLastError() == IPP_STATUS_ERROR_BAD_REQUEST ||
       cupsLastError() == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED)
   {
@@ -1349,6 +1372,12 @@ show_jobs(const char *dests,		/* I - Destinations */
 
   response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/");
 
+  if (cupsLastError() == IPP_STATUS_ERROR_SERVICE_UNAVAILABLE)
+  {
+    _cupsLangPrintf(stderr, _("%s: Scheduler is not running."), "lpstat");
+    ippDelete(response);
+    return (1);
+  }
   if (cupsLastError() == IPP_STATUS_ERROR_BAD_REQUEST ||
       cupsLastError() == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED)
   {
@@ -1586,6 +1615,12 @@ show_printers(const char  *printers,	/* I - Destinations */
 
   response = cupsDoRequest(CUPS_HTTP_DEFAULT, request, "/");
 
+  if (cupsLastError() == IPP_STATUS_ERROR_SERVICE_UNAVAILABLE)
+  {
+    _cupsLangPrintf(stderr, _("%s: Scheduler is not running."), "lpstat");
+    ippDelete(response);
+    return (1);
+  }
   if (cupsLastError() == IPP_STATUS_ERROR_BAD_REQUEST ||
       cupsLastError() == IPP_STATUS_ERROR_VERSION_NOT_SUPPORTED)
   {
@@ -1789,10 +1824,10 @@ show_printers(const char  *printers,	/* I - Destinations */
 
         if ((message && *message) || pstate == IPP_PRINTER_STOPPED)
 	{
-	  if (!message || !*message)
-	    _cupsLangPuts(stdout, _("\treason unknown"));
+	  if (message && *message)
+	  	_cupsLangPrintf(stdout, "\t%s", message);
 	  else
-	    _cupsLangPrintf(stdout, "\t%s", message);
+	    _cupsLangPuts(stdout, _("\treason unknown"));
 	}
 
         if (long_status > 1)
@@ -1909,10 +1944,10 @@ show_printers(const char  *printers,	/* I - Destinations */
 
             if ((message && *message) || pstate == IPP_PRINTER_STOPPED)
 	    {
-	      if (!message || !*message)
-		_cupsLangPuts(stdout, _("\treason unknown"));
-	      else
+	      if (message && *message)
 		_cupsLangPrintf(stdout, "\t%s", message);
+	      else
+		_cupsLangPuts(stdout, _("\treason unknown"));
             }
 
             if (long_status > 1)
@@ -2016,7 +2051,7 @@ show_printers(const char  *printers,	/* I - Destinations */
  * 'show_scheduler()' - Show scheduler status.
  */
 
-static void
+static int				/* 1 on success, 0 on failure */
 show_scheduler(void)
 {
   http_t	*http;			/* Connection to server */
@@ -2027,9 +2062,13 @@ show_scheduler(void)
   {
     _cupsLangPuts(stdout, _("scheduler is running"));
     httpClose(http);
+    return (1);
   }
   else
+  {
     _cupsLangPuts(stdout, _("scheduler is not running"));
+    return (0);
+  }
 }
 
 

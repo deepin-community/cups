@@ -13,7 +13,7 @@ cupsd.conf - server configuration file for cups
 The
 <i>cupsd.conf</i>
 file configures the CUPS scheduler,
-<b>cupsd</b>(8).
+<a href="man-cupsd.html?TOPIC=Man+Pages"><b>cupsd</b>(8).</a>
 It is normally located in the
 <i>/etc/cups</i>
 directory.
@@ -23,7 +23,7 @@ The configuration directive name and values are case-insensitive.
 Comment lines start with the # character.
 <h3><a name="TOP_LEVEL_DIRECTIVES">Top-level Directives</a></h3>
 The following top-level directives are understood by
-<b>cupsd</b>(8):
+<a href="man-cupsd.html?TOPIC=Man+Pages"><b>cupsd</b>(8):</a>
 <dl class="man">
 <dt><a name="AccessLogLevel"></a><b>AccessLogLevel config</b>
 <dd style="margin-left: 5.0em"><dt><b>AccessLogLevel actions</b>
@@ -58,7 +58,6 @@ The default is "No".
 Specifies whether shared printers are advertised.
 The default is "No".
 <dt><a name="DefaultAuthType"></a><b>DefaultAuthType Basic</b>
-<dd style="margin-left: 5.0em"><dt><b>DefaultAuthType Negotiate</b>
 <dd style="margin-left: 5.0em"><br>
 Specifies the default type of authentication to use.
 The default is "Basic".
@@ -76,6 +75,7 @@ The default is "en".
 <dd style="margin-left: 5.0em">Specifies the default paper size for new print queues. "Auto" uses a locale-specific default, while "None" specifies there is no default paper size.
 Specific size names are typically "Letter" or "A4".
 The default is "Auto".
+Note: The default paper size must use a size name from the PPD file and not a PWG self-describing media size name.
 <dt><a name="DefaultPolicy"></a><b>DefaultPolicy </b><i>policy-name</i>
 <dd style="margin-left: 5.0em">Specifies the default access policy to use.
 The default access policy is "default".
@@ -111,15 +111,12 @@ The default limit is "0".
 value) of filters that are run to print a job.
 The nice value ranges from 0, the highest priority, to 19, the lowest priority.
 The default is 0.
-<dt><a name="GSSServiceName"></a><b>GSSServiceName </b><i>name</i>
-<dd style="margin-left: 5.0em">Specifies the service name when using Kerberos authentication.
-The default service name is "http."
 <dt><b>HostNameLookups On</b>
 <dd style="margin-left: 5.0em"><dt><a name="HostNameLookups"></a><b>HostNameLookups Off</b>
 <dd style="margin-left: 5.0em"><dt><b>HostNameLookups Double</b>
 <dd style="margin-left: 5.0em">Specifies whether to do reverse lookups on connecting clients.
 The "Double" setting causes
-<b>cupsd</b>(8)
+<a href="man-cupsd.html?TOPIC=Man+Pages"><b>cupsd</b>(8)</a>
 to verify that the hostname resolved from the address matches one of the addresses returned for that hostname.
 Double lookups also prevent clients with unregistered addresses from connecting to your server.
 The default is "Off" to avoid the potential server performance problems with hostname lookups.
@@ -128,7 +125,7 @@ Only set this option to "On" or "Double" if absolutely required.
 <dd style="margin-left: 5.0em">Specifies the length of time to wait before shutting down due to inactivity.
 The default is "60" seconds.
 Note: Only applicable when
-<b>cupsd</b>(8)
+<a href="man-cupsd.html?TOPIC=Man+Pages"><b>cupsd</b>(8)</a>
 is run on-demand (e.g., with <b>-l</b>).
 <dt><a name="JobKillDelay"></a><b>JobKillDelay </b><i>seconds</i>
 <dd style="margin-left: 5.0em">Specifies the number of seconds to wait before killing the filters and backend associated with a canceled or held job.
@@ -145,9 +142,6 @@ The default is "5".
 <dd style="margin-left: 5.0em"><dt><b>KeepAlive No</b>
 <dd style="margin-left: 5.0em">Specifies whether to support HTTP keep-alive connections.
 The default is "Yes".
-<dt><a name="KeepAliveTimeout"></a><b>KeepAliveTimeout </b><i>seconds</i>
-<dd style="margin-left: 5.0em">Specifies how long an idle client connection remains open.
-The default is "30".
 <dt><a name="LimitIPP"></a><b>&lt;Limit </b><i>operation </i>...<b>> </b>... <b>&lt;/Limit></b>
 <dd style="margin-left: 5.0em">Specifies the IPP operations that are being limited inside a Policy section. IPP operation names are listed below in the section "IPP OPERATION NAMES".
 <dt><a name="Limit"></a><b>&lt;Limit </b><i>method </i>...<b>> </b>... <b>&lt;/Limit></b>
@@ -164,11 +158,6 @@ The default is "0" which disables the limit check.
 Multiple Listen directives can be provided to listen on multiple addresses.
 The Listen directive is similar to the Port directive but allows you to restrict access to specific interfaces or networks.
 Note: "Listen *:<i>port</i>" and "Port <i>port</i>" effectively listen on all IP addresses, so you cannot combine them with Listen directives for explicit IPv4 or IPv6 addresses on the same port.
-<dt><a name="ListenBackLog"></a><b>ListenBackLog </b><i>number</i>
-<dd style="margin-left: 5.0em">Specifies the number of pending connections that will be allowed.
-This normally only affects very busy servers that have reached the MaxClients limit, but can also be triggered by large numbers of simultaneous connections.
-When the limit is reached, the operating system will refuse additional connections until the scheduler can accept the pending ones.
-The default is the OS-defined default limit, typically either "5" for older operating systems or "128" for newer operating systems.
 <dt><a name="Location"></a><b>&lt;Location </b><i>/path</i><b>> </b>... <b>&lt;/Location></b>
 <dd style="margin-left: 5.0em">Specifies access control for the named location.
 Paths are documented below in the section "LOCATION PATHS".
@@ -222,6 +211,19 @@ The default is "10800" (3 hours).
 <dd style="margin-left: 5.0em">Specifies the maximum size of the log files before they are rotated.
 The value "0" disables log rotation.
 The default is "1048576" (1MB).
+<dt><a name="MaxSubscriptions"></a><b>MaxSubscriptions </b><i>number</i>
+<dd style="margin-left: 5.0em">Specifies the maximum number of simultaneous event subscriptions that are allowed.
+Set to "0" to allow an unlimited number of subscriptions.
+The default is "100".
+<dt><a name="MaxSubscriptionsPerJob"></a><b>MaxSubscriptionsPerJob </b><i>number</i>
+<dd style="margin-left: 5.0em">Specifies the maximum number of simultaneous event subscriptions that are allowed per job.
+The default is "0" which allows up to MaxSubscriptions subscriptions per job.
+<dt><a name="MaxSubscriptionsPerPrinter"></a><b>MaxSubscriptionsPerPrinter </b><i>number</i>
+<dd style="margin-left: 5.0em">Specifies the maximum number of simultaneous event subscriptions that are allowed per printer.
+The default is "0" which allows up to MaxSubscriptions subscriptions per printer.
+<dt><a name="MaxSubscriptionsPerUser"></a><b>MaxSubscriptionsPerUser </b><i>number</i>
+<dd style="margin-left: 5.0em">Specifies the maximum number of simultaneous event subscriptions that are allowed per user.
+The default is "0" which allows up to MaxSubscriptions subscriptions per user.
 <dt><a name="MultipleOperationTimeout"></a><b>MultipleOperationTimeout </b><i>seconds</i>
 <dd style="margin-left: 5.0em">Specifies the maximum amount of time to allow between files in a multiple file print job.
 The default is "900" (15 minutes).
@@ -242,6 +244,11 @@ The default is "86400" (preserve 1 day).
 If a numeric value is specified, the job history is preserved for the indicated number of seconds after printing.
 If "Yes", the job history is preserved until the MaxJobs limit is reached.
 The default is "Yes".
+<dt><a name="ReadyPaperSizes"></a><b>ReadyPaperSizes </b><i>sizename[,...]</i>
+<dd style="margin-left: 5.0em">Specifies a list of potential paper sizes that are reported as "ready" (loaded).
+The actual list will only contain sizes that each printer supports.
+The default is "Letter,Legal,Tabloid,4x6,Env10" when the default paper size is "Letter" and "A3,A4,A5,A6,EnvDL" otherwise.
+Note: Paper sizes must use the size names from the PPD file and not PWG self-describing media size names.
 <dt><a name="ReloadTimeout"></a><b>ReloadTimeout </b><i>seconds</i>
 <dd style="margin-left: 5.0em">Specifies the amount of time to wait for job completion before restarting the scheduler.
 The default is "30".
@@ -308,7 +315,7 @@ The default is "No".
 </dl>
 <h3><a name="HTTP_METHOD_NAMES">Http Method Names</a></h3>
 The following HTTP methods are supported by
-<b>cupsd</b>(8):
+<a href="man-cupsd.html?TOPIC=Man+Pages"><b>cupsd</b>(8):</a>
 <dl class="man">
 <dt>GET
 <dd style="margin-left: 5.0em">Used by a client to download icons and other printer resources and to access the CUPS web interface.
@@ -323,7 +330,7 @@ The following HTTP methods are supported by
 </dl>
 <h3><a name="IPP_OPERATION_NAMES">Ipp Operation Names</a></h3>
 The following IPP operations are supported by
-<b>cupsd</b>(8):
+<a href="man-cupsd.html?TOPIC=Man+Pages"><b>cupsd</b>(8):</a>
 <dl class="man">
 <dt>CUPS-Accept-Jobs
 <dd style="margin-left: 5.0em">Allows a printer to accept new jobs.
@@ -416,7 +423,7 @@ The following IPP operations are supported by
 </dl>
 <h3><a name="LOCATION_PATHS">Location Paths</a></h3>
 The following paths are commonly used when configuring
-<b>cupsd</b>(8):
+<a href="man-cupsd.html?TOPIC=Man+Pages"><b>cupsd</b>(8):</a>
 <dl class="man">
 <dt>/
 <dd style="margin-left: 5.0em">The path for all get operations (get-printers, get-jobs, etc.)
@@ -464,7 +471,6 @@ The Order directive controls whether Allow lines are evaluated before or after D
 <dt><b>AuthType None</b>
 <dd style="margin-left: 5.0em"><dt><b>AuthType Basic</b>
 <dd style="margin-left: 5.0em"><dt><b>AuthType Default</b>
-<dd style="margin-left: 5.0em"><dt><b>AuthType Negotiate</b>
 <dd style="margin-left: 5.0em">Specifies the type of authentication required.
 The value "Default" corresponds to the DefaultAuthType value.
 <dt><b>Deny all</b>
@@ -496,7 +502,7 @@ The default value is "IfRequested".
 <dt><b>Require user {</b><i>user-name</i>|<b>@</b><i>group-name</i>} ...
 <dd style="margin-left: 5.0em">Specifies that an authenticated user must match one of the named users or be a member of one of the named groups.
 The group name "@SYSTEM" corresponds to the list of groups defined by the SystemGroup directive in the
-<b>cups-files.conf</b>(5)
+<a href="man-cups-files.conf.html?TOPIC=Man+Pages"><b>cups-files.conf</b>(5)</a>
 file.
 The group name "@OWNER" corresponds to the owner of the resource, for example the person that submitted a print job.
 Note: The 'root' user is not special and must be granted privileges like any other user account.
@@ -519,7 +525,7 @@ The "default" access list is "@OWNER @SYSTEM".
 "@ACL" maps to the printer's requesting-user-name-allowed or requesting-user-name-denied values.
 "@OWNER" maps to the job's owner.
 "@SYSTEM" maps to the groups listed for the SystemGroup directive in the
-<b>cups-files.conf</b>(5)
+<a href="man-cups-files.conf.html?TOPIC=Man+Pages"><b>cups-files.conf</b>(5)</a>
 file.
 <dt><b>JobPrivateValues all</b>
 <dd style="margin-left: 5.0em"><dt><b>JobPrivateValues default</b>
@@ -535,7 +541,7 @@ The "default" access list is "@OWNER @SYSTEM".
 "@ACL" maps to the printer's requesting-user-name-allowed or requesting-user-name-denied values.
 "@OWNER" maps to the job's owner.
 "@SYSTEM" maps to the groups listed for the SystemGroup directive in the
-<b>cups-files.conf</b>(5)
+<a href="man-cups-files.conf.html?TOPIC=Man+Pages"><b>cups-files.conf</b>(5)</a>
 file.
 <dt><b>SubscriptionPrivateValues all</b>
 <dd style="margin-left: 5.0em"><dt><b>SubscriptionPrivateValues default</b>
@@ -547,6 +553,8 @@ The "default" values are "notify-events", "notify-pull-method", "notify-recipien
 <h3><a name="DEPRECATED_DIRECTIVES">Deprecated Directives</a></h3>
 The following directives are deprecated and will be removed in a future release of CUPS:
 <dl class="man">
+<dt><b>AuthType Negotiate</b>
+<dd style="margin-left: 5.0em">Specifies Kerberos authentication is required.
 <dt><a name="Classification"></a><b>Classification </b><i>banner</i>
 <dd style="margin-left: 5.0em"><br>
 Specifies the security classification of the server.
@@ -557,12 +565,16 @@ The default is no classification banner.
 <dd style="margin-left: 5.0em"><br>
 Specifies whether users may override the classification (cover page) of individual print jobs using the "job-sheets" option.
 The default is "No".
+<dt><b>DefaultAuthType Negotiate</b>
+<dd style="margin-left: 5.0em">Specifies that Kerberos authentication is required by default.
+<dt><a name="GSSServiceName"></a><b>GSSServiceName </b><i>name</i>
+<dd style="margin-left: 5.0em">Specifies the service name when using Kerberos authentication.
+The default service name is "http."
 <dt><a name="PageLogFormat"></a><b>PageLogFormat </b><i>format-string</i>
 <dd style="margin-left: 5.0em">Specifies the format of PageLog lines.
 Sequences beginning with percent (%) characters are replaced with the corresponding information, while all other characters are copied literally.
 The following percent sequences are recognized:
 <pre class="man">
-
     "%%" inserts a single percent character.
     "%{name}" inserts the value of the specified IPP attribute.
     "%C" inserts the number of copies for the current page.
@@ -576,13 +588,10 @@ The following percent sequences are recognized:
 The default is the empty string, which disables page logging.
 The string "%p %u %j %T %P %C %{job-billing} %{job-originating-host-name} %{job-name} %{media} %{sides}" creates a page log with the standard items.
 Use "%{job-impressions-completed}" to insert the number of pages (sides) that were printed, or "%{job-media-sheets-completed}" to insert the number of sheets that were printed.
-<dt><a name="RIPCache"></a><b>RIPCache </b><i>size</i>
-<dd style="margin-left: 5.0em">Specifies the maximum amount of memory to use when converting documents into bitmaps for a printer.
-The default is "128m".
 </dl>
 <h2 class="title"><a name="NOTES">Notes</a></h2>
 File, directory, and user configuration directives that used to be allowed in the <b>cupsd.conf</b> file are now stored in the
-<b>cups-files.conf</b>(5)
+<a href="man-cups-files.conf.html?TOPIC=Man+Pages"><b>cups-files.conf</b>(5)</a>
 file instead in order to prevent certain types of privilege escalation attacks.
 <p>The scheduler MUST be restarted manually after making changes to the <b>cupsd.conf</b> file.
 On Linux this is typically done using the
@@ -598,7 +607,6 @@ The <b>cupsd.conf</b> file format is based on the Apache HTTP Server configurati
 <h2 class="title"><a name="EXAMPLES">Examples</a></h2>
 Log everything with a maximum log file size of 32 megabytes:
 <pre class="man">
-
     AccessLogLevel all
     LogLevel debug2
     MaxLogSize 32m
@@ -606,7 +614,6 @@ Log everything with a maximum log file size of 32 megabytes:
 </pre>
 Require authentication for accesses from outside the 10. network:
 <pre class="man">
-
     &lt;Location />
     Order allow,deny
     Allow from 10./8
@@ -616,18 +623,16 @@ Require authentication for accesses from outside the 10. network:
     &lt;/Location>
 </pre>
 <h2 class="title"><a name="SEE_ALSO">See Also</a></h2>
-<b>classes.conf</b>(5),
-<b>cups-files.conf</b>(5),
-<b>cupsd</b>(8),
-<b>mime.convs</b>(5),
-<b>mime.types</b>(5),
-<b>printers.conf</b>(5),
-<b>subscriptions.conf</b>(5),
+<a href="man-classes.conf.html?TOPIC=Man+Pages"><b>classes.conf</b>(5),</a>
+<a href="man-cups-files.conf.html?TOPIC=Man+Pages"><b>cups-files.conf</b>(5),</a>
+<a href="man-cupsd.html?TOPIC=Man+Pages"><b>cupsd</b>(8),</a>
+<a href="man-mime.convs.html?TOPIC=Man+Pages"><b>mime.convs</b>(5),</a>
+<a href="man-mime.types.html?TOPIC=Man+Pages"><b>mime.types</b>(5),</a>
+<a href="man-printers.conf.html?TOPIC=Man+Pages"><b>printers.conf</b>(5),</a>
+<a href="man-subscriptions.conf.html?TOPIC=Man+Pages"><b>subscriptions.conf</b>(5),</a>
 CUPS Online Help (<a href="http://localhost:631/help">http://localhost:631/help</a>)
 <h2 class="title"><a name="COPYRIGHT">Copyright</a></h2>
-Copyright &copy; 2020 by Michael R Sweet
-<br>
-Copyright &copy; 2007-2019 by Apple Inc.
+Copyright &copy; 2020-2022 by OpenPrinting.
 
 </body>
 </html>

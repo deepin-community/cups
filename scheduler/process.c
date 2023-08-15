@@ -1,10 +1,12 @@
 /*
  * Process management routines for the CUPS scheduler.
  *
- * Copyright 2007-2017 by Apple Inc.
- * Copyright 1997-2007 by Easy Software Products, all rights reserved.
+ * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2007-2017 by Apple Inc.
+ * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+ * Licensed under Apache License v2.0.  See the file "LICENSE" for more
+ * information.
  */
 
 /*
@@ -744,7 +746,11 @@ cupsdStartProcess(
     if (!RunUser && setgid(Group))
       exit(errno + 100);
 
+#  if CUPS_SNAP
+    if (!RunUser && setgroups(0, NULL))
+#  else
     if (!RunUser && setgroups(1, &Group))
+#  endif /* CUPS_SNAP */
       exit(errno + 100);
 
    /*

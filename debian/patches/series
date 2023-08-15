@@ -1,8 +1,3 @@
-0001-backend-usb-libusb.c-Use-60s-timeout-for-reading-at-.patch
-0002-backend-usb-libusb.c-Revert-enforcing-read-limits.patch
-0003-Update-testlang-to-test-all-locales-Issue-85.patch
-0004-Make-sure-lang-is-initializes.patch
-0005-Let-cups.1-point-to-client.conf.5-not-client.conf.7.patch
 0006-Apple-AirPrint-support.patch
 0007-Keep-foomatic-PPDs-recommended-stanzas-in-NickNames.patch
 0008-Debian-Set-LogFileGroup-to-adm.patch
@@ -14,3 +9,6 @@
 0014-Debian-Reproducibility-httpAddrGetHostname-test-fail.patch
 0015-Debian-Reproducibility-Do-not-run-stp-tests-as-root.patch
 0016-Debian-po4a-infrastructure-and-translations-for-manp.patch
+0012-add-pt.patch
+0013-CVE-2023-32324.patch
+0014-CVE-2023-34241-Log-result-of-httpGetHostname-BEFORE-.patch

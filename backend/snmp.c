@@ -1,6 +1,7 @@
 /*
  * SNMP discovery backend for CUPS.
  *
+ * Copyright © 2021-2022 by OpenPrinting.
  * Copyright © 2007-2014 by Apple Inc.
  * Copyright © 2006-2007 by Easy Software Products, all rights reserved.
  *
@@ -13,6 +14,9 @@
  */
 
 #include "backend-private.h"
+#ifndef HAVE_GETIFADDRS
+#  include <cups/getifaddrs-internal.h>
+#endif // !HAVE_GETIFADDRS
 #include <cups/array.h>
 #include <cups/file.h>
 #include <cups/http-private.h>
@@ -295,7 +299,12 @@ add_cache(http_addr_t *addr,		/* I - Device IP address */
                addr, addrname, uri ? uri : "(null)", id ? id : "(null)",
 	       make_and_model ? make_and_model : "(null)");
 
-  temp = calloc(1, sizeof(snmp_cache_t));
+  if ((temp = calloc(1, sizeof(snmp_cache_t))) == NULL)
+  {
+    perror("DEBUG: Unable to allocate cache entry");
+    return;
+  }
+
   memcpy(&(temp->address), addr, sizeof(temp->address));
 
   temp->addrname = strdup(addrname);
@@ -424,7 +433,7 @@ alarm_handler(int sig)			/* I - Signal number */
 #endif /* !HAVE_SIGSET && !HAVE_SIGACTION */
 
   if (DebugLevel)
-    write(2, "DEBUG: ALARM!\n", 14);
+    backendMessage("DEBUG: ALARM!\n");
 }
 
 
@@ -613,22 +622,25 @@ get_interface_addresses(
     return (NULL);
 
   for (addr = addrs, first = NULL, last = NULL; addr; addr = addr->ifa_next)
+  {
     if ((addr->ifa_flags & IFF_BROADCAST) && addr->ifa_broadaddr &&
         addr->ifa_broadaddr->sa_family == AF_INET &&
 	(!ifname || !strcmp(ifname, addr->ifa_name)))
     {
-      current = calloc(1, sizeof(http_addrlist_t));
+      if ((current = calloc(1, sizeof(http_addrlist_t))) != NULL)
+      {
+	memcpy(&(current->addr), addr->ifa_broadaddr,
+	       sizeof(struct sockaddr_in));
 
-      memcpy(&(current->addr), addr->ifa_broadaddr,
-             sizeof(struct sockaddr_in));
+	if (!last)
+	  first = current;
+	else
+	  last->next = current;
 
-      if (!last)
-        first = current;
-      else
-        last->next = current;
-
-      last = current;
+	last = current;
+      }
     }
+  }
 
   freeifaddrs(addrs);
 

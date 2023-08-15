@@ -23,8 +23,8 @@
 #  ifdef _WIN32
 #    ifndef __CUPS_SSIZE_T_DEFINED
 #      define __CUPS_SSIZE_T_DEFINED
-/* Windows does not support the ssize_t type, so map it to off_t... */
-typedef off_t ssize_t;			/* @private@ */
+/* Windows does not support the ssize_t type, so map it to __int64... */
+typedef __int64 ssize_t;			/* @private@ */
 #    endif /* !__CUPS_SSIZE_T_DEFINED */
 #    include <winsock2.h>
 #    include <ws2tcpip.h>
@@ -176,7 +176,26 @@ typedef enum http_field_e		/**** HTTP field names ****/
   HTTP_FIELD_ACCEPT_ENCODING,		/* Accepting-Encoding field @since CUPS 1.7/macOS 10.9@ */
   HTTP_FIELD_ALLOW,			/* Allow field @since CUPS 1.7/macOS 10.9@ */
   HTTP_FIELD_SERVER,			/* Server field @since CUPS 1.7/macOS 10.9@ */
-  HTTP_FIELD_AUTHENTICATION_INFO,	/* Authentication-Info field (@since CUPS 2.2.9) */
+  HTTP_FIELD_AUTHENTICATION_INFO,	/* Authentication-Info field @since CUPS 2.2.9@ */
+  HTTP_FIELD_ACCESS_CONTROL_ALLOW_CREDENTIALS,
+					/* CORS/Fetch Access-Control-Allow-Cresdentials field @since CUPS 2.4@ */
+  HTTP_FIELD_ACCESS_CONTROL_ALLOW_HEADERS,
+					/* CORS/Fetch Access-Control-Allow-Headers field @since CUPS 2.4@ */
+  HTTP_FIELD_ACCESS_CONTROL_ALLOW_METHODS,
+					/* CORS/Fetch Access-Control-Allow-Methods field @since CUPS 2.4@ */
+  HTTP_FIELD_ACCESS_CONTROL_ALLOW_ORIGIN,
+					/* CORS/Fetch Access-Control-Allow-Origin field @since CUPS 2.4@ */
+  HTTP_FIELD_ACCESS_CONTROL_EXPOSE_HEADERS,
+					/* CORS/Fetch Access-Control-Expose-Headers field @since CUPS 2.4@ */
+  HTTP_FIELD_ACCESS_CONTROL_MAX_AGE,	/* CORS/Fetch Access-Control-Max-Age field @since CUPS 2.4@ */
+  HTTP_FIELD_ACCESS_CONTROL_REQUEST_HEADERS,
+					/* CORS/Fetch Access-Control-Request-Headers field @since CUPS 2.4@ */
+  HTTP_FIELD_ACCESS_CONTROL_REQUEST_METHOD,
+					/* CORS/Fetch Access-Control-Request-Method field @since CUPS 2.4@ */
+  HTTP_FIELD_OPTIONAL_WWW_AUTHENTICATE,	/* RFC 8053 Optional-WWW-Authenticate field @since CUPS 2.4@ */
+  HTTP_FIELD_ORIGIN,			/* RFC 6454 Origin field @since CUPS 2.4@ */
+  HTTP_FIELD_OSCORE,			/* RFC 8613 OSCORE field @since CUPS 2.4@ */
+  HTTP_FIELD_STRICT_TRANSPORT_SECURITY,	/* HSTS Strict-Transport-Security field @since CUPS 2.4@ */
   HTTP_FIELD_MAX			/* Maximum field index */
 } http_field_t;
 
@@ -346,7 +365,7 @@ typedef enum http_trust_e		/**** Level of trust for credentials @since CUPS 2.0/
   HTTP_TRUST_CHANGED,			/* Credentials have changed */
   HTTP_TRUST_EXPIRED,			/* Credentials are expired */
   HTTP_TRUST_RENEWED,			/* Credentials have been renewed */
-  HTTP_TRUST_UNKNOWN,			/* Credentials are unknown/new */
+  HTTP_TRUST_UNKNOWN			/* Credentials are unknown/new */
 } http_trust_t;
 
 typedef enum http_uri_status_e		/**** URI separation status @since CUPS 1.2@ ****/
@@ -555,7 +574,7 @@ extern http_status_t	httpGetExpect(http_t *http) _CUPS_API_1_7;
 extern ssize_t		httpPeek(http_t *http, char *buffer, size_t length) _CUPS_API_1_7;
 extern http_state_t	httpReadRequest(http_t *http, char *resource, size_t resourcelen) _CUPS_API_1_7;
 extern void		httpSetDefaultField(http_t *http, http_field_t field, const char *value) _CUPS_API_1_7;
-extern http_state_t	httpWriteResponse(http_t *http, http_status_t status) _CUPS_API_1_7;
+extern int		httpWriteResponse(http_t *http, http_status_t status) _CUPS_API_1_7;
 
 /* New in CUPS 2.0/macOS 10.10 */
 extern int		httpAddrClose(http_addr_t *addr, int fd) _CUPS_API_2_0;

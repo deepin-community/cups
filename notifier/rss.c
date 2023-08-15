@@ -46,7 +46,7 @@ static char		*rss_password;	/* Password for remote RSS */
  */
 
 static int		compare_rss(_cups_rss_t *a, _cups_rss_t *b);
-static void		delete_message(_cups_rss_t *rss);
+static void		delete_message(_cups_rss_t *msg);
 static void		load_rss(cups_array_t *rss, const char *filename);
 static _cups_rss_t	*new_message(int sequence_number, char *subject,
 			             char *text, char *link_url,
@@ -566,7 +566,17 @@ new_message(int    sequence_number,	/* I - notify-sequence-number */
 
 
   if ((msg = calloc(1, sizeof(_cups_rss_t))) == NULL)
+  {
+#ifdef __clang_analyzer__
+    // These free calls are really unnecessary (a failure here ultimately causes
+    // an exit, which frees all memory much faster) but it makes Clang happy...
+    free(subject);
+    free(text);
+    free(link_url);
+#endif // __clang_analyzer__
+
     return (NULL);
+  }
 
   msg->sequence_number = sequence_number;
   msg->subject         = subject;

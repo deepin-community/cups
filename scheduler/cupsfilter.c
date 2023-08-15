@@ -1,8 +1,9 @@
 /*
  * Filtering program for CUPS.
  *
- * Copyright 2007-2016 by Apple Inc.
- * Copyright 1997-2006 by Easy Software Products, all rights reserved.
+ * Copyright © 2021-2022 by OpenPrinting
+ * Copyright © 2007-2016 by Apple Inc.
+ * Copyright © 1997-2006 by Easy Software Products, all rights reserved.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
  */
@@ -30,8 +31,6 @@
  */
 
 static char		*DataDir = NULL;/* CUPS_DATADIR environment variable */
-static char		*FontPath = NULL;
-					/* CUPS_FONTPATH environment variable */
 static mime_filter_t	GZIPFilter =	/* gziptoany filter */
 {
   NULL,					/* Source type */
@@ -44,8 +43,6 @@ static char		*ServerBin = NULL;
 					/* CUPS_SERVERBIN environment variable */
 static char		*ServerRoot = NULL;
 					/* CUPS_SERVERROOT environment variable */
-static char		*RIPCache = NULL;
-					/* RIP_MAX_CACHE environment variable */
 static char		TempFile[1024] = "";
 					/* Temporary file */
 
@@ -183,9 +180,14 @@ main(int  argc,				/* I - Number of command-line args */
 	    case 'a' : /* Specify option... */
 		i ++;
 		if (i < argc)
+		{
 		  num_options = cupsParseOptions(argv[i], num_options, &options);
+		}
 		else
+		{
+		  _cupsLangPrintf(stderr, _("%s: Error - expected name=value after \"-a\" option."), argv[0]);
 		  usage(opt);
+		}
 		break;
 
 	    case 'c' : /* Specify cups-files.conf file location... */
@@ -198,15 +200,23 @@ main(int  argc,				/* I - Number of command-line args */
 		    strlcpy(cupsfilesconf, argv[i], sizeof(cupsfilesconf));
 		}
 		else
-		  usage(opt);
+		{
+		  _cupsLangPrintf(stderr, _("%s: Error - expected filename after \"-c\" option."), argv[0]);
+		  usage(NULL);
+		}
 		break;
 
 	    case 'd' : /* Specify the real printer name */
 		i ++;
 		if (i < argc)
+		{
 		  printer = argv[i];
+		}
 		else
-		  usage(opt);
+		{
+		  _cupsLangPrintf(stderr, _("%s: Error - expected printer name after \"-d\" option."), argv[0]);
+		  usage(NULL);
+		}
 		break;
 
 	    case 'D' : /* Delete input file after conversion */
@@ -220,9 +230,14 @@ main(int  argc,				/* I - Number of command-line args */
 	    case 'f' : /* Specify input file... */
 		i ++;
 		if (i < argc && !infile)
+		{
 		  infile = argv[i];
+		}
 		else
-		  usage(opt);
+		{
+		  _cupsLangPrintf(stderr, _("%s: Error - expected input file after \"-f\" option."), argv[0]);
+		  usage(NULL);
+		}
 		break;
 
 	    case 'i' : /* Specify source MIME type... */
@@ -235,7 +250,10 @@ main(int  argc,				/* I - Number of command-line args */
 		  srctype = argv[i];
 		}
 		else
-		  usage(opt);
+		{
+		  _cupsLangPrintf(stderr, _("%s: Error - expected source MIME type after \"-i\" option."), argv[0]);
+		  usage(NULL);
+		}
 		break;
 
 	    case 'j' : /* Get job file or specify destination MIME type... */
@@ -248,8 +266,10 @@ main(int  argc,				/* I - Number of command-line args */
 		    infile = TempFile;
 		  }
 		  else
-		    usage(opt);
-
+		  {
+		    _cupsLangPrintf(stdout, _("%s: Error - expected job-id after \"-j\" option."), argv[0]);
+		    usage(NULL);
+		  }
 		  break;
 		}
 
@@ -263,15 +283,23 @@ main(int  argc,				/* I - Number of command-line args */
 		  dsttype = argv[i];
 		}
 		else
-		  usage(opt);
+		{
+		  _cupsLangPrintf(stderr, _("%s: Error - expected destination MIME type after \"-m\" option."), argv[0]);
+		  usage(NULL);
+		}
 		break;
 
 	    case 'n' : /* Specify number of copies... */
 		i ++;
 		if (i < argc)
+		{
 		  num_options = cupsAddOption("copies", argv[i], num_options, &options);
+		}
 		else
-		  usage(opt);
+		{
+		  _cupsLangPrintf(stderr, _("%s: Error - expected number of copies after \"-n\" option."), argv[0]);
+		  usage(NULL);
+		}
 		break;
 
 	    case 'o' : /* Specify option(s) or output filename */
@@ -286,28 +314,43 @@ main(int  argc,				/* I - Number of command-line args */
 		      outfile = argv[i];
 		  }
 		  else
+		  {
 		    num_options = cupsParseOptions(argv[i], num_options, &options);
+		  }
 		}
 		else
-		  usage(opt);
+		{
+		  _cupsLangPrintf(stderr, _("%s: Error - expected name=value after \"-o\" option."), argv[0]);
+		  usage(NULL);
+		}
 		break;
 
 	    case 'p' : /* Specify PPD file... */
 	    case 'P' : /* Specify PPD file... */
 		i ++;
 		if (i < argc)
+		{
 		  ppdfile = argv[i];
+		}
 		else
-		  usage(opt);
+		{
+		  _cupsLangPrintf(stderr, _("%s: Error - expected PPD file after \"-%c\" option."), argv[0], *opt);
+		  usage(NULL);
+		}
 		break;
 
 	    case 't' : /* Specify title... */
 	    case 'J' : /* Specify title... */
 		i ++;
 		if (i < argc)
+		{
 		  title = argv[i];
+		}
 		else
-		  usage(opt);
+		{
+		  _cupsLangPrintf(stderr, _("%s: Error - expected title after \"-%c\" option."), argv[0], *opt);
+		  usage(NULL);
+		}
 		break;
 
 	    case 'u' : /* Delete PPD file after conversion */
@@ -317,14 +360,19 @@ main(int  argc,				/* I - Number of command-line args */
 	    case 'U' : /* Specify username... */
 		i ++;
 		if (i < argc)
+		{
 		  user = argv[i];
+		}
 		else
-		  usage(opt);
+		{
+		  _cupsLangPrintf(stderr, _("%s: Error - expected \"username\" after \"-U\" option."), argv[0]);
+		  usage(NULL);
+		}
 		break;
 
 	    default : /* Something we don't understand... */
-		usage(opt);
-		break;
+		_cupsLangPrintf(stderr, _("%s: Error - unknown option \"-%c\"."), argv[0], *opt);
+		usage(NULL);
 	  }
 	}
       }
@@ -338,8 +386,7 @@ main(int  argc,				/* I - Number of command-line args */
     }
     else
     {
-      _cupsLangPuts(stderr,
-                    _("cupsfilter: Only one filename can be specified."));
+      _cupsLangPuts(stderr, _("cupsfilter: Only one filename can be specified."));
       usage(NULL);
     }
   }
@@ -373,10 +420,7 @@ main(int  argc,				/* I - Number of command-line args */
 
   if (!mime)
   {
-    _cupsLangPrintf(stderr,
-                    _("%s: Unable to read MIME database from \"%s\" or "
-		      "\"%s\"."),
-		    command, mimedir, ServerRoot);
+    _cupsLangPrintf(stderr, _("%s: Unable to read MIME database from \"%s\" or \"%s\"."), command, mimedir, ServerRoot);
     return (1);
   }
 
@@ -921,7 +965,7 @@ exec_filters(mime_type_t   *srctype,	/* I - Source type */
 {
   int		i;			/* Looping var */
   const char	*argv[8],		/* Command-line arguments */
-		*envp[17],		/* Environment variables */
+		*envp[21],		/* Environment variables */
 		*temp;			/* Temporary string */
   char		*optstr,		/* Filter options */
 		content_type[1024],	/* CONTENT_TYPE */
@@ -937,8 +981,14 @@ exec_filters(mime_type_t   *srctype,	/* I - Source type */
 		printer_info[255],	/* PRINTER_INFO env variable */
 		printer_location[255],	/* PRINTER_LOCATION env variable */
 		printer_name[255],	/* PRINTER env variable */
-		rip_max_cache[1024],	/* RIP_MAX_CACHE */
 		userenv[1024],		/* USER */
+#if CUPS_SNAP
+		fontconfig_file[1024],	/* FONTCONFIG_FILE */
+		fontconfig_path[1024],	/* FONTCONFIG_PATH */
+		fontconfig_sysroot[1024],
+					/* FONTCONFIG_SYSROOT */
+		ld_library_path[2048],	/* LD_LIBRARY_PATH */
+#endif /* CUPS_SNAP */
 		program[1024];		/* Program to run */
   mime_filter_t	*filter,		/* Current filter */
 		*next;			/* Next filter */
@@ -995,7 +1045,6 @@ exec_filters(mime_type_t   *srctype,	/* I - Source type */
   snprintf(content_type, sizeof(content_type), "CONTENT_TYPE=%s/%s",
            srctype->super, srctype->type);
   snprintf(cups_datadir, sizeof(cups_datadir), "CUPS_DATADIR=%s", DataDir);
-  snprintf(cups_fontpath, sizeof(cups_fontpath), "CUPS_FONTPATH=%s", FontPath);
   snprintf(cups_serverbin, sizeof(cups_serverbin), "CUPS_SERVERBIN=%s",
            ServerBin);
   snprintf(cups_serverroot, sizeof(cups_serverroot), "CUPS_SERVERROOT=%s",
@@ -1020,9 +1069,9 @@ exec_filters(mime_type_t   *srctype,	/* I - Source type */
                  "Versions/A/Frameworks/PrintCore.framework/Versions/A/"
 		 "Resources/Generic.ppd", sizeof(ppd));
 #else
-    snprintf(ppd, sizeof(ppd), "PPD=%s/model/laserjet.ppd", DataDir);
+  snprintf(ppd, sizeof(ppd), "PPD=%s/model/laserjet.ppd", DataDir);
 #endif /* __APPLE__ */
-  snprintf(rip_max_cache, sizeof(rip_max_cache), "RIP_MAX_CACHE=%s", RIPCache);
+
   snprintf(userenv, sizeof(userenv), "USER=%s", user);
 
   if (printer &&
@@ -1065,31 +1114,53 @@ exec_filters(mime_type_t   *srctype,	/* I - Source type */
   if (!argv[4])
     argv[4] = "1";
 
-  envp[0]  = "<CFProcessPath>";
-  envp[1]  = content_type;
-  envp[2]  = cups_datadir;
-  envp[3]  = cups_fontpath;
-  envp[4]  = cups_serverbin;
-  envp[5]  = cups_serverroot;
-  envp[6]  = lang;
-  envp[7]  = path;
-  envp[8]  = ppd;
-  envp[9]  = printer_info;
-  envp[10] = printer_location;
-  envp[11] = printer_name;
-  envp[12] = rip_max_cache;
-  envp[13] = userenv;
-  envp[14] = "CHARSET=utf-8";
-  if (final_content_type[0])
-  {
-    envp[15] = final_content_type;
-    envp[16] = NULL;
-  }
-  else
-    envp[15] = NULL;
-
   for (i = 0; argv[i]; i ++)
     fprintf(stderr, "DEBUG: argv[%d]=\"%s\"\n", i, argv[i]);
+
+  i = 0;
+#ifdef __APPLE__
+  envp[i ++] = "<CFProcessPath>";
+#endif /* __APPLE__ */
+  envp[i ++] = content_type;
+  envp[i ++] = cups_datadir;
+  envp[i ++] = cups_fontpath;
+  envp[i ++] = cups_serverbin;
+  envp[i ++] = cups_serverroot;
+  envp[i ++] = lang;
+  envp[i ++] = path;
+  envp[i ++] = ppd;
+  envp[i ++] = printer_info;
+  envp[i ++] = printer_location;
+  envp[i ++] = printer_name;
+  envp[i ++] = userenv;
+  envp[i ++] = "CHARSET=utf-8";
+  if (final_content_type[0])
+    envp[i ++] = final_content_type;
+
+#if CUPS_SNAP
+  if ((temp = getenv("FONTCONFIG_FILE")) != NULL)
+  {
+    snprintf(fontconfig_file, sizeof(fontconfig_file), "FONTCONFIG_FILE=%s", temp);
+    envp[i ++] = fontconfig_file;
+  }
+  if ((temp = getenv("FONTCONFIG_PATH")) != NULL)
+  {
+    snprintf(fontconfig_path, sizeof(fontconfig_path), "FONTCONFIG_PATH=%s", temp);
+    envp[i ++] = fontconfig_path;
+  }
+  if ((temp = getenv("FONTCONFIG_SYSROOT")) != NULL)
+  {
+    snprintf(fontconfig_sysroot, sizeof(fontconfig_sysroot), "FONTCONFIG_SYSROOT=%s", temp);
+    envp[i ++] = fontconfig_sysroot;
+  }
+  if ((temp = getenv("LD_LIBRARY_PATH")) != NULL)
+  {
+    snprintf(ld_library_path, sizeof(ld_library_path), "LD_LIBRARY_PATH=%s", temp);
+    envp[i ++] = ld_library_path;
+  }
+#endif /* CUPS_SNAP */
+
+  envp[i] = NULL;
 
   for (i = 0; envp[i]; i ++)
     fprintf(stderr, "DEBUG: envp[%d]=\"%s\"\n", i, envp[i]);
@@ -1377,13 +1448,6 @@ read_cups_files_conf(
   else
     set_string(&DataDir, CUPS_DATADIR);
 
-  if ((temp = getenv("CUPS_FONTPATH")) != NULL)
-    set_string(&FontPath, temp);
-  else
-    set_string(&FontPath, CUPS_FONTPATH);
-
-  set_string(&RIPCache, "128m");
-
   if ((temp = getenv("CUPS_SERVERBIN")) != NULL)
     set_string(&ServerBin, temp);
   else
@@ -1405,10 +1469,6 @@ read_cups_files_conf(
     {
       if (!_cups_strcasecmp(line, "DataDir"))
         set_string(&DataDir, ptr);
-      else if (!_cups_strcasecmp(line, "FontPath"))
-        set_string(&FontPath, ptr);
-      else if (!_cups_strcasecmp(line, "RIPCache"))
-        set_string(&RIPCache, ptr);
       else if (!_cups_strcasecmp(line, "ServerBin"))
         set_string(&ServerBin, ptr);
       else if (!_cups_strcasecmp(line, "ServerRoot"))
@@ -1418,6 +1478,11 @@ read_cups_files_conf(
     cupsFileClose(fp);
   }
 
+#if CUPS_SNAP
+  if ((temp = getenv("PATH")) != NULL)
+    snprintf(line, sizeof(line), "%s/filter:" CUPS_BINDIR ":" CUPS_SBINDIR ":%s", ServerBin, temp);
+  else
+#endif /* CUPS_SNAP */
   snprintf(line, sizeof(line), "%s/filter:" CUPS_BINDIR ":" CUPS_SBINDIR ":/bin:/usr/bin", ServerBin);
   set_string(&Path, line);
 

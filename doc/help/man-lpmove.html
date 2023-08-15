@@ -12,9 +12,9 @@ lpmove - move a job or all jobs to a new destination
 <h2 class="title"><a name="SYNOPSIS">Synopsis</a></h2>
 <b>lpmove</b>
 [
-<b>-E</b>
-] [
 <b>-h </b><i>server</i>[<b>:</b><i>port</i>]
+] [
+<b>-E</b>
 ] [
 <b>-U</b>
 <i>username</i>
@@ -24,9 +24,9 @@ lpmove - move a job or all jobs to a new destination
 <br>
 <b>lpmove</b>
 [
-<b>-E</b>
-] [
 <b>-h </b><i>server</i>[<b>:</b><i>port</i>]
+] [
+<b>-E</b>
 ] [
 <b>-U</b>
 <i>username</i>
@@ -44,11 +44,11 @@ The <b>lpmove</b> command supports the following options:
 <dd style="margin-left: 5.0em">Specifies an alternate username.
 <dt><b>-h </b><i>server</i>[<b>:</b><i>port</i>]
 <dd style="margin-left: 5.0em">Specifies an alternate server.
+Note: This option must occur before all others.
 </dl>
 <h2 class="title"><a name="EXAMPLES">Examples</a></h2>
 Move job 123 from "oldprinter" to "newprinter":
 <pre class="man">
-
     lpmove 123 newprinter
 
             <i>or</i>
@@ -58,18 +58,17 @@ Move job 123 from "oldprinter" to "newprinter":
 </pre>
 Move all jobs from "oldprinter" to "newprinter":
 <pre class="man">
-
     lpmove oldprinter newprinter
 </pre>
 <h2 class="title"><a name="SEE_ALSO">See Also</a></h2>
-<b>cancel</b>(1),
-<b>lp</b>(1),
-<b>lpr</b>(1),
-<b>lprm</b>(1),
+<a href="man-cancel.html?TOPIC=Man+Pages"><b>cancel</b>(1),</a>
+<a href="man-lp.html?TOPIC=Man+Pages"><b>lp</b>(1),</a>
+<a href="man-lpr.html?TOPIC=Man+Pages"><b>lpr</b>(1),</a>
+<a href="man-lprm.html?TOPIC=Man+Pages"><b>lprm</b>(1),</a>
 <br>
 CUPS Online Help (<a href="http://localhost:631/help">http://localhost:631/help</a>)
 <h2 class="title"><a name="COPYRIGHT">Copyright</a></h2>
-Copyright &copy; 2007-2019 by Apple Inc.
+Copyright &copy; 2021-2022 by OpenPrinting.
 
 </body>
 </html>

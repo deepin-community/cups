@@ -1,6 +1,7 @@
 /*
  * PPD file routines for CUPS.
  *
+ * Copyright © 2021-2022 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -125,6 +126,7 @@ ppdClose(ppd_file_t *ppd)		/* I - PPD file record */
   free(ppd->lang_encoding);
   free(ppd->nickname);
   free(ppd->patches);
+  free(ppd->emulations);
   free(ppd->jcl_begin);
   free(ppd->jcl_end);
   free(ppd->jcl_ps);
@@ -871,15 +873,15 @@ _ppdOpen(
       ppd_decode(ppd->jcl_ps);		/* Decode quoted string */
     }
     else if (!strcmp(keyword, "AccurateScreensSupport"))
-      ppd->accurate_screens = !strcmp(string, "True");
+      ppd->accurate_screens = !strcasecmp(string, "True");
     else if (!strcmp(keyword, "ColorDevice"))
-      ppd->color_device = !strcmp(string, "True");
+      ppd->color_device = !strcasecmp(string, "True");
     else if (!strcmp(keyword, "ContoneOnly"))
-      ppd->contone_only = !strcmp(string, "True");
+      ppd->contone_only = !strcasecmp(string, "True");
     else if (!strcmp(keyword, "cupsFlipDuplex"))
-      ppd->flip_duplex = !strcmp(string, "True");
+      ppd->flip_duplex = !strcasecmp(string, "True");
     else if (!strcmp(keyword, "cupsManualCopies"))
-      ppd->manual_copies = !strcmp(string, "True");
+      ppd->manual_copies = !strcasecmp(string, "True");
     else if (!strcmp(keyword, "cupsModelNumber"))
       ppd->model_number = atoi(string);
     else if (!strcmp(keyword, "cupsColorProfile"))
@@ -2391,8 +2393,16 @@ ppd_add_attr(ppd_file_t *ppd,		/* I - PPD file data */
   * Copy data over...
   */
 
+  if (!_cups_strcasecmp(spec, "custom") || !_cups_strncasecmp(spec, "custom.", 7))
+  {
+    temp->spec[0] = '_';
+    strlcpy(temp->spec + 1, spec, sizeof(temp->spec) - 1);
+  }
+  else {
+      strlcpy(temp->spec, spec, sizeof(temp->spec));
+  }
+
   strlcpy(temp->name, name, sizeof(temp->name));
-  strlcpy(temp->spec, spec, sizeof(temp->spec));
   strlcpy(temp->text, text, sizeof(temp->text));
   temp->value = (char *)value;
 
@@ -3420,12 +3430,12 @@ ppd_update_filters(ppd_file_t     *ppd,	/* I - PPD file */
 		srctype[256],
 		dstsuper[16],		/* Destination MIME media type */
 		dsttype[256],
-		program[1024],		/* Command to run */
 		*ptr,			/* Pointer into command to run */
 		buffer[1024],		/* Re-written cupsFilter value */
 		**filter;		/* Current filter */
   int		cost;			/* Cost of filter */
 
+  char		program[1024] = { 0 };	/* Command to run */
 
   DEBUG_printf(("4ppd_update_filters(ppd=%p, cg=%p)", ppd, pg));
 

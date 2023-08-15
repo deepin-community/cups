@@ -1,7 +1,7 @@
 /*
  * Printer routines for the CUPS scheduler.
  *
- * Copyright © 2020 by Michael R Sweet
+ * Copyright © 2020-2022 by OpenPrinting
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -851,10 +851,10 @@ cupsdDeletePrinter(
   cupsdClearString(&p->alert);
   cupsdClearString(&p->alert_description);
 
-#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+#ifdef HAVE_DNSSD
   cupsdClearString(&p->pdl);
   cupsdClearString(&p->reg_name);
-#endif /* HAVE_DNSSD || HAVE_AVAHI */
+#endif /* HAVE_DNSSD */
 
   cupsArrayDelete(p->filetypes);
 
@@ -883,6 +883,9 @@ cupsdDeleteTemporaryPrinters(int force) /* I - Force deletion instead of auto? *
   time_t          unused_time;          /* Last time for printer state change */
 
 
+  cupsdLogMessage(CUPSD_LOG_DEBUG2,
+		  "cupsdDeleteTemporaryPrinters: Removing unused temporary printers");
+
  /*
   * Allow temporary printers to stick around for 60 seconds after the last job
   * completes.
@@ -892,7 +895,8 @@ cupsdDeleteTemporaryPrinters(int force) /* I - Force deletion instead of auto? *
 
   for (p = (cupsd_printer_t *)cupsArrayFirst(Printers); p; p = (cupsd_printer_t *)cupsArrayNext(Printers))
   {
-    if (p->temporary && (force || p->state_time < unused_time))
+    if (p->temporary &&
+	(force || (p->state_time < unused_time && p->state != IPP_PSTATE_PROCESSING)))
       cupsdDeletePrinter(p, 0);
   }
 }
@@ -944,6 +948,8 @@ cupsdLoadAllPrinters(void)
 			*value,		/* Pointer to value */
 			*valueptr;	/* Pointer into value */
   cupsd_printer_t	*p;		/* Current printer */
+  int			found_raw = 0;		/* Flag whether raw queue is installed */
+  int			found_driver = 0;		/* Flag whether queue with classic driver is installed */
 
 
  /*
@@ -1018,6 +1024,30 @@ cupsdLoadAllPrinters(void)
 	}
 
         cupsdSetPrinterAttrs(p);
+
+	if ((p->device_uri && strncmp(p->device_uri, "ipp:", 4) && strncmp(p->device_uri, "ipps:", 5) && strncmp(p->device_uri, "implicitclass:", 14)) ||
+	    !p->make_model ||
+	    (p->make_model && strstr(p->make_model, "IPP Everywhere") == NULL && strstr(p->make_model, "driverless") == NULL))
+	{
+	 /*
+	  * Warn users about printer drivers and raw queues will be deprecated.
+	  * It will warn users in the following scenarios:
+	  * - the queue doesn't use ipp, ipps or implicitclass backend, which means
+	  *   it doesn't communicate via IPP and is raw or uses a driver for sure
+	  * - the queue doesn't have make_model - it is raw
+	  * - the queue uses a correct backend, but the model is not IPP Everywhere/driverless
+	  */
+	  if (!p->make_model)
+	  {
+	    cupsdLogMessage(CUPSD_LOG_DEBUG, "Queue %s is a raw queue, which is deprecated.", p->name);
+	    found_raw = 1;
+	  }
+	  else
+	  {
+	    cupsdLogMessage(CUPSD_LOG_DEBUG, "Queue %s uses a printer driver, which is deprecated.", p->name);
+	    found_driver = 1;
+	  }
+	}
 
         if (strncmp(p->device_uri, "file:", 5) && p->state != IPP_PRINTER_STOPPED)
 	{
@@ -1409,6 +1439,12 @@ cupsdLoadAllPrinters(void)
     }
   }
 
+  if (found_raw)
+    cupsdLogMessage(CUPSD_LOG_WARN, "Raw queues are deprecated and will stop working in a future version of CUPS. See https://github.com/OpenPrinting/cups/issues/103");
+
+  if (found_driver)
+    cupsdLogMessage(CUPSD_LOG_WARN, "Printer drivers are deprecated and will stop working in a future version of CUPS. See https://github.com/OpenPrinting/cups/issues/103");
+
   cupsFileClose(fp);
 }
 
@@ -1476,13 +1512,10 @@ cupsdSaveAllPrinters(void)
   int			i;		/* Looping var */
   cups_file_t		*fp;		/* printers.conf file */
   char			filename[1024],	/* printers.conf filename */
-			temp[1024],	/* Temporary string */
 			value[2048],	/* Value string */
 			*ptr,		/* Pointer into value */
 			*name;		/* Current user/group name */
   cupsd_printer_t	*printer;	/* Current printer class */
-  time_t		curtime;	/* Current time */
-  struct tm		curdate;	/* Current date */
   cups_option_t		*option;	/* Current option */
   ipp_attribute_t	*marker;	/* Current marker attribute */
 
@@ -1501,10 +1534,6 @@ cupsdSaveAllPrinters(void)
  /*
   * Write a small header to the file...
   */
-
-  time(&curtime);
-  localtime_r(&curtime, &curdate);
-  strftime(temp, sizeof(temp) - 1, "%Y-%m-%d %H:%M", &curdate);
 
   cupsFilePuts(fp, "# Printer configuration file for " CUPS_SVERSION "\n");
   cupsFilePrintf(fp, "# Written by cupsd\n");
@@ -3370,6 +3399,7 @@ add_printer_defaults(cupsd_printer_t *p)/* I - Printer */
     cupsArrayAdd(CommonDefaults, _cupsStrAlloc("notify-events-default"));
     cupsArrayAdd(CommonDefaults, _cupsStrAlloc("number-up-default"));
     cupsArrayAdd(CommonDefaults, _cupsStrAlloc("orientation-requested-default"));
+    cupsArrayAdd(CommonDefaults, _cupsStrAlloc("print-color-mode-default"));
     cupsArrayAdd(CommonDefaults, _cupsStrAlloc("print-quality-default"));
   }
 
@@ -3381,9 +3411,7 @@ add_printer_defaults(cupsd_printer_t *p)/* I - Printer */
        i > 0;
        i --, option ++)
   {
-    if (strcmp(option->name, "ipp-options") &&
-	strcmp(option->name, "job-sheets") &&
-        strcmp(option->name, "lease-duration"))
+    if (strcmp(option->name, "ipp-options") && strcmp(option->name, "job-sheets") && strcmp(option->name, "lease-duration"))
     {
       snprintf(name, sizeof(name), "%s-default", option->name);
       num_options = cupsAddOption(name, option->value, num_options, &options);
@@ -3405,44 +3433,37 @@ add_printer_defaults(cupsd_printer_t *p)/* I - Printer */
   */
 
   if (!cupsGetOption("copies", p->num_options, p->options))
-    ippAddInteger(p->attrs, IPP_TAG_PRINTER, IPP_TAG_INTEGER, "copies-default",
-                  1);
+    ippAddInteger(p->attrs, IPP_TAG_PRINTER, IPP_TAG_INTEGER, "copies-default", 1);
 
   if (!cupsGetOption("document-format", p->num_options, p->options))
-    ippAddString(p->attrs, IPP_TAG_PRINTER, IPP_TAG_MIMETYPE,
-        	 "document-format-default", NULL, "application/octet-stream");
+    ippAddString(p->attrs, IPP_TAG_PRINTER, IPP_TAG_MIMETYPE, "document-format-default", NULL, "application/octet-stream");
 
   if (!cupsGetOption("job-cancel-after", p->num_options, p->options))
-    ippAddInteger(p->attrs, IPP_TAG_PRINTER, MaxJobTime > 0 ? IPP_TAG_INTEGER : IPP_TAG_NOVALUE,
-		  "job-cancel-after-default", MaxJobTime);
+    ippAddInteger(p->attrs, IPP_TAG_PRINTER, MaxJobTime > 0 ? IPP_TAG_INTEGER : IPP_TAG_NOVALUE, "job-cancel-after-default", MaxJobTime);
 
   if (!cupsGetOption("job-hold-until", p->num_options, p->options))
-    ippAddString(p->attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
-                 "job-hold-until-default", NULL, "no-hold");
+    ippAddString(p->attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "job-hold-until-default", NULL, "no-hold");
 
   if (!cupsGetOption("job-priority", p->num_options, p->options))
-    ippAddInteger(p->attrs, IPP_TAG_PRINTER, IPP_TAG_INTEGER,
-                  "job-priority-default", 50);
+    ippAddInteger(p->attrs, IPP_TAG_PRINTER, IPP_TAG_INTEGER, "job-priority-default", 50);
 
   if (!cupsGetOption("number-up", p->num_options, p->options))
-    ippAddInteger(p->attrs, IPP_TAG_PRINTER, IPP_TAG_INTEGER,
-                  "number-up-default", 1);
+    ippAddInteger(p->attrs, IPP_TAG_PRINTER, IPP_TAG_INTEGER, "number-up-default", 1);
 
   if (!cupsGetOption("notify-lease-duration", p->num_options, p->options))
-    ippAddInteger(p->attrs, IPP_TAG_PRINTER, IPP_TAG_INTEGER,
-        	  "notify-lease-duration-default", DefaultLeaseDuration);
+    ippAddInteger(p->attrs, IPP_TAG_PRINTER, IPP_TAG_INTEGER, "notify-lease-duration-default", DefaultLeaseDuration);
 
   if (!cupsGetOption("notify-events", p->num_options, p->options))
-    ippAddString(p->attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
-        	 "notify-events-default", NULL, "job-completed");
+    ippAddString(p->attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "notify-events-default", NULL, "job-completed");
 
   if (!cupsGetOption("orientation-requested", p->num_options, p->options))
-    ippAddString(p->attrs, IPP_TAG_PRINTER, IPP_TAG_NOVALUE,
-                 "orientation-requested-default", NULL, NULL);
+    ippAddString(p->attrs, IPP_TAG_PRINTER, IPP_TAG_NOVALUE, "orientation-requested-default", NULL, NULL);
+
+  if (!cupsGetOption("print-color-mode", p->num_options, p->options))
+    ippAddString(p->attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "print-color-mode-default", NULL, (p->type & CUPS_PRINTER_COLOR) ? "color" : "monochrome");
 
   if (!cupsGetOption("print-quality", p->num_options, p->options))
-    ippAddInteger(p->attrs, IPP_TAG_PRINTER, IPP_TAG_ENUM,
-                  "print-quality-default", IPP_QUALITY_NORMAL);
+    ippAddInteger(p->attrs, IPP_TAG_PRINTER, IPP_TAG_ENUM, "print-quality-default", IPP_QUALITY_NORMAL);
 }
 
 
@@ -3610,6 +3631,8 @@ add_printer_formats(cupsd_printer_t *p)	/* I - Printer */
   ipp_attribute_t *attr;		/* document-format-supported attribute */
   char		mimetype[MIME_MAX_SUPER + MIME_MAX_TYPE + 2];
 					/* MIME type name */
+  const char	*preferred = "image/urf";
+					/* document-format-preferred value */
 
 
  /*
@@ -3655,6 +3678,9 @@ add_printer_formats(cupsd_printer_t *p)	/* I - Printer */
 
       cupsArrayDelete(filters);
       cupsArrayAdd(p->filetypes, type);
+
+      if (!strcasecmp(mimetype, "application/pdf"))
+        preferred = "application/pdf";
     }
     else
       cupsdLogMessage(CUPSD_LOG_DEBUG2,
@@ -3692,7 +3718,9 @@ add_printer_formats(cupsd_printer_t *p)	/* I - Printer */
     attr->values[i].string.text = _cupsStrAlloc(mimetype);
   }
 
-#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+  ippAddString(p->attrs, IPP_TAG_PRINTER, IPP_CONST_TAG(IPP_TAG_MIMETYPE), "document-format-preferred", NULL, preferred);
+
+#ifdef HAVE_DNSSD
   {
     char		pdl[1024];	/* Buffer to build pdl list */
     mime_filter_t	*filter;	/* MIME filter looping var */
@@ -3712,9 +3740,6 @@ add_printer_formats(cupsd_printer_t *p)	/* I - Printer */
     }
 
     pdl[0] = '\0';
-
-    if (!filter && mimeType(MimeDatabase, "application", "octet-stream"))
-      strlcat(pdl, "application/octet-stream,", sizeof(pdl));
 
    /*
     * Then list a bunch of formats that are supported by the printer...
@@ -3739,15 +3764,19 @@ add_printer_formats(cupsd_printer_t *p)	/* I - Printer */
 	  strlcat(pdl, "image/png,", sizeof(pdl));
 	else if (!_cups_strcasecmp(type->type, "pwg-raster"))
 	  strlcat(pdl, "image/pwg-raster,", sizeof(pdl));
+	else if (!_cups_strcasecmp(type->type, "urf"))
+	  strlcat(pdl, "image/urf,", sizeof(pdl));
       }
     }
 
     if (pdl[0])
       pdl[strlen(pdl) - 1] = '\0';	/* Remove trailing comma */
 
+    cupsdLogMessage(CUPSD_LOG_DEBUG, "%s: pdl='%s'", p->name, pdl);
+
     cupsdSetString(&p->pdl, pdl);
   }
-#endif /* HAVE_DNSSD || HAVE_AVAHI */
+#endif /* HAVE_DNSSD */
 }
 
 
@@ -3845,6 +3874,7 @@ load_ppd(cupsd_printer_t *p)		/* I - Printer */
   int		i, j;			/* Looping vars */
   char		cache_name[1024];	/* Cache filename */
   struct stat	cache_info;		/* Cache file info */
+  struct stat	conf_info;		/* cupsd.conf file info */
   ppd_file_t	*ppd;			/* PPD file */
   char		ppd_name[1024];		/* PPD filename */
   struct stat	ppd_info;		/* PPD file info */
@@ -3873,6 +3903,15 @@ load_ppd(cupsd_printer_t *p)		/* I - Printer */
 		margins[16];		/* media-*-margin-supported values */
   const char	*filter,		/* Current filter */
 		*mandatory;		/* Current mandatory attribute */
+  ipp_attribute_t *media_col_ready,	/* media-col-ready attribute */
+		*media_ready;		/* media-ready attribute */
+  int		num_urf;		/* Number of urf-supported values */
+  const char	*urf[16],		/* urf-supported values */
+		*urf_prefix;		/* Prefix string for value */
+  char		*urf_ptr,		/* Pointer into value */
+		urf_fn[64],		/* FN (finishings) value */
+		urf_pq[32],		/* PQ (print-quality) value */
+		urf_rs[32];		/* RS (resolution) value */
   static const char * const pwg_raster_document_types[] =
 		{
 		  "black_1",
@@ -3897,6 +3936,9 @@ load_ppd(cupsd_printer_t *p)		/* I - Printer */
   * Check to see if the cache is up-to-date...
   */
 
+  if (stat(ConfigurationFile, &conf_info))
+    conf_info.st_mtime = 0;
+
   snprintf(cache_name, sizeof(cache_name), "%s/%s.data", CacheDir, p->name);
   if (stat(cache_name, &cache_info))
     cache_info.st_mtime = 0;
@@ -3913,7 +3955,7 @@ load_ppd(cupsd_printer_t *p)		/* I - Printer */
   _ppdCacheDestroy(p->pc);
   p->pc = NULL;
 
-  if (cache_info.st_mtime >= ppd_info.st_mtime)
+  if (cache_info.st_mtime >= ppd_info.st_mtime && cache_info.st_mtime >= conf_info.st_mtime)
   {
     cupsdLogMessage(CUPSD_LOG_DEBUG, "load_ppd: Loading %s...", cache_name);
 
@@ -4086,6 +4128,19 @@ load_ppd(cupsd_printer_t *p)		/* I - Printer */
       cupsdSetString(&p->strings, strings_name);
     else
       cupsdClearString(&p->strings);
+
+    num_urf         = 0;
+    urf[num_urf ++] = "V1.4";
+    urf[num_urf ++] = "CP1";
+    urf[num_urf ++] = "W8";
+
+    for (i = 0, urf_ptr = urf_pq, urf_prefix = "PQ"; i < num_qualities; i ++)
+    {
+      snprintf(urf_ptr, sizeof(urf_pq) - (size_t)(urf_ptr - urf_pq), "%s%d", urf_prefix, qualities[i]);
+      urf_prefix = "-";
+      urf_ptr    += strlen(urf_ptr);
+    }
+    urf[num_urf ++] = urf_pq;
 
    /*
     * Add media options from the PPD file...
@@ -4335,7 +4390,39 @@ load_ppd(cupsd_printer_t *p)		/* I - Printer */
 	  ippDelete(col);
 	}
       }
+
+     /*
+      * media[-col]-ready
+      */
+
+      for (media_col_ready = NULL, media_ready = NULL, i = p->pc->num_sizes, pwgsize = p->pc->sizes; i > 0; i --, pwgsize ++)
+      {
+	ipp_t *col;			// media-col-ready value
+
+        // Skip printer sizes that don't have a PPD size or aren't in the ready
+        // sizes array...
+	if (!pwgsize->map.ppd || !cupsArrayFind(ReadyPaperSizes, pwgsize->map.ppd))
+	  continue;
+
+        // Add or append a media-ready value
+	if (media_ready)
+	  ippSetString(p->ppd_attrs, &media_ready, ippGetCount(media_ready), pwgsize->map.pwg);
+	else
+	  media_ready = ippAddString(p->ppd_attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "media-ready", NULL, pwgsize->map.pwg);
+
+        // Add or append a media-col-ready value
+	col = new_media_col(pwgsize);
+
+	if (media_col_ready)
+	  ippSetCollection(p->ppd_attrs, &media_col_ready, ippGetCount(media_col_ready), col);
+	else
+	  media_col_ready = ippAddCollection(p->ppd_attrs, IPP_TAG_PRINTER, "media-col-ready", col);
+
+	ippDelete(col);
+      }
     }
+
+    ippAddString(p->ppd_attrs, IPP_TAG_PRINTER, IPP_CONST_TAG(IPP_TAG_TEXT), "mopria-certified", NULL, "1.3");
 
    /*
     * Output bin...
@@ -4387,6 +4474,8 @@ load_ppd(cupsd_printer_t *p)		/* I - Printer */
 		   "output-bin-supported", NULL, "face-up");
       ippAddString(p->ppd_attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
 		   "output-bin-default", NULL, "face-up");
+
+      urf[num_urf ++] = "OFU0";
     }
     else
     {
@@ -4408,18 +4497,25 @@ load_ppd(cupsd_printer_t *p)		/* I - Printer */
 	"color"
       };
 
-      ippAddStrings(p->ppd_attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
-                    "print-color-mode-supported", 2, NULL, color_modes);
-      ippAddString(p->ppd_attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
-                   "print-color-mode-default", NULL, "color");
+      ippAddStrings(p->ppd_attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "print-color-mode-supported", 2, NULL, color_modes);
       ippAddStrings(p->ppd_attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "pwg-raster-document-type-supported", 3, NULL, pwg_raster_document_types);
+
+      urf[num_urf ++] = "SRGB24";
+
+      if (!cupsGetOption("printer-color-mode", p->num_options, p->options))
+      {
+        // If the default color mode isn't set, use the default from the PPD
+        // file...
+        ppd_option_t *color_model = ppdFindOption(ppd, "ColorModel");
+					// ColorModel PPD option
+
+        if (color_model && strcmp(color_model->defchoice, "RGB"))
+          p->num_options = cupsAddOption("print-color-mode", "monochrome", p->num_options, &p->options);
+      }
     }
     else
     {
-      ippAddString(p->ppd_attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
-                   "print-color-mode-supported", NULL, "monochrome");
-      ippAddString(p->ppd_attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
-                   "print-color-mode-default", NULL, "monochrome");
+      ippAddString(p->ppd_attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "print-color-mode-supported", NULL, "monochrome");
       ippAddStrings(p->ppd_attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "pwg-raster-document-type-supported", 2, NULL, pwg_raster_document_types);
     }
 
@@ -4484,7 +4580,11 @@ load_ppd(cupsd_printer_t *p)		/* I - Printer */
 	  ippAddResolution(p->ppd_attrs, IPP_TAG_PRINTER, "printer-resolution-default", IPP_RES_PER_INCH, xdpi, ydpi);
 
         if (i == 0)
+        {
 	  ippAddResolution(p->ppd_attrs, IPP_TAG_PRINTER, "pwg-raster-document-resolution-supported", IPP_RES_PER_INCH, xdpi, ydpi);
+          snprintf(urf_rs, sizeof(urf_rs), "RS%d", xdpi);
+          urf[num_urf ++] = urf_rs;
+	}
       }
     }
     else if ((ppd_attr = ppdFindAttr(ppd, "DefaultResolution", NULL)) != NULL &&
@@ -4518,6 +4618,8 @@ load_ppd(cupsd_printer_t *p)		/* I - Printer */
 		       "printer-resolution-supported", IPP_RES_PER_INCH,
 		       xdpi, ydpi);
       ippAddResolution(p->ppd_attrs, IPP_TAG_PRINTER, "pwg-raster-document-resolution-supported", IPP_RES_PER_INCH, xdpi, ydpi);
+      snprintf(urf_rs, sizeof(urf_rs), "RS%d", xdpi);
+      urf[num_urf ++] = urf_rs;
     }
     else
     {
@@ -4532,6 +4634,8 @@ load_ppd(cupsd_printer_t *p)		/* I - Printer */
 		       "printer-resolution-supported", IPP_RES_PER_INCH,
 		       300, 300);
       ippAddResolution(p->ppd_attrs, IPP_TAG_PRINTER, "pwg-raster-document-resolution-supported", IPP_RES_PER_INCH, 300, 300);
+      strlcpy(urf_rs, "RS300", sizeof(urf_rs));
+      urf[num_urf ++] = urf_rs;
     }
 
    /*
@@ -4552,6 +4656,8 @@ load_ppd(cupsd_printer_t *p)		/* I - Printer */
       p->type |= CUPS_PRINTER_DUPLEX;
 
       ippAddString(p->ppd_attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "pwg-raster-document-sheet-back", NULL, "normal");
+
+      urf[num_urf ++] = "DM1";
 
       ippAddStrings(p->ppd_attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD,
 		    "sides-supported", 3, NULL, sides);
@@ -4581,10 +4687,14 @@ load_ppd(cupsd_printer_t *p)		/* I - Printer */
     {
       _pwg_finishings_t	*fin;		/* Current finishing value */
 
-      for (fin = (_pwg_finishings_t *)cupsArrayFirst(p->pc->finishings); fin; fin = (_pwg_finishings_t *)cupsArrayNext(p->pc->finishings))
+      for (fin = (_pwg_finishings_t *)cupsArrayFirst(p->pc->finishings), urf_ptr = urf_fn, urf_prefix = "FN"; fin; fin = (_pwg_finishings_t *)cupsArrayNext(p->pc->finishings))
       {
         if (num_finishings < (int)(sizeof(finishings) / sizeof(finishings[0])))
           finishings[num_finishings++] = (int)fin->value;
+
+        snprintf(urf_ptr, sizeof(urf_fn) - (size_t)(urf_ptr - urf_fn), "%s%d", urf_prefix, fin->value);
+        urf_prefix = "-";
+        urf_ptr    += strlen(urf_ptr);
 
         switch (fin->value)
         {
@@ -4645,7 +4755,15 @@ load_ppd(cupsd_printer_t *p)		/* I - Printer */
               break;
         }
       }
+
+      if (urf_ptr > urf_fn)
+        urf[num_urf ++] = urf_fn;
     }
+    else
+      urf[num_urf ++] = "FN3";
+
+    /* urf-supported */
+    ippAddStrings(p->ppd_attrs, IPP_TAG_PRINTER, IPP_TAG_KEYWORD, "urf-supported", num_urf, NULL, urf);
 
     if (p->pc && p->pc->templates)
     {

@@ -1,6 +1,7 @@
 /*
  * Authorization routines for the CUPS scheduler.
  *
+ * Copyright © 2021-2022 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -51,12 +52,20 @@ typedef struct sockpeercred cupsd_ucred_t;
 #  endif
 #  define CUPSD_UCRED_UID(c) (c).uid
 #endif /* HAVE_SYS_UCRED_H */
+#ifdef HAVE_LIBAPPARMOR
+#  include <sys/apparmor.h>
+#endif /* HAVE_LIBAPPARMOR */
+#ifdef HAVE_LIBSNAPDGLIB
+#  include <glib.h>
+#  include <snapd-glib/snapd-glib.h>
+#endif /* HAVE_LIBSNAPDGLIB */
 
 
 /*
  * Local functions...
  */
 
+static int		check_admin_access(cupsd_client_t *con);
 #ifdef HAVE_AUTHORIZATION_H
 static int		check_authref(cupsd_client_t *con, const char *right);
 #endif /* HAVE_AUTHORIZATION_H */
@@ -202,7 +211,6 @@ cupsdAddNameMask(cups_array_t **masks,	/* IO - Masks array (created as needed) *
 
     if (ifptr >= ifname && *ifptr == ')')
     {
-      ifptr --;
       *ifptr = '\0';
     }
 
@@ -724,7 +732,6 @@ cupsdAuthorize(cupsd_client_t *con)	/* I - Client connection */
 			output_token = GSS_C_EMPTY_BUFFER;
 					/* Output token for username */
     gss_name_t		client_name;	/* Client name */
-
 
 #  ifdef __APPLE__
    /*
@@ -1629,7 +1636,7 @@ cupsdIsAuthorized(cupsd_client_t *con,	/* I - Connection */
   if (auth == CUPSD_AUTH_DENY && best->satisfy == CUPSD_AUTH_SATISFY_ALL)
     return (HTTP_FORBIDDEN);
 
-#ifdef HAVE_SSL
+#ifdef HAVE_TLS
  /*
   * See if encryption is required...
   */
@@ -1646,7 +1653,7 @@ cupsdIsAuthorized(cupsd_client_t *con,	/* I - Connection */
                     "cupsdIsAuthorized: Need upgrade to TLS...");
     return (HTTP_UPGRADE_REQUIRED);
   }
-#endif /* HAVE_SSL */
+#endif /* HAVE_TLS */
 
  /*
   * Now see what access level is required...
@@ -1714,11 +1721,8 @@ cupsdIsAuthorized(cupsd_client_t *con,	/* I - Connection */
 
  /*
   * OK, got a username.  See if we need normal user access, or group
-  * access... (root always matches)
+  * access...
   */
-
-  if (!strcmp(username, "root"))
-    return (HTTP_OK);
 
  /*
   * Strip any @domain or @KDC from the username and owner...
@@ -1748,6 +1752,21 @@ cupsdIsAuthorized(cupsd_client_t *con,	/* I - Connection */
   }
   else
     pw = NULL;
+
+ /*
+  * For matching user and group memberships below we will first go
+  * through all names except @SYSTEM to authorize the task as
+  * non-administrative, like printing or deleting one's own job, if this
+  * fails we will check whether we can authorize via the special name
+  * @SYSTEM, as an administrative task, like creating a print queue or
+  * deleting someone else's job.
+  * Note that tasks are considered as administrative by the policies
+  * in cupsd.conf, when they require the user or group @SYSTEM.
+  * We do this separation because if the client is a Snap connecting via
+  * domain socket, we need to additionally check whether it plugs to us
+  * through the "cups-control" interface which allows administration and
+  * not through the "cups" interface which allows only printing.
+  */
 
   if (best->level == CUPSD_AUTH_USER)
   {
@@ -1779,8 +1798,14 @@ cupsdIsAuthorized(cupsd_client_t *con,	/* I - Connection */
       {
 	if (!_cups_strncasecmp(name, "@AUTHKEY(", 9) && check_authref(con, name + 9))
 	  return (HTTP_OK);
-	else if (!_cups_strcasecmp(name, "@SYSTEM") && SystemGroupAuthKey &&
-		 check_authref(con, SystemGroupAuthKey))
+      }
+
+      for (name = (char *)cupsArrayFirst(best->names);
+           name;
+	   name = (char *)cupsArrayNext(best->names))
+      {
+	if (!_cups_strcasecmp(name, "@SYSTEM") && SystemGroupAuthKey &&
+	    check_authref(con, SystemGroupAuthKey))
 	  return (HTTP_OK);
       }
 
@@ -1797,9 +1822,8 @@ cupsdIsAuthorized(cupsd_client_t *con,	/* I - Connection */
 	return (HTTP_OK);
       else if (!_cups_strcasecmp(name, "@SYSTEM"))
       {
-        for (i = 0; i < NumSystemGroups; i ++)
-	  if (cupsdCheckGroup(username, pw, SystemGroups[i]))
-	    return (HTTP_OK);
+	/* Do @SYSTEM later, when every other entry fails */
+	continue;
       }
       else if (name[0] == '@')
       {
@@ -1808,6 +1832,18 @@ cupsdIsAuthorized(cupsd_client_t *con,	/* I - Connection */
       }
       else if (!_cups_strcasecmp(username, name))
         return (HTTP_OK);
+    }
+
+    for (name = (char *)cupsArrayFirst(best->names);
+	 name;
+	 name = (char *)cupsArrayNext(best->names))
+    {
+      if (!_cups_strcasecmp(name, "@SYSTEM"))
+      {
+        for (i = 0; i < NumSystemGroups; i ++)
+	  if (cupsdCheckGroup(username, pw, SystemGroups[i]) && check_admin_access(con))
+	    return (HTTP_OK);
+      }
     }
 
     return (con->username[0] ? HTTP_FORBIDDEN : HTTP_UNAUTHORIZED);
@@ -1827,16 +1863,30 @@ cupsdIsAuthorized(cupsd_client_t *con,	/* I - Connection */
        name;
        name = (char *)cupsArrayNext(best->names))
   {
-    cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdIsAuthorized: Checking group \"%s\" membership...", name);
-
     if (!_cups_strcasecmp(name, "@SYSTEM"))
     {
+      /* Do @SYSTEM later, when every other entry fails */
+      continue;
+    }
+
+    cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdIsAuthorized: Checking group \"%s\" membership...", name);
+
+    if (cupsdCheckGroup(username, pw, name))
+      return (HTTP_OK);
+  }
+
+  for (name = (char *)cupsArrayFirst(best->names);
+       name;
+       name = (char *)cupsArrayNext(best->names))
+  {
+    if (!_cups_strcasecmp(name, "@SYSTEM"))
+    {
+      cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdIsAuthorized: Checking group \"%s\" membership...", name);
+
       for (i = 0; i < NumSystemGroups; i ++)
-	if (cupsdCheckGroup(username, pw, SystemGroups[i]))
+	if (cupsdCheckGroup(username, pw, SystemGroups[i]) && check_admin_access(con))
 	  return (HTTP_OK);
     }
-    else if (cupsdCheckGroup(username, pw, name))
-      return (HTTP_OK);
   }
 
  /*
@@ -1886,6 +1936,219 @@ cupsdNewLocation(const char *location)	/* I - Location path */
   */
 
   return (temp);
+}
+
+
+/*
+ * 'check_admin_access()' - Verify that the client has administrative access.
+ */
+
+static int				// O - 1 if authorized, 0 otherwise
+check_admin_access(cupsd_client_t *con) // I - Client connection
+{
+#if defined(HAVE_LIBAPPARMOR) && defined(HAVE_LIBSNAPDGLIB)
+ /*
+  * If the client accesses locally via domain socket, find out whether it
+  * is a Snap.  Grant access if it is not a Snap, if it is a classic Snap
+  * or if it is a confined Snap which plugs "cups-control".  Otherwise deny
+  * access.
+  */
+
+  int		fd = httpGetFd(con->http);
+					// Client socket file descriptor
+  char		*context = NULL;	// AppArmor profile name of client
+  SnapdClient	*client = NULL;		// Data structure of snapd access
+  GError	*error = NULL;		// Glib error
+  int		ret = 1;		// Return value
+#  if !CUPS_SNAP
+  SnapdSnap	*snap = NULL;		// Data structure of client Snap
+#  endif // !CUPS_SNAP
+
+
+#  ifdef AF_LOCAL
+  // Only check domain sockets...
+  if (httpAddrFamily(con->http->hostaddr) != AF_LOCAL)
+    return (1);
+#  endif // AF_LOCAL
+
+#  if !CUPS_SNAP
+  // If AppArmor is not enabled, then we can't identify the client...
+  if (!aa_is_enabled())
+  {
+    cupsdLogClient(con, CUPSD_LOG_DEBUG, "AppArmor not in use.");
+    return (1);
+  }
+#  endif /* !CUPS_SNAP */
+
+  // Get the client's AppArmor context using the socket...
+  if (aa_getpeercon(fd, &context, NULL) < 0)
+  {
+    cupsdLogClient(con, CUPSD_LOG_DEBUG, "AppArmor profile could not be retrieved: %s", strerror(errno));
+    return (1);
+  }
+  else
+  {
+    cupsdLogClient(con, CUPSD_LOG_DEBUG, "AppArmor profile is '%s'.", context);
+  }
+
+  // Allow access from "cups" snap...
+  if (!strncmp(context, "snap.cups.", 10))
+  {
+    cupsdLogClient(con, CUPSD_LOG_DEBUG, "Client from the CUPS Snap itself - allowed.");
+    goto done;
+  }
+
+#  if CUPS_SNAP && defined(HAVE_SNAPD_CLIENT_RUN_SNAPCTL2_SYNC)
+ /*
+  * CUPS is snapped, so check whether the client is also snapped.  If so,
+  * determine whether the client snap has a "cups-control" plug which allows
+  * the application to perform CUPS administrative tasks.
+  */
+
+  const char	*cookie;		// snapd access cookie
+  int		status = 65535;		// Status of client Snap context check
+  const char	*args[] =		// snapctl arguments
+  {
+    "is-connected",
+    "--apparmor-label",
+    NULL,
+    "cups-control",
+    NULL
+  };
+
+  // Connect to snapd
+  if ((client = snapd_client_new()) == NULL)
+  {
+    cupsdLogClient(con, CUPSD_LOG_ERROR, "Unable to connect to snapd.");
+    ret = 0;
+    goto done;
+  }
+
+  // snapctl commands are sent over a domain socket
+  snapd_client_set_socket_path(client, "/run/snapd-snap.socket");
+
+  // Take cookie from the environment if available
+  if ((cookie = g_getenv("SNAP_COOKIE")) == NULL)
+  {
+    cookie = "";
+    cupsdLogClient(con, CUPSD_LOG_WARN, "No SNAP_COOKIE set in the Snap environment.");
+  }
+
+  // Do the client Snap context check...
+  args[2] = context;
+
+  if (!snapd_client_run_snapctl2_sync(client, cookie, (char **)args, NULL, NULL, &status, NULL, &error))
+  {
+    cupsdLogClient(con, CUPSD_LOG_ERROR, "Unable to check snap context: %s", error->message);
+    ret = 0;
+    goto done;
+  }
+
+  switch (status)
+  {
+    case 0 : // The client is a confined Snap and plugs cups-control
+	cupsdLogClient(con, CUPSD_LOG_DEBUG, "Snap with cups-control plug - allowed.");
+	break;
+    case 1 : // The client is a confined Snap and does not plug cups-control
+	cupsdLogClient(con, CUPSD_LOG_DEBUG, "Snap without cups-control plug - denied.");
+	ret = 0;
+	break;
+    case 10 : // The client is a classic Snap
+	cupsdLogClient(con, CUPSD_LOG_DEBUG, "Classic snap - allowed.");
+	break;
+    case 11 : // The client is not a Snap
+	cupsdLogClient(con, CUPSD_LOG_DEBUG, "Not a snap - allowed.");
+	break;
+    default : // Unexpected status...
+	cupsdLogClient(con, CUPSD_LOG_ERROR, "Snap check returned unexpected status %d - denied.", status);
+	ret = 0;
+	break;
+  }
+
+#  elif !CUPS_SNAP
+ /*
+  * If CUPS is not snapped, check whether the client is snapped and if it has
+  * the "cups-control" plug.
+  */
+
+  // Is the client a snapped application?
+  if (strncmp(context, "snap.", 5))
+  {
+    cupsdLogClient(con, CUPSD_LOG_DEBUG, "Not a snap - allowed.");
+    goto done;
+  }
+
+  // Extract the snap name from the context (snap.name.instance)
+  char *snap_name = strdup(context + 5);// Snap name follows "snap."
+  char *ptr = strchr(snap_name, '.');	// instance follows the name...
+  if (!ptr)
+  {
+    cupsdLogClient(con, CUPSD_LOG_DEBUG, "Malformed snapd AppArmor profile name '%s' - denied.", context);
+    free(snap_name);
+    ret = 0;
+    goto done;
+  }
+
+  *ptr = '\0';
+  cupsdLogClient(con, CUPSD_LOG_DEBUG, "Client snap is '%s'.", snap_name);
+
+  // Connect to snapd
+  if ((client = snapd_client_new()) == NULL)
+  {
+    cupsdLogClient(con, CUPSD_LOG_ERROR, "Unable to connect to snapd.");
+    free(snap_name);
+    ret = 0;
+    goto done;
+  }
+
+  // Check whether the client Snap is under classic confinement
+  GPtrArray *plugs = NULL;		// List of plugs for snap
+
+  if ((snap = snapd_client_get_snap_sync(client, snap_name, NULL, &error)) == NULL)
+  {
+    cupsdLogClient(con, CUPSD_LOG_DEBUG, "Unable to get client Snap data: %s", error->message);
+    ret = 0;
+  }
+  // Snaps using classic confinement are granted access
+  else if (snapd_snap_get_confinement(snap) == SNAPD_CONFINEMENT_CLASSIC)
+  {
+    cupsdLogClient(con, CUPSD_LOG_DEBUG, "Classic snap - allowed.");
+  }
+  // Check whether the client Snap has the cups-control plug
+  else if (!snapd_client_get_connections2_sync(client, SNAPD_GET_CONNECTIONS_FLAGS_NONE, snap_name, "cups-control", NULL, NULL, &plugs, NULL, NULL, &error))
+  {
+    cupsdLogClient(con, CUPSD_LOG_DEBUG, "Unable to get client Snap plugs: %s", error->message);
+    ret = 0;
+  }
+  else if (!plugs || plugs->len <= 0)
+  {
+    cupsdLogClient(con, CUPSD_LOG_DEBUG, "Snap without cups-control plug - denied.");
+    ret = 0;
+  }
+  else
+  {
+    cupsdLogClient(con, CUPSD_LOG_DEBUG, "Snap with cups-control plug - allowed.");
+  }
+
+  if (plugs)
+    g_ptr_array_unref(plugs);
+
+  free(snap_name);
+  g_clear_object(&snap);
+
+#  endif // CUPS_SNAP
+
+  done:
+
+  free(context);
+  g_clear_object(&client);
+
+  return (ret);
+
+#else
+  // No AppArmor/snapd to deal with...
+  return (1);
+#endif // HAVE_LIBAPPARMOR && HAVE_LIBSNAPDGLIB
 }
 
 
