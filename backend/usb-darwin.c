@@ -1,5 +1,7 @@
 /*
- * Copyright 2005-2016 Apple Inc. All rights reserved.
+ * USB backend for macOS.
+ *
+ * Copyright © 2005-2021 Apple Inc. All rights reserved.
  *
  * IMPORTANT:  This Apple software is supplied to you by Apple Computer,
  * Inc. ("Apple") in consideration of your agreement to the following
@@ -288,11 +290,11 @@ static void status_timer_cb(CFRunLoopTimerRef timer, void *info);
 #define IS_64BIT 1
 #define IS_NOT_64BIT 0
 
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__arm64e__)
 static pid_t	child_pid;		/* Child PID */
-static void run_legacy_backend(int argc, char *argv[], int fd) _CUPS_NORETURN;	/* Starts child backend process running as a ppc executable */
-#endif /* __i386__ || __x86_64__ */
-static void sigterm_handler(int sig);	/* SIGTERM handler */
+static void run_legacy_backend(int argc, char *argv[], int fd) _CUPS_NORETURN;	/* Starts child backend process running as a x86_64 executable */
+static void sigterm_handler(int sig);    /* SIGTERM handler */
+#endif /* __arm64e__ */
 static void sigquit_handler(int sig, siginfo_t *si, void *unused) _CUPS_NORETURN;
 
 #ifdef PARSE_PS_ERRORS
@@ -357,6 +359,8 @@ print_device(const char *uri,		/* I - Device URI */
 
 
   (void)uri;
+  (void)argc;
+  (void)argv;
 
  /*
   * Catch SIGQUIT to determine who is sending it...
@@ -436,18 +440,18 @@ print_device(const char *uri,		/* I - Device URI */
 
     status = registry_open(&driverBundlePath);
 
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__arm64e__)
     /*
      * If we were unable to load the class drivers for this printer it's
-     * probably because they're ppc or i386. In this case try to run this
-     * backend as i386 or ppc executables so we can use them...
+     * probably because they're x86_64 (or older). In this case try to run this
+     * backend as x86_64 so we can use them...
      */
     if (status == -2)
     {
       run_legacy_backend(argc, argv, print_fd);
       /* Never returns here */
     }
-#endif /* __i386__ || __x86_64__ */
+#endif /* __arm64e__ */
 
     if (status ==  -2)
     {
@@ -1510,12 +1514,11 @@ static kern_return_t load_printerdriver(CFStringRef *driverBundlePath)
   SInt32		score;
   kern_return_t		kr;
   printer_interface_t	interface;
-  HRESULT		res;
 
   kr = IOCreatePlugInInterfaceForService(g.printer_obj, kIOUSBInterfaceUserClientTypeID, kIOCFPlugInInterfaceID, &iodev, &score);
   if (kr == kIOReturnSuccess)
   {
-    if ((res = (*iodev)->QueryInterface(iodev, USB_INTERFACE_KIND, (LPVOID *) &interface)) == noErr)
+    if ((*iodev)->QueryInterface(iodev, USB_INTERFACE_KIND, (LPVOID *) &interface) == noErr)
     {
       *driverBundlePath = IORegistryEntryCreateCFProperty(g.printer_obj, kUSBClassDriverProperty, NULL, kNilOptions);
 
@@ -1596,7 +1599,7 @@ static CFStringRef copy_printer_interface_deviceid(printer_interface_t printer, 
 		/* This request takes the 0 based configuration index. IOKit returns a 1 based configuration index */
 		configurationIndex -= 1;
 
-		bzero(&request, sizeof(request));
+		memset(&request, 0, sizeof(request));
 
 		request.bmRequestType		= USBmakebmRequestType(kUSBIn, kUSBClass, kUSBInterface);
 		request.bRequest			= kUSBPrintClassGetDeviceID;
@@ -1613,14 +1616,14 @@ static CFStringRef copy_printer_interface_deviceid(printer_interface_t printer, 
 
 			if (actualLength > 2 && actualLength <= bufferLength - 2)
 			{
-				ret = CFStringCreateWithBytes(NULL, (const UInt8 *) &request.pData[2], actualLength - 2, kCFStringEncodingUTF8, false);
+				ret = CFStringCreateWithBytes(NULL, (const UInt8 *)request.pData + 2, actualLength - 2, kCFStringEncodingUTF8, false);
 			}
 			else if (actualLength > 2) {
 				err = sendRequest(actualLength);
 				if (err == kIOReturnSuccess && request.wLenDone > 0)
 				{
 					actualLength = OSSwapBigToHostInt16(*((UInt16 *)request.pData));
-					ret = CFStringCreateWithBytes(NULL, (const UInt8 *) &request.pData[2], actualLength - 2, kCFStringEncodingUTF8, false);
+					ret = CFStringCreateWithBytes(NULL, (const UInt8 *)request.pData + 2, actualLength - 2, kCFStringEncodingUTF8, false);
 				}
 			}
 		}
@@ -1638,7 +1641,7 @@ static CFStringRef copy_printer_interface_deviceid(printer_interface_t printer, 
 		IOUSBDevRequestTO		request;
 		IOUSBDeviceDescriptor	desc;
 
-		bzero(&request, sizeof(request));
+		memset(&request, 0, sizeof(request));
 
 		request.bmRequestType = USBmakebmRequestType( kUSBIn,  kUSBStandard, kUSBDevice );
 		request.bRequest = kUSBRqGetDescriptor;
@@ -1667,41 +1670,59 @@ static CFStringRef copy_printer_interface_deviceid(printer_interface_t printer, 
 					CFStringAppendFormat(extras, NULL, CFSTR("MDL:%@;"), model);
 			}
 
-			if (serial == NULL && desc.iSerialNumber != 0)
+			if (desc.iSerialNumber != 0)
 			{
-				serial = copy_printer_interface_indexed_description(printer, desc.iSerialNumber, kUSBLanguageEnglish);
-				if (serial && CFStringGetLength(serial) > 0)
-					CFStringAppendFormat(extras, NULL, CFSTR("SERN:%@;"), serial);
+				// Always look at the USB serial number since some printers
+				// incorrectly include a bogus static serial number in their
+				// IEEE-1284 device ID string...
+				CFStringRef userial = copy_printer_interface_indexed_description(printer, desc.iSerialNumber, kUSBLanguageEnglish);
+				if (userial && CFStringGetLength(userial) > 0 && (serial == NULL || CFStringCompare(serial, userial, kCFCompareCaseInsensitive) != kCFCompareEqualTo))
+				{
+					if (serial != NULL)
+					{
+						// 1284 serial number doesn't match USB serial number, so  replace the existing SERN: in device ID
+						CFRange range = CFStringFind(ret, serial, 0);
+						CFMutableStringRef deviceIDString = CFStringCreateMutableCopy(NULL, 0, ret);
+						CFStringReplace(deviceIDString, range, userial);
+						CFRelease(ret);
+						ret = deviceIDString;
+
+						CFRelease(serial);
+					}
+					else
+					{
+						// No 1284 serial number so add SERN: with USB serial number to device ID
+						CFStringAppendFormat(extras, NULL, CFSTR("SERN:%@;"), userial);
+					}
+					serial = userial;
+				}
+				else if (userial != NULL)
+					CFRelease(userial);
 			}
 
 			if (ret != NULL)
 			{
 				CFStringAppend(extras, ret);
 				CFRelease(ret);
-
-				ret = extras;
 			}
-			else
-			{
-				ret = extras;
-			}
+      ret = extras;
 		}
 	}
 
 	if (ret != NULL)
 	{
-	/* Remove special characters from the serial number */
-	CFRange range = (serial != NULL ? CFStringFind(serial, CFSTR("+"), 0) : CFRangeMake(0, 0));
-	if (range.length == 1)
-	{
-		range = CFStringFind(ret, serial, 0);
+		/* Remove special characters from the serial number */
+		CFRange range = (serial != NULL ? CFStringFind(serial, CFSTR("+"), 0) : CFRangeMake(0, 0));
+		if (range.length == 1)
+		{
+			range = CFStringFind(ret, serial, 0);
 
-		CFMutableStringRef deviceIDString = CFStringCreateMutableCopy(NULL, 0, ret);
-		CFRelease(ret);
+			CFMutableStringRef deviceIDString = CFStringCreateMutableCopy(NULL, 0, ret);
+			CFRelease(ret);
 
-		ret = deviceIDString;
-		CFStringFindAndReplace(deviceIDString, CFSTR("+"), CFSTR(""), range, 0);
-	}
+			ret = deviceIDString;
+			CFStringFindAndReplace(deviceIDString, CFSTR("+"), CFSTR(""), range, 0);
+		}
 	}
 
 	if (manufacturer != NULL)
@@ -1728,7 +1749,7 @@ static CFStringRef copy_printer_interface_indexed_description(printer_interface_
 	UInt8 description[256]; // Max possible descriptor length
 	IOUSBDevRequestTO	request;
 
-	bzero(description, 2);
+	memset(description, 0, 2);
 
 	request.bmRequestType = USBmakebmRequestType(kUSBIn, kUSBStandard, kUSBDevice);
 	request.bRequest = kUSBRqGetDescriptor;
@@ -1742,7 +1763,7 @@ static CFStringRef copy_printer_interface_indexed_description(printer_interface_
 	err = (*printer)->ControlRequestTO(printer, 0, &request);
 	if (err != kIOReturnSuccess && err != kIOReturnOverrun)
 	{
-		bzero(description, request.wLength);
+		memset(description, 0, request.wLength);
 
 		// Let's try again full length. Here's why:
 		//      On USB 2.0 controllers, we will not get an overrun error.  We just get a "babble" error
@@ -1775,7 +1796,7 @@ static CFStringRef copy_printer_interface_indexed_description(printer_interface_
 	request.wValue = (kUSBStringDesc << 8) | index;
 	request.wIndex = language;
 
-	bzero(description, length);
+	memset(description, 0, length);
 	request.wLength = (UInt16)length;
 	request.pData = &description;
 	request.completionTimeout = 0;
@@ -1791,7 +1812,7 @@ static CFStringRef copy_printer_interface_indexed_description(printer_interface_
 	if ((description[0] & 1) != 0)
 		description[0] &= 0xfe;
 
-	char buffer[258] = {};
+	char buffer[258] = {0};
 	unsigned int maxLength = sizeof buffer;
 	if (description[0] > 1)
 	{
@@ -2053,11 +2074,11 @@ static void setup_cfLanguage(void)
 }
 
 #pragma mark -
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__arm64e__)
 /*!
  * @function	run_legacy_backend
  *
- * @abstract	Starts child backend process running as a ppc or i386 executable.
+ * @abstract	Starts child backend process running as a x86_64 executable.
  *
  * @result	Never returns; always calls exit().
  *
@@ -2076,18 +2097,14 @@ static void run_legacy_backend(int argc,
 
 
  /*
-  * If we're running as x86_64 or i386 and couldn't load the class driver
-  * (because it's ppc or i386), then try to re-exec ourselves in ppc or i386
-  * mode to try again. If we don't have a ppc or i386 architecture we may be
+  * If we're running as ARM and couldn't load the class driver
+  * (because it's x86_64, i386 or ppc), then try to re-exec ourselves in x86_64
+  * mode to try again. If we don't have that architecture we may be
   * running with the same architecture again so guard against this by setting
   * and testing an environment variable...
   */
 
-#  ifdef __x86_64__
-  usb_legacy_status = getenv("USB_I386_STATUS");
-#  else
-  usb_legacy_status = getenv("USB_PPC_STATUS");
-#  endif /* __x86_64__ */
+  usb_legacy_status = getenv("USB_LEGACY_STATUS");
 
   if (!usb_legacy_status)
   {
@@ -2116,21 +2133,13 @@ static void run_legacy_backend(int argc,
     * Set the environment variable...
     */
 
-#  ifdef __x86_64__
-    setenv("USB_I386_STATUS", "1", false);
-#  else
-    setenv("USB_PPC_STATUS", "1", false);
-#  endif /* __x86_64__ */
+    setenv("USB_LEGACY_STATUS", "1", false);
 
    /*
     * Tell the kernel to use the specified CPU architecture...
     */
 
-#  ifdef __x86_64__
-    cpu_type_t cpu = CPU_TYPE_I386;
-#  else
-    cpu_type_t cpu = CPU_TYPE_POWERPC;
-#  endif /* __x86_64__ */
+    cpu_type_t cpu = CPU_TYPE_X86_64;
     size_t ocount = 1;
     posix_spawnattr_t attrs;
 
@@ -2139,11 +2148,7 @@ static void run_legacy_backend(int argc,
       posix_spawnattr_setsigdefault(&attrs, &oldmask);
       if (posix_spawnattr_setbinpref_np(&attrs, 1, &cpu, &ocount) || ocount != 1)
       {
-#  ifdef __x86_64__
-	perror("DEBUG: Unable to set binary preference to i386");
-#  else
-	perror("DEBUG: Unable to set binary preference to ppc");
-#  endif /* __x86_64__ */
+	perror("DEBUG: Unable to set binary preference to X86_64");
 	_cupsLangPrintFilter(stderr, "ERROR",
 	                     _("Unable to use legacy USB class driver."));
 	exit(CUPS_BACKEND_STOP);
@@ -2217,8 +2222,6 @@ static void run_legacy_backend(int argc,
 
   exit(exitstatus);
 }
-#endif /* __i386__ || __x86_64__ */
-
 
 /*
  * 'sigterm_handler()' - SIGTERM handler.
@@ -2227,7 +2230,6 @@ static void run_legacy_backend(int argc,
 static void
 sigterm_handler(int sig)		/* I - Signal */
 {
-#if defined(__i386__) || defined(__x86_64__)
  /*
   * If we started a child process pass the signal on to it...
   */
@@ -2249,12 +2251,12 @@ sigterm_handler(int sig)		/* I - Signal */
       _exit(0);
     else
     {
-      write(2, "DEBUG: Child crashed.\n", 22);
+      backendMessage("DEBUG: Child crashed.\n");
       _exit(CUPS_BACKEND_STOP);
     }
   }
-#endif /* __i386__ || __x86_64__ */
 }
+#endif /* __arm64e__ */
 
 
 /*

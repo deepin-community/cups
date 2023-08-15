@@ -1,7 +1,8 @@
 /*
  * Administration CGI for CUPS.
  *
- * Copyright © 2007-2019 by Apple Inc.
+ * Copyright © 2021-2022 by OpenPrinting
+ * Copyright © 2007-2021 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
@@ -50,7 +51,6 @@ static void	do_set_sharing(http_t *http);
 static char	*get_option_value(ppd_file_t *ppd, const char *name,
 		                  char *buffer, size_t bufsize);
 static double	get_points(double number, const char *uval);
-static char	*get_printer_ppd(const char *uri, char *buffer, size_t bufsize);
 
 
 /*
@@ -619,6 +619,7 @@ do_am_printer(http_t *http,		/* I - HTTP connection */
 		*oldinfo;		/* Old printer information */
   const cgi_file_t *file;		/* Uploaded file, if any */
   const char	*var;			/* CGI variable */
+  char	*ppd_name = NULL;	/* Pointer to PPD name */
   char		uri[HTTP_MAX_URI],	/* Device or printer URI */
 		*uriptr,		/* Pointer into URI */
 		evefile[1024] = "";	/* IPP Everywhere PPD file */
@@ -1124,12 +1125,10 @@ do_am_printer(http_t *http,		/* I - HTTP connection */
 
     if (!file)
     {
-      var = cgiGetVariable("PPD_NAME");
-      if (!strcmp(var, "everywhere"))
-        get_printer_ppd(cgiGetVariable("DEVICE_URI"), evefile, sizeof(evefile));
-      else if (strcmp(var, "__no_change__"))
+      ppd_name = cgiGetVariable("PPD_NAME");
+      if (strcmp(ppd_name, "__no_change__"))
 	ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME, "ppd-name",
-		     NULL, var);
+		     NULL, ppd_name);
     }
 
     ippAddString(request, IPP_TAG_PRINTER, IPP_TAG_TEXT, "printer-location",
@@ -1219,7 +1218,7 @@ do_am_printer(http_t *http,		/* I - HTTP connection */
 
       cgiCopyTemplateLang("printer-modified.tmpl");
     }
-    else
+    else if (ppd_name && (strcmp(ppd_name, "everywhere") == 0 || strstr(ppd_name, "driverless")))
     {
      /*
       * Set the printer options...
@@ -1228,6 +1227,16 @@ do_am_printer(http_t *http,		/* I - HTTP connection */
       cgiSetVariable("OP", "set-printer-options");
       do_set_options(http, 0);
       return;
+    }
+    else
+    {
+     /*
+      * If we don't have an everywhere model, show printer-added
+      * template with warning about drivers going away...
+      */
+
+      cgiStartHTML(title);
+      cgiCopyTemplateLang("printer-added.tmpl");
     }
 
     cgiEndHTML();
@@ -1440,52 +1449,40 @@ do_config_server(http_t *http)		/* I - HTTP connection */
       * Settings *have* changed, so save the changes...
       */
 
-      cupsFreeOptions(num_settings, settings);
+      int		num_newsettings;/* New number of server settings */
+      cups_option_t	*newsettings;	/* New server settings */
 
-      num_settings = 0;
-      num_settings = cupsAddOption(CUPS_SERVER_DEBUG_LOGGING,
-                                   debug_logging, num_settings, &settings);
-      num_settings = cupsAddOption(CUPS_SERVER_REMOTE_ADMIN,
-                                   remote_admin, num_settings, &settings);
-      num_settings = cupsAddOption(CUPS_SERVER_REMOTE_ANY,
-                                   remote_any, num_settings, &settings);
-      num_settings = cupsAddOption(CUPS_SERVER_SHARE_PRINTERS,
-                                   share_printers, num_settings, &settings);
-      num_settings = cupsAddOption(CUPS_SERVER_USER_CANCEL_ANY,
-                                   user_cancel_any, num_settings, &settings);
+      num_newsettings = 0;
+      num_newsettings = cupsAddOption(CUPS_SERVER_DEBUG_LOGGING, debug_logging, num_newsettings, &newsettings);
+      num_newsettings = cupsAddOption(CUPS_SERVER_REMOTE_ADMIN, remote_admin, num_newsettings, &newsettings);
+      num_newsettings = cupsAddOption(CUPS_SERVER_REMOTE_ANY, remote_any, num_newsettings, &newsettings);
+      num_newsettings = cupsAddOption(CUPS_SERVER_SHARE_PRINTERS, share_printers, num_newsettings, &newsettings);
+      num_newsettings = cupsAddOption(CUPS_SERVER_USER_CANCEL_ANY, user_cancel_any, num_newsettings, &newsettings);
 #ifdef HAVE_GSSAPI
-      num_settings = cupsAddOption("DefaultAuthType", default_auth_type,
-                                   num_settings, &settings);
+      num_newsettings = cupsAddOption("DefaultAuthType", default_auth_type, num_newsettings, &newsettings);
 #endif /* HAVE_GSSAPI */
 
       if (advanced)
       {
        /*
-        * Add advanced settings...
+        * Add advanced newsettings...
 	*/
 
 	if (_cups_strcasecmp(browse_web_if, current_browse_web_if))
-	  num_settings = cupsAddOption("BrowseWebIF", browse_web_if,
-				       num_settings, &settings);
+	  num_newsettings = cupsAddOption("BrowseWebIF", browse_web_if, num_newsettings, &newsettings);
 	if (_cups_strcasecmp(preserve_job_history, current_preserve_job_history))
-	  num_settings = cupsAddOption("PreserveJobHistory",
-	                               preserve_job_history, num_settings,
-				       &settings);
+	  num_newsettings = cupsAddOption("PreserveJobHistory", preserve_job_history, num_newsettings, &newsettings);
 	if (_cups_strcasecmp(preserve_job_files, current_preserve_job_files))
-	  num_settings = cupsAddOption("PreserveJobFiles", preserve_job_files,
-	                               num_settings, &settings);
+	  num_newsettings = cupsAddOption("PreserveJobFiles", preserve_job_files, num_newsettings, &newsettings);
         if (_cups_strcasecmp(max_clients, current_max_clients))
-	  num_settings = cupsAddOption("MaxClients", max_clients, num_settings,
-	                               &settings);
+	  num_newsettings = cupsAddOption("MaxClients", max_clients, num_newsettings, &newsettings);
         if (_cups_strcasecmp(max_jobs, current_max_jobs))
-	  num_settings = cupsAddOption("MaxJobs", max_jobs, num_settings,
-	                               &settings);
+	  num_newsettings = cupsAddOption("MaxJobs", max_jobs, num_newsettings, &newsettings);
         if (_cups_strcasecmp(max_log_size, current_max_log_size))
-	  num_settings = cupsAddOption("MaxLogSize", max_log_size, num_settings,
-	                               &settings);
+	  num_newsettings = cupsAddOption("MaxLogSize", max_log_size, num_newsettings, &newsettings);
       }
 
-      if (!cupsAdminSetServerSettings(http, num_settings, settings))
+      if (!cupsAdminSetServerSettings(http, num_newsettings, newsettings))
       {
         if (cupsLastError() == IPP_NOT_AUTHORIZED)
 	{
@@ -1509,6 +1506,8 @@ do_config_server(http_t *http)		/* I - HTTP connection */
 	cgiStartHTML(cgiText(_("Change Settings")));
 	cgiCopyTemplateLang("restart.tmpl");
       }
+
+      cupsFreeOptions(num_newsettings, newsettings);
     }
     else
     {
@@ -2272,7 +2271,7 @@ do_set_allowed_users(http_t *http)	/* I - HTTP connection */
   ipp_t		*request,		/* IPP request */
 		*response;		/* IPP response */
   char		uri[HTTP_MAX_URI];	/* Printer URI */
-  const char	*printer,		/* Printer name (purge-jobs) */
+  const char	*printer,		/* Printer name */
 		*is_class,		/* Is a class? */
 		*users,			/* List of users or groups */
 		*type;			/* Allow/deny type */
@@ -2537,7 +2536,7 @@ do_set_default(http_t *http)		/* I - HTTP connection */
   const char	*title;			/* Page title */
   ipp_t		*request;		/* IPP request */
   char		uri[HTTP_MAX_URI];	/* Printer URI */
-  const char	*printer,		/* Printer name (purge-jobs) */
+  const char	*printer,		/* Printer name */
 		*is_class;		/* Is a class? */
 
 
@@ -3734,83 +3733,4 @@ get_points(double     number,		/* I - Original number */
     return (number * 72.0 / 0.0254);
   else					/* Points */
     return (number);
-}
-
-
-/*
- * 'get_printer_ppd()' - Get an IPP Everywhere PPD file for the given URI.
- */
-
-static char *				/* O - Filename or NULL */
-get_printer_ppd(const char *uri,	/* I - Printer URI */
-                char       *buffer,	/* I - Filename buffer */
-		size_t     bufsize)	/* I - Size of filename buffer */
-{
-  http_t	*http;			/* Connection to printer */
-  ipp_t		*request,		/* Get-Printer-Attributes request */
-		*response;		/* Get-Printer-Attributes response */
-  char		resolved[1024],		/* Resolved URI */
-		scheme[32],		/* URI scheme */
-		userpass[256],		/* Username:password */
-		host[256],		/* Hostname */
-		resource[256];		/* Resource path */
-  int		port;			/* Port number */
-  static const char * const pattrs[] =	/* Printer attributes we need */
-  {
-    "all",
-    "media-col-database"
-  };
-
-
- /*
-  * Connect to the printer...
-  */
-
-  if (strstr(uri, "._tcp"))
-  {
-   /*
-    * Resolve URI...
-    */
-
-    if (!_httpResolveURI(uri, resolved, sizeof(resolved), _HTTP_RESOLVE_DEFAULT, NULL, NULL))
-    {
-      fprintf(stderr, "ERROR: Unable to resolve \"%s\".\n", uri);
-      return (NULL);
-    }
-
-    uri = resolved;
-  }
-
-  if (httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource)) < HTTP_URI_STATUS_OK)
-  {
-    fprintf(stderr, "ERROR: Bad printer URI \"%s\".\n", uri);
-    return (NULL);
-  }
-
-  http = httpConnect2(host, port, NULL, AF_UNSPEC, !strcmp(scheme, "ipps") ? HTTP_ENCRYPTION_ALWAYS : HTTP_ENCRYPTION_IF_REQUESTED, 1, 30000, NULL);
-  if (!http)
-  {
-    fprintf(stderr, "ERROR: Unable to connect to \"%s:%d\": %s\n", host, port, cupsLastErrorString());
-    return (NULL);
-  }
-
- /*
-  * Send a Get-Printer-Attributes request...
-  */
-
-  request = ippNewRequest(IPP_OP_GET_PRINTER_ATTRIBUTES);
-  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri", NULL, uri);
-  ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD, "requested-attributes",  (int)(sizeof(pattrs) / sizeof(pattrs[0])), NULL, pattrs);
-  response = cupsDoRequest(http, request, resource);
-
-  if (!_ppdCreateFromIPP(buffer, bufsize, response))
-    fprintf(stderr, "ERROR: Unable to create PPD file: %s\n", strerror(errno));
-
-  ippDelete(response);
-  httpClose(http);
-
-  if (buffer[0])
-    return (buffer);
-  else
-    return (NULL);
 }

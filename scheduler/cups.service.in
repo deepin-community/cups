@@ -1,14 +1,15 @@
 [Unit]
 Description=CUPS Scheduler
 Documentation=man:cupsd(8)
-After=network.target sssd.service ypbind.service nslcd.service
+After=network.target nss-user-lookup.target nslcd.service
 Requires=cups.socket
 
 [Service]
 ExecStart=@sbindir@/cupsd -l
 Type=notify
 Restart=on-failure
+@TIMEOUTSTARTSEC@
 
 [Install]
 Also=cups.socket cups.path
-WantedBy=printer.target
+WantedBy=@SYSTEMD_WANTED_BY@

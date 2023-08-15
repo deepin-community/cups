@@ -1,13 +1,15 @@
 /*
  * Authentication functions for CUPS.
  *
- * Copyright 2007-2019 by Apple Inc.
- * Copyright 1997-2007 by Easy Software Products.
+ * Copyright © 2021 by OpenPrinting.
+ * Copyright © 2007-2019 by Apple Inc.
+ * Copyright © 1997-2007 by Easy Software Products.
  *
  * This file contains Kerberos support code, copyright 2006 by
  * Jelmer Vernooij.
  *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+ * Licensed under Apache License v2.0.  See the file "LICENSE" for more
+ * information.
  */
 
 /*
@@ -90,6 +92,7 @@ static void	cups_gss_printf(OM_uint32 major_status, OM_uint32 minor_status,
 #    define	cups_gss_printf(major, minor, message)
 #  endif /* DEBUG */
 #endif /* HAVE_GSSAPI */
+static int	cups_is_local_connection(http_t *http);
 static int	cups_local_auth(http_t *http);
 
 
@@ -114,7 +117,7 @@ cupsDoAuthentication(
   char		scheme[256],		/* Scheme name */
 		prompt[1024];		/* Prompt for user */
   int		localauth;		/* Local authentication result */
-  _cups_globals_t *cg;			/* Global data */
+  _cups_globals_t *cg = _cupsGlobals();	/* Global data */
 
 
   DEBUG_printf(("cupsDoAuthentication(http=%p, method=\"%s\", resource=\"%s\")", (void *)http, method, resource));
@@ -174,10 +177,10 @@ cupsDoAuthentication(
     DEBUG_printf(("2cupsDoAuthentication: Trying scheme \"%s\"...", scheme));
 
 #ifdef HAVE_GSSAPI
-    if (!_cups_strcasecmp(scheme, "Negotiate"))
+    if (!_cups_strcasecmp(scheme, "Negotiate") && !cups_is_local_connection(http))
     {
      /*
-      * Kerberos authentication...
+      * Kerberos authentication to remote server...
       */
 
       int gss_status;			/* Auth status */
@@ -201,7 +204,38 @@ cupsDoAuthentication(
     }
     else
 #endif /* HAVE_GSSAPI */
-    if (_cups_strcasecmp(scheme, "Basic") && _cups_strcasecmp(scheme, "Digest"))
+    if (!_cups_strcasecmp(scheme, "Bearer"))
+    {
+      // OAuth 2.0 (Bearer) authentication...
+      const char	*bearer = NULL;	/* Bearer token string, if any */
+
+      if (cg->oauth_cb)
+      {
+        // Try callback...
+	char	scope[HTTP_MAX_VALUE];	/* scope="xyz" string */
+
+	cups_auth_param(schemedata, "realm", http->realm, sizeof(http->realm));
+
+	if (cups_auth_param(schemedata, "scope", scope, sizeof(scope)))
+	  bearer = (cg->oauth_cb)(http, http->realm, scope, resource, cg->oauth_data);
+	else
+	  bearer = (cg->oauth_cb)(http, http->realm, NULL, resource, cg->oauth_data);
+      }
+
+      if (bearer)
+      {
+        // Use this access token...
+        httpSetAuthString(http, "Bearer", bearer);
+        break;
+      }
+      else
+      {
+        // No access token, try the next scheme...
+        DEBUG_puts("2cupsDoAuthentication: No OAuth access token to provide.");
+        continue;
+      }
+    }
+    else if (_cups_strcasecmp(scheme, "Basic") && _cups_strcasecmp(scheme, "Digest") && _cups_strcasecmp(scheme, "Negotiate"))
     {
      /*
       * Other schemes not yet supported...
@@ -215,7 +249,7 @@ cupsDoAuthentication(
     * See if we should retry the current username:password...
     */
 
-    if ((http->digest_tries > 1 || !http->userpass[0]) && (!_cups_strcasecmp(scheme, "Basic") || (!_cups_strcasecmp(scheme, "Digest"))))
+    if (http->digest_tries > 1 || !http->userpass[0])
     {
      /*
       * Nope - get a new password from the user...
@@ -223,8 +257,6 @@ cupsDoAuthentication(
 
       char default_username[HTTP_MAX_VALUE];
 					/* Default username */
-
-      cg = _cupsGlobals();
 
       if (!cg->lang_default)
 	cg->lang_default = cupsLangDefault();
@@ -295,7 +327,7 @@ cupsDoAuthentication(
     }
   }
 
-  if (http->authstring)
+  if (http->authstring && http->authstring[0])
   {
     DEBUG_printf(("1cupsDoAuthentication: authstring=\"%s\".", http->authstring));
 
@@ -326,10 +358,6 @@ _cupsSetNegotiateAuthString(
 		major_status;		/* Major status code */
   gss_buffer_desc output_token = GSS_C_EMPTY_BUFFER;
 					/* Output token */
-
-
-  (void)method;
-  (void)resource;
 
 #  ifdef __APPLE__
  /*
@@ -447,6 +475,9 @@ _cupsSetNegotiateAuthString(
       }
     }
   }
+#  else
+  (void)method;
+  (void)resource;
 #  endif /* HAVE_GSS_ACQUIRED_CRED_EX_F */
 
   if (major_status == GSS_S_NO_CRED)
@@ -729,9 +760,10 @@ cups_auth_scheme(const char *www_authenticate,	/* I - Pointer into WWW-Authentic
         * Skip quoted value...
         */
 
-        www_authenticate ++;
-        while (*www_authenticate && *www_authenticate != '\"')
+
+        do
           www_authenticate ++;
+        while (*www_authenticate && *www_authenticate != '\"');
       }
     }
 
@@ -916,6 +948,14 @@ cups_gss_printf(OM_uint32  major_status,/* I - Major status code */
 #  endif /* DEBUG */
 #endif /* HAVE_GSSAPI */
 
+static int				/* O - 0 if not a local connection */
+					/*     1  if local connection */
+cups_is_local_connection(http_t *http)	/* I - HTTP connection to server */
+{
+  if (!httpAddrLocalhost(http->hostaddr) && _cups_strcasecmp(http->hostname, "localhost") != 0)
+    return 0;
+  return 1;
+}
 
 /*
  * 'cups_local_auth()' - Get the local authorization certificate if
@@ -958,7 +998,7 @@ cups_local_auth(http_t *http)		/* I - HTTP connection to server */
   * See if we are accessing localhost...
   */
 
-  if (!httpAddrLocalhost(http->hostaddr) && _cups_strcasecmp(http->hostname, "localhost") != 0)
+  if (!cups_is_local_connection(http))
   {
     DEBUG_puts("8cups_local_auth: Not a local connection!");
     return (1);
@@ -1032,11 +1072,6 @@ cups_local_auth(http_t *http)		/* I - HTTP connection to server */
   }
 #  endif /* HAVE_AUTHORIZATION_H */
 
-#  ifdef HAVE_GSSAPI
-  if (cups_auth_find(www_auth, "Negotiate"))
-    return (1);
-#  endif /* HAVE_GSSAPI */
-
 #  if defined(SO_PEERCRED) && defined(AF_LOCAL)
  /*
   * See if we can authenticate using the peer credentials provided over a
@@ -1052,12 +1087,14 @@ cups_local_auth(http_t *http)		/* I - HTTP connection to server */
     * Verify that the current cupsUser() matches the current UID...
     */
 
-    struct passwd	*pwd;		/* Password information */
+    struct passwd	pwd;		/* Password information */
+    struct passwd	*result;	/* Auxiliary pointer */
     const char		*username;	/* Current username */
 
     username = cupsUser();
 
-    if ((pwd = getpwnam(username)) != NULL && pwd->pw_uid == getuid())
+    getpwnam_r(username, &pwd, cg->pw_buf, PW_BUF_SIZE, &result);
+    if (result && pwd.pw_uid == getuid())
     {
       httpSetAuthString(http, "PeerCred", username);
 

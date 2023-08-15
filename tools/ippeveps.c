@@ -1,6 +1,7 @@
 /*
  * Generic Adobe PostScript printer command for ippeveprinter/CUPS.
  *
+ * Copyright © 2021-2022 by OpenPrinting.
  * Copyright © 2019 by Apple Inc.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
@@ -72,7 +73,10 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   num_options = get_options(&options);
   if ((ipp_copies = getenv("IPP_COPIES")) != NULL)
-    copies = atoi(ipp_copies);
+  {
+    if ((copies = atoi(ipp_copies)) < 1)
+      copies = 1;
+  }
   else
     copies = 1;
 
@@ -185,7 +189,7 @@ ascii85(const unsigned char *data,	/* I - Data to write */
   if (length > 0)
   {
     // Copy any remainder into the leftdata array...
-    if ((length - leftcount) > 0)
+    if (length > leftcount)
       memcpy(leftdata + leftcount, data, (size_t)(length - leftcount));
 
     memset(leftdata + length, 0, (size_t)(4 - length));
@@ -417,10 +421,8 @@ get_options(cups_option_t **options)	/* O - Options */
   * Load PPD file and the corresponding IPP <-> PPD cache data...
   */
 
-  if ((ppd = ppdOpenFile(getenv("PPD"))) != NULL)
+  if ((ppd = ppdOpenFile(getenv("PPD"))) != NULL && (ppd_cache = _ppdCacheCreateWithPPD(ppd)) != NULL)
   {
-    ppd_cache = _ppdCacheCreateWithPPD(ppd);
-
     /* TODO: Fix me - values are names, not numbers... Also need to support finishings-col */
     if ((value = getenv("IPP_FINISHINGS")) == NULL)
       value = getenv("IPP_FINISHINGS_DEFAULT");
@@ -953,7 +955,11 @@ ps_to_ps(const char    *filename,	/* I - Filename */
     if (!strncmp(line, "%%Page:", 7))
       break;
 
-    first_pos = ftell(fp);
+    if ((first_pos = ftell(fp)) < 0)
+    {
+      perror("DEBUG: ftell failed");
+      first_pos = 0;
+    }
 
     if (line[0] != '%')
       fputs(line, stdout);
@@ -966,7 +972,13 @@ ps_to_ps(const char    *filename,	/* I - Filename */
       int copy_page = 0;		/* Do we copy the page data? */
 
       if (fp != stdin)
-        fseek(fp, first_pos, SEEK_SET);
+      {
+        if (fseek(fp, first_pos, SEEK_SET) < 0)
+	{
+	  perror("ERROR: Unable to seek within PostScript file");
+	  break;
+	}
+      }
 
       page = 0;
       while (fgets(line, sizeof(line), fp))

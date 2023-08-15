@@ -22,7 +22,7 @@
 //
 
 static const char	*ppd_locale(ppd_file_t *ppd);
-static void		usage(void);
+static void		usage(void) _CUPS_NORETURN;
 
 
 //
@@ -75,7 +75,6 @@ main(int  argc,				// I - Number of command-line arguments
 
 	  default :			// Unknown
 	      usage();
-	      break;
         }
     }
     else

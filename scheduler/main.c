@@ -1,6 +1,7 @@
 /*
  * Main loop for the CUPS scheduler.
  *
+ * Copyright © 2021-2022 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -232,7 +233,6 @@ main(int  argc,				/* I - Number of command-line args */
 
           case 'h' : /* Show usage/help */
 	      usage(0);
-	      break;
 
           case 'l' : /* Started by launchd/systemd/upstart... */
 #ifdef HAVE_ONDEMAND
@@ -312,7 +312,6 @@ main(int  argc,				/* I - Number of command-line args */
               _cupsLangPrintf(stderr, _("cupsd: Unknown option \"%c\" - "
 	                                "aborting."), *opt);
 	      usage(1);
-	      break;
 	}
       }
     }
@@ -581,7 +580,7 @@ main(int  argc,				/* I - Number of command-line args */
   * Clean out old temp files and printer cache data.
   */
 
-  if (!strncmp(TempDir, RequestRoot, strlen(RequestRoot)))
+  if (!RequestRoot || !strncmp(TempDir, RequestRoot, strlen(RequestRoot)))
     cupsdCleanFiles(TempDir, NULL);
 
   cupsdCleanFiles(CacheDir, "*.ipp");
@@ -859,9 +858,9 @@ main(int  argc,				/* I - Number of command-line args */
       * Got an error from select!
       */
 
-#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+#ifdef HAVE_DNSSD
       cupsd_printer_t	*p;		/* Current printer */
-#endif /* HAVE_DNSSD || HAVE_AVAHI */
+#endif /* HAVE_DNSSD */
 
       if (errno == EINTR)		/* Just interrupted by a signal */
         continue;
@@ -901,13 +900,13 @@ main(int  argc,				/* I - Number of command-line args */
 			job->print_pipes[0], job->print_pipes[1],
 			job->back_pipes[0], job->back_pipes[1]);
 
-#if defined(HAVE_DNSSD) || defined(HAVE_AVAHI)
+#ifdef HAVE_DNSSD
       for (p = (cupsd_printer_t *)cupsArrayFirst(Printers);
 	   p;
 	   p = (cupsd_printer_t *)cupsArrayNext(Printers))
         cupsdLogMessage(CUPSD_LOG_EMERG, "printer[%s] reg_name=\"%s\"", p->name,
 	                p->reg_name ? p->reg_name : "(null)");
-#endif /* HAVE_DNSSD || HAVE_AVAHI */
+#endif /* HAVE_DNSSD */
 
       break;
     }
@@ -1730,6 +1729,11 @@ select_timeout(int fds)			/* I - Number of descriptors returned */
  /*
   * Check for any job activity...
   */
+  if (JobHistoryUpdate && timeout > JobHistoryUpdate)
+  {
+    timeout = JobHistoryUpdate;
+    why     = "update job history";
+  }
 
   for (job = (cupsd_job_t *)cupsArrayFirst(ActiveJobs);
        job;
@@ -1897,7 +1901,6 @@ service_add_listener(int fd,		/* I - Socket file descriptor */
     {
       cupsdLogMessage(CUPSD_LOG_ERROR, "service_add_listener: Unable to allocate listener: %s.", strerror(errno));
       exit(EXIT_FAILURE);
-      return;
     }
 
     cupsArrayAdd(Listeners, lis);
@@ -1908,10 +1911,10 @@ service_add_listener(int fd,		/* I - Socket file descriptor */
   lis->fd        = fd;
   lis->on_demand = 1;
 
-#  ifdef HAVE_SSL
+#  ifdef HAVE_TLS
   if (httpAddrPort(&(lis->address)) == 443)
     lis->encryption = HTTP_ENCRYPT_ALWAYS;
-#  endif /* HAVE_SSL */
+#  endif /* HAVE_TLS */
 }
 #endif /* HAVE_ONDEMAND */
 
@@ -1949,7 +1952,6 @@ service_checkin(void)
     {
       cupsdLogMessage(CUPSD_LOG_ERROR, "service_checkin: Unable to get listener sockets: %s", strerror(error));
       exit(EXIT_FAILURE);
-      return; /* anti-compiler-warning */
     }
 
    /*
@@ -1982,7 +1984,6 @@ service_checkin(void)
     {
       cupsdLogMessage(CUPSD_LOG_ERROR, "service_checkin: Unable to get listener sockets: %s", strerror(-count));
       exit(EXIT_FAILURE);
-      return; /* anti-compiler-warning */
     }
 
    /*
@@ -2006,21 +2007,18 @@ service_checkin(void)
     {
       cupsdLogMessage(CUPSD_LOG_ERROR, "service_checkin: We did not get started via Upstart.");
       exit(EXIT_FAILURE);
-      return;
     }
 
     if (strcasecmp(e, "socket"))
     {
       cupsdLogMessage(CUPSD_LOG_ERROR, "service_checkin: We did not get triggered via an Upstart socket event.");
       exit(EXIT_FAILURE);
-      return;
     }
 
     if ((e = getenv("UPSTART_FDS")) == NULL)
     {
       cupsdLogMessage(CUPSD_LOG_ERROR, "service_checkin: Unable to get listener sockets from UPSTART_FDS.");
       exit(EXIT_FAILURE);
-      return;
     }
 
     cupsdLogMessage(CUPSD_LOG_DEBUG, "service_checkin: UPSTART_FDS=%s", e);
@@ -2030,7 +2028,6 @@ service_checkin(void)
     {
       cupsdLogMessage(CUPSD_LOG_ERROR, "service_checkin: Could not parse UPSTART_FDS: %s", strerror(errno));
       exit(EXIT_FAILURE);
-      return;
     }
 
    /*

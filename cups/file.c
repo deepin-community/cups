@@ -6,6 +6,7 @@
  * our own file functions allows us to provide transparent support of
  * different line endings, gzip'd print files, PPD files, etc.
  *
+ * Copyright © 2021-2022 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -32,7 +33,6 @@
  */
 
 struct _cups_file_s			/**** CUPS file structure... ****/
-
 {
   int		fd;			/* File descriptor */
   char		mode,			/* Mode ('r' or 'w') */
@@ -1100,8 +1100,7 @@ cupsFileOpen(const char *filename,	/* I - Name of file */
   switch (*mode)
   {
     case 'a' : /* Append file */
-        fd = cups_open(filename,
-		       O_RDWR | O_CREAT | O_APPEND | O_LARGEFILE | O_BINARY);
+        fd = cups_open(filename, O_WRONLY | O_CREAT | O_APPEND | O_LARGEFILE | O_BINARY);
         break;
 
     case 'r' : /* Read file */
@@ -1112,8 +1111,7 @@ cupsFileOpen(const char *filename,	/* I - Name of file */
         fd = cups_open(filename, O_WRONLY | O_LARGEFILE | O_BINARY);
 	if (fd < 0 && errno == ENOENT)
 	{
-	  fd = cups_open(filename,
-	                 O_WRONLY | O_CREAT | O_EXCL | O_LARGEFILE | O_BINARY);
+	  fd = cups_open(filename, O_WRONLY | O_CREAT | O_EXCL | O_LARGEFILE | O_BINARY);
 	  if (fd < 0 && errno == EEXIST)
 	    fd = cups_open(filename, O_WRONLY | O_LARGEFILE | O_BINARY);
 	}
@@ -1263,8 +1261,12 @@ cupsFileOpenFd(int        fd,		/* I - File descriptor */
 	  * Initialize the compressor...
 	  */
 
-          deflateInit2(&(fp->stream), mode[1] - '0', Z_DEFLATED, -15, 8,
-	               Z_DEFAULT_STRATEGY);
+          if (deflateInit2(&(fp->stream), mode[1] - '0', Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY) < Z_OK)
+          {
+            close(fd);
+            free(fp);
+	    return (NULL);
+          }
 
 	  fp->stream.next_out  = fp->cbuf;
 	  fp->stream.avail_out = sizeof(fp->cbuf);
@@ -1722,10 +1724,11 @@ cupsFileRewind(cups_file_t *fp)		/* I - CUPS file */
   */
 
   DEBUG_printf(("cupsFileRewind(fp=%p)", (void *)fp));
-  DEBUG_printf(("2cupsFileRewind: pos=" CUPS_LLFMT, CUPS_LLCAST fp->pos));
 
   if (!fp || fp->mode != 'r')
     return (-1);
+
+  DEBUG_printf(("2cupsFileRewind: pos=" CUPS_LLFMT, CUPS_LLCAST fp->pos));
 
  /*
   * Handle special cases...
@@ -1794,8 +1797,6 @@ cupsFileSeek(cups_file_t *fp,		/* I - CUPS file */
 
 
   DEBUG_printf(("cupsFileSeek(fp=%p, pos=" CUPS_LLFMT ")", (void *)fp, CUPS_LLCAST pos));
-  DEBUG_printf(("2cupsFileSeek: fp->pos=" CUPS_LLFMT, CUPS_LLCAST fp->pos));
-  DEBUG_printf(("2cupsFileSeek: fp->ptr=%p, fp->end=%p", (void *)fp->ptr, (void *)fp->end));
 
  /*
   * Range check input...
@@ -1803,6 +1804,9 @@ cupsFileSeek(cups_file_t *fp,		/* I - CUPS file */
 
   if (!fp || pos < 0 || fp->mode != 'r')
     return (-1);
+
+  DEBUG_printf(("2cupsFileSeek: fp->pos=" CUPS_LLFMT, CUPS_LLCAST fp->pos));
+  DEBUG_printf(("2cupsFileSeek: fp->ptr=%p, fp->end=%p", (void *)fp->ptr, (void *)fp->end));
 
  /*
   * Handle special cases...
@@ -2155,6 +2159,9 @@ cups_compress(cups_file_t *fp,		/* I - CUPS file */
               const char  *buf,		/* I - Buffer */
 	      size_t      bytes)	/* I - Number bytes */
 {
+  int	status;				/* Deflate status */
+
+
   DEBUG_printf(("7cups_compress(fp=%p, buf=%p, bytes=" CUPS_LLFMT ")", (void *)fp, (void *)buf, CUPS_LLCAST bytes));
 
  /*
@@ -2188,7 +2195,8 @@ cups_compress(cups_file_t *fp,		/* I - CUPS file */
       fp->stream.avail_out = sizeof(fp->cbuf);
     }
 
-    deflate(&(fp->stream), Z_NO_FLUSH);
+    if ((status = deflate(&(fp->stream), Z_NO_FLUSH)) < Z_OK && status != Z_BUF_ERROR)
+      return (-1);
   }
 
   return ((ssize_t)bytes);

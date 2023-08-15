@@ -1,6 +1,7 @@
 /*
  * Configuration file definitions for the CUPS scheduler.
  *
+ * Copyright © 2021-2022 by OpenPrinting.
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -139,18 +140,16 @@ VAR char		*AccessLog		VALUE(NULL),
 					/* Default paper size */
 			*ErrorPolicy		VALUE(NULL),
 					/* Default printer-error-policy */
-			*RIPCache		VALUE(NULL),
-					/* Amount of memory for RIPs */
 			*TempDir		VALUE(NULL),
 					/* Temporary directory */
 			*Printcap		VALUE(NULL),
 					/* Printcap file */
-			*FontPath		VALUE(NULL),
-					/* Font search path */
 			*RemoteRoot		VALUE(NULL),
 					/* Remote root user */
 			*Classification		VALUE(NULL);
 					/* Classification of system */
+VAR cups_array_t	*ReadyPaperSizes	VALUE(NULL);
+					/* List of paper sizes to list as ready */
 VAR uid_t		User			VALUE(1),
 					/* User ID for server */
 			RunUser			VALUE(0);
@@ -201,8 +200,6 @@ VAR int			MaxClients		VALUE(100),
 					/* Timeout during requests */
 			KeepAlive		VALUE(TRUE),
 					/* Support the Keep-Alive option? */
-			KeepAliveTimeout	VALUE(DEFAULT_KEEPALIVE),
-					/* Timeout between requests */
 			FileDevice		VALUE(FALSE),
 					/* Allow file: devices? */
 			FilterLimit		VALUE(0),
@@ -238,12 +235,12 @@ VAR int			NumMimeTypes		VALUE(0);
 VAR const char		**MimeTypes		VALUE(NULL);
 					/* Array of MIME types */
 
-#ifdef HAVE_SSL
+#ifdef HAVE_TLS
 VAR int			CreateSelfSignedCerts	VALUE(TRUE);
 					/* Automatically create self-signed certs? */
 VAR char		*ServerKeychain		VALUE(NULL);
 					/* Keychain holding cert + key */
-#endif /* HAVE_SSL */
+#endif /* HAVE_TLS */
 
 #ifdef HAVE_ONDEMAND
 VAR int			IdleExitTimeout		VALUE(60);

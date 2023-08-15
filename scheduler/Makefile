@@ -1,7 +1,7 @@
 #
 # Scheduler Makefile for CUPS.
 #
-# Copyright © 2020 by Michael R Sweet
+# Copyright © 2020-2022 by OpenPrinting
 # Copyright © 2007-2019 by Apple Inc.
 # Copyright © 1997-2007 by Easy Software Products, all rights reserved.
 #
@@ -324,7 +324,8 @@ cupsd:	$(CUPSDOBJS) libcupsmime.a ../cups/$(LIBCUPS)
 cupsd-static:	$(CUPSDOBJS) libcupsmime.a ../cups/$(LIBCUPSSTATIC)
 	echo Linking $@...
 	$(LD_CC) $(ALL_LDFLAGS) -o cupsd-static $(CUPSDOBJS) libcupsmime.a \
-		$(PAMLIBS) $(LIBPAPER) $(LIBMALLOC) $(SERVERLIBS) $(ONDEMANDLIBS) \ $(LIBWRAP) $(LINKCUPSSTATIC)
+		$(PAMLIBS) $(LIBPAPER) $(LIBMALLOC) $(SERVERLIBS) $(ONDEMANDLIBS) \
+		$(LIBWRAP) $(LINKCUPSSTATIC)
 	$(CODE_SIGN) -s "$(CODE_SIGN_IDENTITY)" $@
 
 

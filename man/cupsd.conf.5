@@ -1,14 +1,14 @@
 .\"
 .\" cupsd.conf man page for CUPS.
 .\"
-.\" Copyright © 2020 by Michael R Sweet
+.\" Copyright © 2020-2022 by OpenPrinting.
 .\" Copyright © 2007-2019 by Apple Inc.
 .\" Copyright © 1997-2006 by Easy Software Products.
 .\"
 .\" Licensed under Apache License v2.0.  See the file "LICENSE" for more
 .\" information.
 .\"
-.TH cupsd.conf 5 "CUPS" "28 November 2020" "Apple Inc."
+.TH cupsd.conf 5 "CUPS" "2021-10-01" "OpenPrinting"
 .SH NAME
 cupsd.conf \- server configuration file for cups
 .SH DESCRIPTION
@@ -80,8 +80,6 @@ The default is "No".
 .\"#DefaultAuthType
 .TP 5
 \fBDefaultAuthType Basic\fR
-.TP 5
-\fBDefaultAuthType Negotiate\fR
 .br
 Specifies the default type of authentication to use.
 The default is "Basic".
@@ -109,6 +107,7 @@ The default is "en".
 Specifies the default paper size for new print queues. "Auto" uses a locale-specific default, while "None" specifies there is no default paper size.
 Specific size names are typically "Letter" or "A4".
 The default is "Auto".
+Note: The default paper size must use a size name from the PPD file and not a PWG self-describing media size name.
 .\"#DefaultPolicy
 .TP 5
 \fBDefaultPolicy \fIpolicy-name\fR
@@ -162,11 +161,6 @@ Specifies the scheduling priority (
 value) of filters that are run to print a job.
 The nice value ranges from 0, the highest priority, to 19, the lowest priority.
 The default is 0.
-.\"#GSSServiceName
-.TP 5
-\fBGSSServiceName \fIname\fR
-Specifies the service name when using Kerberos authentication.
-The default service name is "http."
 .TP 5
 .\"#HostNameLookups
 \fBHostNameLookups On\fR
@@ -213,11 +207,6 @@ The default is "5".
 \fBKeepAlive No\fR
 Specifies whether to support HTTP keep-alive connections.
 The default is "Yes".
-.\"#KeepAliveTimeout
-.TP 5
-\fBKeepAliveTimeout \fIseconds\fR
-Specifies how long an idle client connection remains open.
-The default is "30".
 .\"#LimitIPP
 .TP 5
 \fB<Limit \fIoperation \fR...\fB> \fR... \fB</Limit>\fR
@@ -247,13 +236,6 @@ Listens to the specified address and port or domain socket path for connections.
 Multiple Listen directives can be provided to listen on multiple addresses.
 The Listen directive is similar to the Port directive but allows you to restrict access to specific interfaces or networks.
 Note: "Listen *:\fIport\fR" and "Port \fIport\fR" effectively listen on all IP addresses, so you cannot combine them with Listen directives for explicit IPv4 or IPv6 addresses on the same port.
-.\"#ListenBackLog
-.TP 5
-\fBListenBackLog \fInumber\fR
-Specifies the number of pending connections that will be allowed.
-This normally only affects very busy servers that have reached the MaxClients limit, but can also be triggered by large numbers of simultaneous connections.
-When the limit is reached, the operating system will refuse additional connections until the scheduler can accept the pending ones.
-The default is the OS-defined default limit, typically either "5" for older operating systems or "128" for newer operating systems.
 .\"#Location
 .TP 5
 \fB<Location \fI/path\fB> \fR... \fB</Location>\fR
@@ -343,6 +325,27 @@ The default is "10800" (3 hours).
 Specifies the maximum size of the log files before they are rotated.
 The value "0" disables log rotation.
 The default is "1048576" (1MB).
+.\"#MaxSubscriptions
+.TP 5
+\fBMaxSubscriptions \fInumber\fR
+Specifies the maximum number of simultaneous event subscriptions that are allowed.
+Set to "0" to allow an unlimited number of subscriptions.
+The default is "100".
+.\"#MaxSubscriptionsPerJob
+.TP 5
+\fBMaxSubscriptionsPerJob \fInumber\fR
+Specifies the maximum number of simultaneous event subscriptions that are allowed per job.
+The default is "0" which allows up to MaxSubscriptions subscriptions per job.
+.\"#MaxSubscriptionsPerPrinter
+.TP 5
+\fBMaxSubscriptionsPerPrinter \fInumber\fR
+Specifies the maximum number of simultaneous event subscriptions that are allowed per printer.
+The default is "0" which allows up to MaxSubscriptions subscriptions per printer.
+.\"#MaxSubscriptionsPerUser
+.TP 5
+\fBMaxSubscriptionsPerUser \fInumber\fR
+Specifies the maximum number of simultaneous event subscriptions that are allowed per user.
+The default is "0" which allows up to MaxSubscriptions subscriptions per user.
 .\"#MultipleOperationTimeout
 .TP 5
 \fBMultipleOperationTimeout \fIseconds\fR
@@ -377,6 +380,13 @@ Specifies whether the job history is preserved after a job is printed.
 If a numeric value is specified, the job history is preserved for the indicated number of seconds after printing.
 If "Yes", the job history is preserved until the MaxJobs limit is reached.
 The default is "Yes".
+.\"#ReadyPaperSizes
+.TP 5
+\fBReadyPaperSizes \fIsizename[,...]\fR
+Specifies a list of potential paper sizes that are reported as "ready" (loaded).
+The actual list will only contain sizes that each printer supports.
+The default is "Letter,Legal,Tabloid,4x6,Env10" when the default paper size is "Letter" and "A3,A4,A5,A6,EnvDL" otherwise.
+Note: Paper sizes must use the size names from the PPD file and not PWG self-describing media size names.
 .\"#ReloadTimeout
 .TP 5
 \fBReloadTimeout \fIseconds\fR
@@ -701,8 +711,6 @@ The Order directive controls whether Allow lines are evaluated before or after D
 \fBAuthType Basic\fR
 .TP 5
 \fBAuthType Default\fR
-.TP 5
-\fBAuthType Negotiate\fR
 Specifies the type of authentication required.
 The value "Default" corresponds to the DefaultAuthType value.
 .TP 5
@@ -816,6 +824,9 @@ Specifies the list of subscription values to make private.
 The "default" values are "notify-events", "notify-pull-method", "notify-recipient-uri", "notify-subscriber-user-name", and "notify-user-data".
 .SS DEPRECATED DIRECTIVES
 The following directives are deprecated and will be removed in a future release of CUPS:
+.TP 5
+\fBAuthType Negotiate\fR
+Specifies Kerberos authentication is required.
 .\"#Classification
 .TP 5
 \fBClassification \fIbanner\fR
@@ -831,6 +842,14 @@ The default is no classification banner.
 .br
 Specifies whether users may override the classification (cover page) of individual print jobs using the "job-sheets" option.
 The default is "No".
+.TP 5
+\fBDefaultAuthType Negotiate\fR
+Specifies that Kerberos authentication is required by default.
+.\"#GSSServiceName
+.TP 5
+\fBGSSServiceName \fIname\fR
+Specifies the service name when using Kerberos authentication.
+The default service name is "http."
 .\"#PageLogFormat
 .TP 5
 \fBPageLogFormat \fIformat-string\fR
@@ -852,11 +871,6 @@ The following percent sequences are recognized:
 The default is the empty string, which disables page logging.
 The string "%p %u %j %T %P %C %{job-billing} %{job-originating-host-name} %{job-name} %{media} %{sides}" creates a page log with the standard items.
 Use "%{job-impressions-completed}" to insert the number of pages (sides) that were printed, or "%{job-media-sheets-completed}" to insert the number of sheets that were printed.
-.\"#RIPCache
-.TP 5
-\fBRIPCache \fIsize\fR
-Specifies the maximum amount of memory to use when converting documents into bitmaps for a printer.
-The default is "128m".
 .SH NOTES
 File, directory, and user configuration directives that used to be allowed in the \fBcupsd.conf\fR file are now stored in the
 .BR cups-files.conf (5)
@@ -904,6 +918,4 @@ Require authentication for accesses from outside the 10. network:
 .BR subscriptions.conf (5),
 CUPS Online Help (http://localhost:631/help)
 .SH COPYRIGHT
-Copyright \[co] 2020 by Michael R Sweet
-.br
-Copyright \[co] 2007-2019 by Apple Inc.
+Copyright \[co] 2020-2022 by OpenPrinting.

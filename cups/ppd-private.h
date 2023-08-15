@@ -1,6 +1,7 @@
 /*
  * Private PPD definitions for CUPS.
  *
+ * Copyright © 2021 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -35,7 +36,7 @@ extern "C" {
  * Constants...
  */
 
-#  define _PPD_CACHE_VERSION	9	/* Version number in cache file */
+#  define _PPD_CACHE_VERSION	10	/* Version number in cache file */
 
 
 /*
@@ -188,6 +189,7 @@ extern const char	*_ppdCacheGetType(_ppd_cache_t *pc,
 extern int		_ppdCacheWriteFile(_ppd_cache_t *pc,
 			                   const char *filename, ipp_t *attrs) _CUPS_PRIVATE;
 extern char		*_ppdCreateFromIPP(char *buffer, size_t bufsize, ipp_t *response) _CUPS_PRIVATE;
+extern char		*_ppdCreateFromIPP2(char *buffer, size_t bufsize, ipp_t *response, cups_lang_t *lang) _CUPS_PRIVATE;
 extern void		_ppdFreeLanguages(cups_array_t *languages) _CUPS_PRIVATE;
 extern cups_encoding_t	_ppdGetEncoding(const char *name) _CUPS_PRIVATE;
 extern cups_array_t	*_ppdGetLanguages(ppd_file_t *ppd) _CUPS_PRIVATE;

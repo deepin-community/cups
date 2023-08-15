@@ -1,7 +1,8 @@
 /*
  * IPP backend for CUPS.
  *
- * Copyright © 2007-2019 by Apple Inc.
+ * Copyright © 2021-2022 by OpenPrinting
+ * Copyright © 2007-2021 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
@@ -256,6 +257,7 @@ main(int  argc,				/* I - Number of command-line args */
 		get_job_attrs = 0,	/* Does printer support Get-Job-Attributes? */
 		send_document = 0,	/* Does printer support Send-Document? */
 		validate_job = 0,	/* Does printer support Validate-Job? */
+		validate_retried = 0,	/* Was Validate-Job request retried? */
 		copies,			/* Number of copies for job */
 		copies_remaining;	/* Number of copies remaining */
   const char	*content_type,		/* CONTENT_TYPE environment variable */
@@ -1429,7 +1431,7 @@ main(int  argc,				/* I - Number of command-line args */
   */
 
   if (version == 10)
-    create_job = send_document = 0;
+    create_job = 0;
 
  /*
   * Start monitoring the printer in the background...
@@ -1495,9 +1497,7 @@ main(int  argc,				/* I - Number of command-line args */
       * One or more options are not supported...
       */
 
-      ipp_attribute_t	*attr;		/* Unsupported attribute */
-
-      if ((attr = ippFindAttribute(response, "sides", IPP_TAG_ZERO)) != NULL)
+      if (ippFindAttribute(response, "sides", IPP_TAG_ZERO))
       {
        /*
         * The sides value is not supported, revert to one-sided as needed...
@@ -1559,7 +1559,17 @@ main(int  argc,				/* I - Number of command-line args */
              ipp_status == IPP_STATUS_ERROR_BAD_REQUEST)
       break;
     else if (job_auth == NULL && ipp_status > IPP_STATUS_ERROR_BAD_REQUEST)
+    {
+      if (!validate_retried)
+      {
+        // Retry Validate-Job operation once, to work around known printer bug...
+        validate_retried = 1;
+        sleep(10);
+        continue;
+      }
+
       goto cleanup;
+    }
   }
 
  /*
@@ -2240,7 +2250,8 @@ main(int  argc,				/* I - Number of command-line args */
   else if (ipp_status == IPP_STATUS_ERROR_CUPS_ACCOUNT_AUTHORIZATION_FAILED)
     fputs("JOBSTATE: account-authorization-failed\n", stderr);
 
-  if (job_canceled)
+  // job_canceled can be -1 which should not be treated as CUPS_BACKEND_OK
+  if (job_canceled > 0)
     return (CUPS_BACKEND_OK);
   else if (ipp_status == IPP_STATUS_ERROR_NOT_AUTHORIZED || ipp_status == IPP_STATUS_ERROR_FORBIDDEN || ipp_status == IPP_STATUS_ERROR_CUPS_AUTHENTICATION_CANCELED)
     return (CUPS_BACKEND_AUTH_REQUIRED);
@@ -2817,8 +2828,6 @@ new_request(
         static const char * const allowed = "0123456789#*-+.()pw";
 					/* Allowed characters */
 
-        destination = ippNew();
-
        /*
         * Unescape and filter out spaces and other characters that are not
         * allowed in a tel: URI.
@@ -2851,6 +2860,8 @@ new_request(
 
         if (strlen(phone) > 0)
         {
+          destination = ippNew();
+
           httpAssembleURI(HTTP_URI_CODING_ALL, tel_uri, sizeof(tel_uri), "tel", NULL, NULL, 0, phone);
           ippAddString(destination, IPP_TAG_JOB, IPP_TAG_URI, "destination-uri", NULL, tel_uri);
           fprintf(stderr, "DEBUG: Faxing to phone %s; destination-uri: %s\n", phone, tel_uri);
@@ -3232,7 +3243,8 @@ run_as_user(char       *argv[],		/* I - Command-line arguments */
 	    const char *device_uri,	/* I - Device URI */
 	    int        fd)		/* I - File to print */
 {
-  const char		*auth_negotiate;/* AUTH_NEGOTIATE env var */
+  const char		*auth_negotiate,/* AUTH_NEGOTIATE env var */
+			*content_type;	/* [FINAL_]CONTENT_TYPE env vars */
   xpc_connection_t	conn;		/* Connection to XPC service */
   xpc_object_t		request;	/* Request message dictionary */
   __block xpc_object_t	response;	/* Response message dictionary */
@@ -3295,6 +3307,10 @@ run_as_user(char       *argv[],		/* I - Command-line arguments */
                             getenv("AUTH_INFO_REQUIRED"));
   if ((auth_negotiate = getenv("AUTH_NEGOTIATE")) != NULL)
     xpc_dictionary_set_string(request, "auth-negotiate", auth_negotiate);
+  if ((content_type = getenv("CONTENT_TYPE")) != NULL)
+    xpc_dictionary_set_string(request, "content-type", content_type);
+  if ((content_type = getenv("FINAL_CONTENT_TYPE")) != NULL)
+    xpc_dictionary_set_string(request, "final-content-type", content_type);
   xpc_dictionary_set_fd(request, "stdin", fd);
   xpc_dictionary_set_fd(request, "stderr", 2);
   xpc_dictionary_set_fd(request, "side-channel", CUPS_SC_FD);
@@ -3417,7 +3433,7 @@ sigterm_handler(int sig)		/* I - Signal */
 {
   (void)sig;	/* remove compiler warnings... */
 
-  write(2, "DEBUG: Got SIGTERM.\n", 20);
+  backendMessage("DEBUG: Got SIGTERM.\n");
 
 #if defined(HAVE_GSSAPI) && defined(HAVE_XPC)
   if (child_pid)
@@ -3433,7 +3449,7 @@ sigterm_handler(int sig)		/* I - Signal */
     * Flag that the job should be canceled...
     */
 
-    write(2, "DEBUG: sigterm_handler: job_canceled = 1.\n", 25);
+    backendMessage("DEBUG: sigterm_handler: job_canceled = 1.\n");
 
     job_canceled = 1;
     return;

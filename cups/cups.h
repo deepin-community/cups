@@ -1,7 +1,8 @@
 /*
  * API definitions for CUPS.
  *
- * Copyright © 2007-2019 by Apple Inc.
+ * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2007-2020 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
@@ -19,8 +20,8 @@
 #  if defined(_WIN32) && !defined(__CUPS_SSIZE_T_DEFINED)
 #    define __CUPS_SSIZE_T_DEFINED
 #    include <stddef.h>
-/* Windows does not support the ssize_t type, so map it to long... */
-typedef long ssize_t;			/* @private@ */
+/* Windows does not support the ssize_t type, so map it to __int64... */
+typedef __int64 ssize_t;			/* @private@ */
 #  endif /* _WIN32 && !__CUPS_SSIZE_T_DEFINED */
 
 #  include "file.h"
@@ -42,10 +43,10 @@ extern "C" {
  * Constants...
  */
 
-#  define CUPS_VERSION			2.0303
+#  define CUPS_VERSION			2.0402
 #  define CUPS_VERSION_MAJOR		2
-#  define CUPS_VERSION_MINOR		3
-#  define CUPS_VERSION_PATCH		3
+#  define CUPS_VERSION_MINOR		4
+#  define CUPS_VERSION_PATCH		2
 
 #  define CUPS_BC_FD			3
 					/* Back-channel file descriptor for
@@ -308,6 +309,9 @@ typedef int (^cups_dest_block_t)(unsigned flags, cups_dest_t *dest);
 					 * @since CUPS 1.6/macOS 10.8@
                                          * @exclude all@ */
 #  endif /* __BLOCKS__ */
+
+typedef const char *(*cups_oauth_cb_t)(http_t *http, const char *realm, const char *scope, const char *resource, void *user_data);
+					/* OAuth callback @since CUPS 2.4@ */
 
 typedef const char *(*cups_password_cb_t)(const char *prompt);
 					/* Password callback @exclude all@ */
@@ -603,6 +607,10 @@ extern const char	*cupsHashString(const unsigned char *hash, size_t hashsize, ch
 /* New in CUPS 2.3 */
 extern int		cupsAddDestMediaOptions(http_t *http, cups_dest_t *dest, cups_dinfo_t *dinfo, unsigned flags, cups_size_t *size, int num_options, cups_option_t **options) _CUPS_API_2_3;
 extern ipp_attribute_t	*cupsEncodeOption(ipp_t *ipp, ipp_tag_t group_tag, const char *name, const char *value) _CUPS_API_2_3;
+
+/* New in CUPS 2.4 */
+extern void		cupsSetOAuthCB(cups_oauth_cb_t cb, void *data) _CUPS_API_2_4;
+
 
 #  ifdef __cplusplus
 }

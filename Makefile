@@ -1,7 +1,7 @@
 #
 # Top-level Makefile for CUPS.
 #
-# Copyright © 2020 by Michael R Sweet
+# Copyright © 2020-2022 by OpenPrinting
 # Copyright © 2007-2019 by Apple Inc.
 # Copyright © 1997-2007 by Easy Software Products, all rights reserved.
 #
@@ -103,10 +103,11 @@ distclean:	clean
 	$(RM) Makedefs config.h config.log config.status
 	$(RM) conf/cups-files.conf conf/cupsd.conf conf/mime.convs conf/pam.std conf/snmp.conf
 	$(RM) cups-config
+	$(RM) cups.pc
 	$(RM) desktop/cups.desktop
 	$(RM) doc/index.html
 	$(RM) packaging/cups.list
-	$(RM) scheduler/cups-lpd.xinetd scheduler/cups.sh scheduler/cups.xml scheduler/org.cups.cups-lpd.plist scheduler/org.cups.cups-lpdAT.service scheduler/org.cups.cupsd.path scheduler/org.cups.cupsd.service scheduler/org.cups.cupsd.socket
+	$(RM) scheduler/cups-lpd.xinetd scheduler/cups.sh scheduler/cups.xml scheduler/org.cups.cups-lpd.plist scheduler/cups-lpdAT.service scheduler/cups.path scheduler/cups.service scheduler/cups.socket
 	$(RM) templates/header.tmpl
 	-$(RM) doc/*/index.html
 	-$(RM) templates/*/header.tmpl
@@ -173,6 +174,9 @@ install-data:
 	echo Installing cups-config script...
 	$(INSTALL_DIR) -m 755 $(BINDIR)
 	$(INSTALL_SCRIPT) cups-config $(BINDIR)/cups-config
+	echo Installing cups.pc file...
+	$(INSTALL_DIR) -m 755 $(CUPS_PKGCONFPATH)
+	$(INSTALL_DATA) cups.pc $(CUPS_PKGCONFPATH)/cups.pc
 
 
 #
@@ -225,6 +229,9 @@ uninstall:
 	echo Uninstalling cups-config script...
 	$(RM) $(BINDIR)/cups-config
 	-$(RMDIR) $(BINDIR)
+	echo Uninstalling cups.pc file...
+	$(RM) $(CUPS_PKGCONFPATH)/cups.pc
+	-$(RMDIR) $(CUPS_PKGCONFPATH)
 
 
 #
