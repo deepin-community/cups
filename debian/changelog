@@ -1,3 +1,15 @@
+cups (2.4.2-5deepin1) unstable; urgency=medium
+
+  * Fix Refactor part of server settings code.
+  * Fix CVE-2023-4504.
+  * Fix CVE-2023-32360.
+  * Fix check colormodel also for CMYK.
+  * Feat enable lpd to encode title.
+  * Fix CVE-2024-47175
+  * Feat audit log of CUPS for system.
+
+ -- LIU Li <liuli@uniontech.com>  Thu, 21 Nov 2024 16:07:46 +0800
+
 cups (2.4.2-5) unstable; urgency=medium
 
   * CVE-2023-34241 (Closes: #1038885)
