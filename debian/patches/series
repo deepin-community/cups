@@ -12,3 +12,11 @@
 0012-add-pt.patch
 0013-CVE-2023-32324.patch
 0014-CVE-2023-34241-Log-result-of-httpGetHostname-BEFORE-.patch
+0001-fix-Refactor-part-of-server-settings-code.patch
+0002-CVE-2023-4504.patch
+0003-CVE-2023-32360.patch
+0004-check-colormodel-also-for-CMYK.patch
+0005-feat-enable-lpd-to-encode-title.patch
+0006-fixed-CVE-2024-47175.patch
+0007-Feat-add-audit-log-to-CUPS.patch
+

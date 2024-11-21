@@ -1,0 +1,272 @@
+From 5e5615eec66839b24306e0f4b117b726cef8ae8c Mon Sep 17 00:00:00 2001
+From: LIU Li <liuli@uniontech.com>
+Date: Thu, 6 Jun 2024 10:40:03 +0800
+Subject: [PATCH] feat: enable lpd to encode title
+
+Signed-off-by: LIU Li <liuli@uniontech.com>
+Change-Id: I93edcea9103926db3cc8ea1e865bd5ee514f6d78
+---
+ backend/lpd.c | 202 +++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 200 insertions(+), 2 deletions(-)
+
+diff --git a/backend/lpd.c b/backend/lpd.c
+index c4aab8b98..7bb4269ac 100644
+--- a/backend/lpd.c
++++ b/backend/lpd.c
+@@ -32,6 +32,7 @@
+ #  include <CoreFoundation/CFPreferences.h>
+ #endif /* __APPLE__ */
+ 
++#include <iconv.h>
+ 
+ /*
+  * Globals...
+@@ -39,6 +40,7 @@
+ 
+ static char	tmpfilename[1024] = "";	/* Temporary spool file name */
+ static int	abort_job = 0;		/* Non-zero if we get SIGTERM */
++static char* encode;
+ 
+ 
+ /*
+@@ -76,6 +78,12 @@ static int	lpd_command(int lpd_fd, char *format, ...)
+ __attribute__ ((__format__ (__printf__, 2, 3)))
+ #    endif /* __GNUC__ */
+ ;
++static int			/* O - Status of command */
++lpd_get_encode(const char      *hostname,	/* I - Host to connect to */
++               http_addrlist_t *addrlist,		/* I - Socket connection to LPD host */
++               char **serverencode,	/* I - printf()-style format string */
++              const char * printer,
++              int             reserve);
+ static int	lpd_queue(const char *hostname, http_addrlist_t *addrlist, const char *printer, int print_fd, int snmp_fd, int mode, const char *user, const char *title, int copies, int banner, int format, int order, int reserve, int manual_copies, int timeout, int contimeout, const char *orighost) _CUPS_NONNULL((1,2,3,7,8,17));
+ static ssize_t	lpd_write(int lpd_fd, char *buffer, size_t length);
+ static void	sigterm_handler(int sig);
+@@ -103,7 +111,7 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
+ 		*value,			/* Value of option */
+ 		sep,			/* Separator character */
+ 		*filename,		/* File to print */
+-		title[256];		/* Title string */
++		title[256] = {0};		/* Title string */
+   int		port;			/* Port number */
+   http_addrlist_t *addrlist;		/* List of addresses for printer */
+   int		snmp_enabled = 1;	/* Is SNMP enabled? */
+@@ -475,10 +483,29 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
+     }
+   }
+ 
++  encode = cupsGetOption("lpd-server-encode", num_jobopts,
++                       jobopts);
++  fprintf(stderr, "got encode from options: %s\n", encode);
++
++  if(!encode)
++    status = lpd_get_encode(hostname, addrlist, &encode, resource + 1, reserve);
++
+  /*
+   * Sanitize the document title...
+   */
+-
++ if(encode) {
++    char *encFrom = "UTF-8";
++    size_t nbufin = strlen(argv[3]), nbufout= 99;
++    iconv_t cd = iconv_open(encode, encFrom);
++    char *outbuf = title;
++    if(cd != (iconv_t)-1) {
++      size_t ret = iconv(cd, &argv[3], &nbufin, &outbuf, &nbufout);
++      if(ret == -1) fprintf(stderr, "DEBUG: iconv ERROR\n");
++      iconv_close(cd);
++    } else{
++      fprintf(stderr, "DEBUG: iconv_open FAILED! errorno=%d\n", errno);
++    }
++ } else {
+   strlcpy(title, argv[3], sizeof(title));
+ 
+   if (sanitize_title)
+@@ -494,6 +521,7 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
+       if (!isalnum(*ptr & 255) && !isspace(*ptr & 255))
+ 	*ptr = '_';
+   }
++ }
+ 
+  /*
+   * Queue the job...
+@@ -626,6 +654,176 @@ cups_rresvport(int *port,		/* IO - Port number to bind to */
+   return (-1);
+ }
+ 
++static int			/* O - Status of command */
++lpd_get_encode(const char      *hostname,	/* I - Host to connect to */
++               http_addrlist_t *addrlist,		/* I - Socket connection to LPD host */
++               char **serverencode,	/* I - printf()-style format string */
++              const char * printer,
++              int             reserve)		/* I - Additional args as necessary */
++{
++  char		buf[1024] = {0};	/* Output buffer */
++  char		buf2[1024] = {0};	/* Output buffer */
++  ssize_t	bytes;		/* Number of bytes to output */
++  int		status = 0;		/* Status from command */
++
++  int fd;
++  http_addrlist_t	*addr;		/* Socket address */
++  int lport, delay;
++
++
++ /*
++  * Don't try to send commands if the job has been canceled...
++  */
++
++  if (abort_job)
++    return (-1);
++
++  fprintf(stderr, "DEBUG: Connecting to %s:%d for printer %s\n", hostname,
++            httpAddrPort(&(addrlist->addr)), printer);
++
++  for (lport = reserve == RESERVE_RFC1179 ? 732 : 1024, addr = addrlist,
++             delay = 5;;
++         addr = addr->next)
++    {
++     /*
++      * Stop if this job has been canceled...
++      */
++
++      if (abort_job)
++        return (CUPS_BACKEND_FAILED);
++
++     /*
++      * Choose the next priviledged port...
++      */
++
++      if (!addr)
++        addr = addrlist;
++
++      lport --;
++
++      if (lport < 721 && reserve == RESERVE_RFC1179)
++        lport = 731;
++      else if (lport < 1)
++        lport = 1023;
++
++#ifdef HAVE_GETEUID
++      if (geteuid() || !reserve)
++#else
++      if (getuid() || !reserve)
++#endif /* HAVE_GETEUID */
++      {
++       /*
++	* Just create a regular socket...
++	*/
++
++        if ((fd = socket(addr->addr.addr.sa_family, SOCK_STREAM, 0)) < 0)
++        {
++          perror("DEBUG: Unable to create socket");
++          sleep(1);
++
++          continue;
++        }
++
++        lport = 0;
++      }
++      else
++      {
++       /*
++	* We're running as root and want to comply with RFC 1179.  Reserve a
++	* priviledged lport between 721 and 731...
++	*/
++
++        if ((fd = cups_rresvport(&lport, addr->addr.addr.sa_family)) < 0)
++        {
++          perror("DEBUG: Unable to reserve port");
++          sleep(1);
++
++          continue;
++        }
++      }
++
++     /*
++      * Connect to the printer or server...
++      */
++
++      if (abort_job)
++      {
++	close(fd);
++
++	return (CUPS_BACKEND_FAILED);
++      }
++
++      if (!connect(fd, &(addr->addr.addr), (socklen_t)httpAddrLength(&(addr->addr))))
++        break;
++      else {
++        close(fd);
++        return (CUPS_BACKEND_FAILED);
++      }
++    }
++
++ /*
++  * Format the string...
++  */
++  *serverencode = NULL;
++
++  // bytes = vsnprintf(buf, sizeof(buf), format, ap);
++  bytes = snprintf(buf, sizeof(buf), "\004%s\n", printer);
++
++  fprintf(stderr, "DEBUG: lpd_command %2.2x %s", buf[0], buf + 1);
++
++ /*
++  * Send the command...
++  */
++
++  if (lpd_write(fd, buf, (size_t)bytes) < bytes)
++  {
++    perror("DEBUG: Unable to send LPD command");
++    return (-1);
++  }
++
++ /*
++  * Read back the status from the command and return it...
++  */
++  bytes = recv(fd, buf, 1000, 0);
++  if (bytes < 1)
++  {
++    _cupsLangPrintFilter(stderr, "WARNING", _("The printer did not respond."));
++    status = (char)errno;
++  }
++
++  close(fd);
++
++  // fprintf(stderr, "DEBUG: lpd_command reply %d bytes: %s\n", bytes, buf);
++  char *inbuf = strstr(buf, "Windows LPD");
++  if (inbuf) {
++    //test server encode gb2312?
++      char *encFrom = "GB2312";
++      char *encTo = "UTF-8";
++      size_t nbufin = strstr(inbuf, "\r")-inbuf, nbufout= 1000;
++      iconv_t cd = iconv_open(encTo, encFrom);
++      // char *inbuf = strstr(buf, "Windows LPD");
++      char *outbuf = buf2;
++      if(cd != (iconv_t)-1) {
++        // fprintf(stderr, "DEBUG: iconv_open OK nbufin=%d\n", nbufin);
++        size_t ret = iconv(cd, &inbuf, &nbufin, &outbuf, &nbufout);
++        // fprintf(stderr, "DEBUG: iconv ret=%d\n", ret);
++        iconv_close(cd);
++        if(ret == -1) {
++          fprintf(stderr, "DEBUG: iconv ERROR\n");
++          // break;
++        }else{
++          const char lpdServer[] = "Windows LPD 服务器";
++          if(strstr(buf2, lpdServer))
++            *serverencode = strdup(encFrom);
++          // break;
++        }
++      }
++  }
++  fprintf(stderr, "lpd_command got encode = %s\n", *serverencode);
++
++  return status;
++}
++
+ 
+ /*
+  * 'lpd_command()' - Send an LPR command sequence and wait for a reply.
+-- 
+2.20.1
+

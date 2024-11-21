@@ -1,0 +1,26 @@
+From 15105e805ea7a8e50041f3026b9c9c924f3e86ee Mon Sep 17 00:00:00 2001
+From: Thorsten Alteholz <debian@alteholz.de>
+Date: Sat, 2 Dec 2023 00:00:38 +0100
+Subject: [PATCH] check colormodel also for CMYK
+
+Change-Id: I83d593f217415c00fd32e4cbaf8c821796373090
+---
+ scheduler/printers.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/scheduler/printers.c b/scheduler/printers.c
+index 4efa613f3..2fbdaad5b 100644
+--- a/scheduler/printers.c
++++ b/scheduler/printers.c
+@@ -4509,7 +4509,7 @@ load_ppd(cupsd_printer_t *p)		/* I - Printer */
+         ppd_option_t *color_model = ppdFindOption(ppd, "ColorModel");
+ 					// ColorModel PPD option
+ 
+-        if (color_model && strcmp(color_model->defchoice, "RGB"))
++        if (color_model && strcmp(color_model->defchoice, "RGB") && strcmp(color_model->defchoice, "CMYK"))
+           p->num_options = cupsAddOption("print-color-mode", "monochrome", p->num_options, &p->options);
+       }
+     }
+-- 
+2.20.1
+
