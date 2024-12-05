@@ -1,3 +1,9 @@
+cups (2.4.2-5deepin2) unstable; urgency=medium
+
+  * Compatible with printer driver which runs on V20.
+
+ -- reddevillg <reddevillg@gmail.com>  Wed, 04 Dec 2024 16:06:25 +0800
+
 cups (2.4.2-5deepin1) unstable; urgency=medium
 
   * Fix Refactor part of server settings code.
