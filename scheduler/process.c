@@ -478,7 +478,10 @@ cupsdStartProcess(
 		cups_exec[1024],	/* Path to "cups-exec" program */
 		user_str[16],		/* User string */
 		group_str[16],		/* Group string */
-		nice_str[16];		/* FilterNice string */
+		nice_str[16],		/* FilterNice string */
+		filter_path[1024] = {0},
+		backend_path[1024] = {0};
+
   uid_t		user;			/* Command UID */
   cupsd_proc_t	*proc;			/* New process record */
 #if USE_POSIX_SPAWN
@@ -555,30 +558,48 @@ cupsdStartProcess(
   if (profile)
 #endif /* !USE_POSIX_SPAWN */
   {
+    struct stat fileinfo;
+    int idx = 0;
+
     snprintf(cups_exec, sizeof(cups_exec), "%s/daemon/cups-exec", ServerBin);
     snprintf(user_str, sizeof(user_str), "%d", user);
     snprintf(group_str, sizeof(group_str), "%d", Group);
     snprintf(nice_str, sizeof(nice_str), "%d", FilterNice);
+    snprintf(filter_path, sizeof(filter_path), "%s/filter/", ServerBin);
+    snprintf(backend_path, sizeof(backend_path), "%s/backend/", ServerBin);
 
-    real_argv[0] = cups_exec;
-    real_argv[1] = (char *)"-g";
-    real_argv[2] = group_str;
-    real_argv[3] = (char *)"-n";
-    real_argv[4] = nice_str;
-    real_argv[5] = (char *)"-u";
-    real_argv[6] = user_str;
-    real_argv[7] = profile ? profile : "none";
-    real_argv[8] = (char *)command;
+    if (!stat("/usr/bin/deepin-compatible-ctl", &fileinfo) &&
+         (strncmp(command, filter_path, strlen(filter_path)) == 0 || strncmp(command, backend_path, strlen(backend_path)) == 0))
+    {
+        real_argv[0] = (char *)"deepin-compatible-ctl";
+        real_argv[1] = (char *)"app";
+        real_argv[2] = (char *)"--ldrd";
+        real_argv[3] = (char *)"run";
+        real_argv[4] = (char *)"--";
+        idx = 5;
+        exec_path = "/usr/bin/deepin-compatible-ctl";
+    } else {
+        exec_path = cups_exec;
+    }
+
+    real_argv[idx + 0] = cups_exec;
+    real_argv[idx + 1] = (char *)"-g";
+    real_argv[idx + 2] = group_str;
+    real_argv[idx + 3] = (char *)"-n";
+    real_argv[idx + 4] = nice_str;
+    real_argv[idx + 5] = (char *)"-u";
+    real_argv[idx + 6] = user_str;
+    real_argv[idx + 7] = profile ? profile : "none";
+    real_argv[idx + 8] = (char *)command;
 
     for (i = 0;
          i < (int)(sizeof(real_argv) / sizeof(real_argv[0]) - 10) && argv[i];
 	 i ++)
-      real_argv[i + 9] = argv[i];
+      real_argv[idx + i + 9] = argv[i];
 
-    real_argv[i + 9] = NULL;
+    real_argv[idx + i + 9] = NULL;
 
     argv      = real_argv;
-    exec_path = cups_exec;
   }
 
   if (LogLevel == CUPSD_LOG_DEBUG2)

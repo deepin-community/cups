@@ -1,3 +1,9 @@
+cups (2.4.2-5deepin3) unstable; urgency=medium
+
+  * Fix bug
+
+ -- LIU Li <liuli@uniontech.com>  Fri, 08 Aug 2025 16:13:49 +0800
+
 cups (2.4.2-5deepin2) unstable; urgency=medium
 
   * Compatible with printer driver which runs on V20.
