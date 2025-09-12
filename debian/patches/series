@@ -28,3 +28,4 @@
 0028-scheduler-Fix-cupsd-activated-on-demand-via-socket.patch
 0029-Eliminate-trivial-switch-s.patch
 0030-cupsd-Block-authentication-using-alternate-method.patch
+0031-libcups-Fix-handling-of-extension-tag-in-ipp_read_io.patch
