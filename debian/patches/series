@@ -26,3 +26,5 @@
 0026-Fix-builds-without-on-demand-support.patch
 0027-Update-no-listeners-message-for-service_checkin.patch
 0028-scheduler-Fix-cupsd-activated-on-demand-via-socket.patch
+0029-Eliminate-trivial-switch-s.patch
+0030-cupsd-Block-authentication-using-alternate-method.patch
