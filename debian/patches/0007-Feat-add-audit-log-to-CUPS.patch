@@ -1,9 +1,8 @@
-From c224a7dff8fb6d03d34fb1bf8085dd6fffaf293a Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?=E5=88=98=E8=8E=89?= <liuli@uniontech.com>
+From: =?utf-8?b?5YiY6I6J?= <liuli@uniontech.com>
 Date: Tue, 12 Jul 2022 15:14:53 +0800
 Subject: [PATCH] Feat: add audit log to CUPS
 MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
+Content-Type: text/plain; charset="utf-8"
 Content-Transfer-Encoding: 8bit
 
 log to /var/log/cups/os_audit.log
@@ -11,11 +10,11 @@ log to /var/log/cups/os_audit.log
 Signed-off-by: 刘莉 <liuli@uniontech.com>
 Change-Id: I9e3ee7176b158a381db9274f11aeb34ab5bc62b9
 ---
- scheduler/subscriptions.c | 160 +++++++++++++++++++++++++++++++++++++-
+ scheduler/subscriptions.c | 160 ++++++++++++++++++++++++++++++++++++++++++++--
  1 file changed, 156 insertions(+), 4 deletions(-)
 
 diff --git a/scheduler/subscriptions.c b/scheduler/subscriptions.c
-index 2dbb28f85..0bcdfe457 100644
+index 2dbb28f..0bcdfe4 100644
 --- a/scheduler/subscriptions.c
 +++ b/scheduler/subscriptions.c
 @@ -39,8 +39,157 @@ static void	cupsd_send_notification(cupsd_subscription_t *sub,
@@ -204,6 +203,3 @@ index 2dbb28f85..0bcdfe457 100644
  
        ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_TEXT,
  		   "notify-text", NULL, ftext);
--- 
-2.20.1
-

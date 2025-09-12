@@ -1,4 +1,3 @@
-From 5e5615eec66839b24306e0f4b117b726cef8ae8c Mon Sep 17 00:00:00 2001
 From: LIU Li <liuli@uniontech.com>
 Date: Thu, 6 Jun 2024 10:40:03 +0800
 Subject: [PATCH] feat: enable lpd to encode title
@@ -6,11 +5,11 @@ Subject: [PATCH] feat: enable lpd to encode title
 Signed-off-by: LIU Li <liuli@uniontech.com>
 Change-Id: I93edcea9103926db3cc8ea1e865bd5ee514f6d78
 ---
- backend/lpd.c | 202 +++++++++++++++++++++++++++++++++++++++++++++++++-
+ backend/lpd.c | 202 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
  1 file changed, 200 insertions(+), 2 deletions(-)
 
 diff --git a/backend/lpd.c b/backend/lpd.c
-index c4aab8b98..7bb4269ac 100644
+index c4aab8b..7bb4269 100644
 --- a/backend/lpd.c
 +++ b/backend/lpd.c
 @@ -32,6 +32,7 @@
@@ -267,6 +266,3 @@ index c4aab8b98..7bb4269ac 100644
  
  /*
   * 'lpd_command()' - Send an LPR command sequence and wait for a reply.
--- 
-2.20.1
-

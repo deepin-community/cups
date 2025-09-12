@@ -1,3 +1,9 @@
+cups (2.4.2-5deepin4) UNRELEASED; urgency=medium
+
+  * Format debian/patches.
+
+ -- Tianyu Chen <sweetyfish@deepin.org>  Fri, 12 Sep 2025 10:06:24 +0800
+
 cups (2.4.2-5deepin3) unstable; urgency=medium
 
   * Fix bug
