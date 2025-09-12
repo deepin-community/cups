@@ -1,0 +1,51 @@
+From: Michael R Sweet <msweet@msweet.org>
+Date: Fri, 14 Jun 2024 15:10:21 -0400
+Subject: Don't abort early if there are no listen sockets after loading
+ cupsd.conf (Issue #985)
+
+---
+ scheduler/conf.c |  2 +-
+ scheduler/main.c | 17 +++++++++++++++++
+ 2 files changed, 18 insertions(+), 1 deletion(-)
+
+diff --git a/scheduler/conf.c b/scheduler/conf.c
+index fc0cec7..9fc988e 100644
+--- a/scheduler/conf.c
++++ b/scheduler/conf.c
+@@ -1052,7 +1052,7 @@ cupsdReadConfiguration(void)
+   * as an error and exit!
+   */
+ 
+-  if (cupsArrayCount(Listeners) == 0)
++  if (cupsArrayCount(Listeners) == 0 && !OnDemand)
+   {
+    /*
+     * No listeners!
+diff --git a/scheduler/main.c b/scheduler/main.c
+index 0380faa..ef3c7e0 100644
+--- a/scheduler/main.c
++++ b/scheduler/main.c
+@@ -2037,6 +2037,23 @@ service_checkin(void)
+     service_add_listener(fd, 0);
+   }
+ #endif /* HAVE_LAUNCHD */
++
++  if (cupsArrayCount(Listeners) == 0)
++  {
++   /*
++    * No listeners!
++    */
++
++    cupsdLogMessage(CUPSD_LOG_EMERG,
++                    "No valid Listen or Port lines were found in the "
++		    "configuration file.");
++
++   /*
++    * Commit suicide...
++    */
++
++    cupsdEndProcess(getpid(), 0);
++  }
+ }
+ 
+ 

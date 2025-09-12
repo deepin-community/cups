@@ -1,0 +1,23 @@
+From: Michael R Sweet <msweet@msweet.org>
+Date: Mon, 17 Jun 2024 09:18:08 -0400
+Subject: Update "no listeners" message for service_checkin.
+
+---
+ scheduler/main.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/scheduler/main.c b/scheduler/main.c
+index ef3c7e0..f0d9409 100644
+--- a/scheduler/main.c
++++ b/scheduler/main.c
+@@ -2044,9 +2044,7 @@ service_checkin(void)
+     * No listeners!
+     */
+ 
+-    cupsdLogMessage(CUPSD_LOG_EMERG,
+-                    "No valid Listen or Port lines were found in the "
+-		    "configuration file.");
++    cupsdLogMessage(CUPSD_LOG_EMERG, "service_checkin: No listener sockets present.");
+ 
+    /*
+     * Commit suicide...

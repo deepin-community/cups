@@ -22,3 +22,7 @@
 0017-Compatible-with-printer-driver-which-runs-on-V20.patch
 0023-Fix-OpenSSL-crash-bug-tls-pointer-wasn-t-cleared-aft.patch
 0024-Fix-domain-socket-handling-fixes-CVE-2024-35235.patch
+0025-Don-t-abort-early-if-there-are-no-listen-sockets-aft.patch
+0026-Fix-builds-without-on-demand-support.patch
+0027-Update-no-listeners-message-for-service_checkin.patch
+0028-scheduler-Fix-cupsd-activated-on-demand-via-socket.patch

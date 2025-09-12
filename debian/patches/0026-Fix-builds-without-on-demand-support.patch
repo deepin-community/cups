@@ -1,0 +1,24 @@
+From: Michael R Sweet <msweet@msweet.org>
+Date: Fri, 14 Jun 2024 15:16:02 -0400
+Subject: Fix builds without on-demand support.
+
+---
+ scheduler/conf.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/scheduler/conf.c b/scheduler/conf.c
+index 9fc988e..adeef50 100644
+--- a/scheduler/conf.c
++++ b/scheduler/conf.c
+@@ -1052,7 +1052,11 @@ cupsdReadConfiguration(void)
+   * as an error and exit!
+   */
+ 
++#ifdef HAVE_ONDEMAND
+   if (cupsArrayCount(Listeners) == 0 && !OnDemand)
++#else
++  if (cupsArrayCount(Listeners) == 0)
++#endif // HAVE_ONDEMAND
+   {
+    /*
+     * No listeners!

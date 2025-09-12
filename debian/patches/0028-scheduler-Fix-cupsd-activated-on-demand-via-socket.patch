@@ -1,0 +1,102 @@
+From: Zdenek Dohnal <zdohnal@redhat.com>
+Date: Tue, 18 Jun 2024 10:38:48 +0200
+Subject: scheduler: Fix cupsd activated on-demand via socket
+
+If only the expected cups.sock is set as listener in cupsd.conf, the
+array Listeners was NULL. To prevent copying the code, do the array
+allocation earlier and have only one check for Listeners, in
+service_checkin() which is run every time cupsd starts.
+
+Fixes #985
+---
+ scheduler/conf.c | 49 ++++++++++++-------------------------------------
+ scheduler/main.c |  2 +-
+ 2 files changed, 13 insertions(+), 38 deletions(-)
+
+diff --git a/scheduler/conf.c b/scheduler/conf.c
+index adeef50..8914904 100644
+--- a/scheduler/conf.c
++++ b/scheduler/conf.c
+@@ -558,6 +558,18 @@ cupsdReadConfiguration(void)
+ 
+   cupsdDeleteAllListeners();
+ 
++ /*
++  * Allocate array Listeners
++  */
++
++  Listeners = cupsArrayNew(NULL, NULL);
++
++  if (!Listeners)
++  {
++    fprintf(stderr, "Unable to allocate memory for array Listeners.");
++    return (0);
++  }
++
+   old_remote_port = RemotePort;
+   RemotePort      = 0;
+ 
+@@ -1047,32 +1059,6 @@ cupsdReadConfiguration(void)
+     }
+   }
+ 
+- /*
+-  * Check that we have at least one listen/port line; if not, report this
+-  * as an error and exit!
+-  */
+-
+-#ifdef HAVE_ONDEMAND
+-  if (cupsArrayCount(Listeners) == 0 && !OnDemand)
+-#else
+-  if (cupsArrayCount(Listeners) == 0)
+-#endif // HAVE_ONDEMAND
+-  {
+-   /*
+-    * No listeners!
+-    */
+-
+-    cupsdLogMessage(CUPSD_LOG_EMERG,
+-                    "No valid Listen or Port lines were found in the "
+-		    "configuration file.");
+-
+-   /*
+-    * Commit suicide...
+-    */
+-
+-    cupsdEndProcess(getpid(), 0);
+-  }
+-
+  /*
+   * Set the default locale using the language and charset...
+   */
+@@ -3148,17 +3134,6 @@ read_cupsd_conf(cups_file_t *fp)	/* I - File to read from */
+         * Allocate another listener...
+ 	*/
+ 
+-        if (!Listeners)
+-	  Listeners = cupsArrayNew(NULL, NULL);
+-
+-	if (!Listeners)
+-	{
+-          cupsdLogMessage(CUPSD_LOG_ERROR,
+-	                  "Unable to allocate %s at line %d - %s.",
+-	                  line, linenum, strerror(errno));
+-          break;
+-	}
+-
+         if ((lis = calloc(1, sizeof(cupsd_listener_t))) == NULL)
+ 	{
+           cupsdLogMessage(CUPSD_LOG_ERROR,
+diff --git a/scheduler/main.c b/scheduler/main.c
+index f0d9409..63bee60 100644
+--- a/scheduler/main.c
++++ b/scheduler/main.c
+@@ -2044,7 +2044,7 @@ service_checkin(void)
+     * No listeners!
+     */
+ 
+-    cupsdLogMessage(CUPSD_LOG_EMERG, "service_checkin: No listener sockets present.");
++    cupsdLogMessage(CUPSD_LOG_EMERG, "No listener sockets present.");
+ 
+    /*
+     * Commit suicide...
