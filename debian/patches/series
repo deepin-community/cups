@@ -20,3 +20,4 @@
 0006-fixed-CVE-2024-47175.patch
 0007-Feat-add-audit-log-to-CUPS.patch
 0017-Compatible-with-printer-driver-which-runs-on-V20.patch
+0023-Fix-OpenSSL-crash-bug-tls-pointer-wasn-t-cleared-aft.patch
