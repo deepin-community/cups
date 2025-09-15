@@ -1,8 +1,14 @@
-cups (2.4.2-5deepin4) UNRELEASED; urgency=medium
+cups (2.4.2-5deepin4) unstable; urgency=medium
 
   * Format debian/patches.
+  * Set Author to Zdenek Dohnal in debian/patches/0013-CVE-2023-32324.patch
+  * 0023-Fix-OpenSSL-crash-bug-tls-pointer-wasn-t-cleared-aft.patch
+  * CVE-2024-35235
+  * regression of fix for CVE-2024-35235
+  * CVE-2025-58060
+  * CVE-2025-58364
 
- -- Tianyu Chen <sweetyfish@deepin.org>  Fri, 12 Sep 2025 10:06:24 +0800
+ -- Tianyu Chen <sweetyfish@deepin.org>  Mon, 15 Sep 2025 10:30:43 +0800
 
 cups (2.4.2-5deepin3) unstable; urgency=medium
 
