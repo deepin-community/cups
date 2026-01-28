@@ -1,5 +1,5 @@
-libcups.so.2 libcups2t64 #MINVER#
-* Build-Depends-Package: libcups2t64-dev
+libcups.so.2 libcups2 #MINVER#
+* Build-Depends-Package: libcups2-dev
 # Keep these at the latest upstream release
  (optional|regex)"^_pwg.*@Base$" 2.3~b6
  (optional|regex)"^_cups.*@Base$" 2.3~b6
