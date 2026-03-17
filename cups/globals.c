@@ -1,7 +1,7 @@
 /*
  * Global variable access routines for CUPS.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -14,6 +14,7 @@
  */
 
 #include "cups-private.h"
+#include "debug-internal.h"
 #ifndef _WIN32
 #  include <pwd.h>
 #endif /* !_WIN32 */
@@ -179,12 +180,13 @@ DllMain(HINSTANCE hinst,		/* I - DLL module handle */
 static _cups_globals_t *		/* O - Pointer to global data */
 cups_globals_alloc(void)
 {
-  _cups_globals_t *cg = malloc(sizeof(_cups_globals_t));
+  _cups_globals_t *cg = calloc(1, sizeof(_cups_globals_t));
 					/* Pointer to global data */
 #ifdef _WIN32
   HKEY		key;			/* Registry key */
   DWORD		size;			/* Size of string */
-  static char	installdir[1024] = "",	/* Install directory */
+  static char	homedir[1024] = "",	/* Home directory */
+		installdir[1024] = "",	/* Install directory */
 		confdir[1024] = "",	/* Server root directory */
 		localedir[1024] = "";	/* Locale directory */
 #endif /* _WIN32 */
@@ -198,7 +200,6 @@ cups_globals_alloc(void)
   * callback values...
   */
 
-  memset(cg, 0, sizeof(_cups_globals_t));
   cg->encryption     = (http_encryption_t)-1;
   cg->password_cb    = (cups_password_cb2_t)_cupsGetPassword;
   cg->trust_first    = -1;
@@ -274,7 +275,29 @@ cups_globals_alloc(void)
   if ((cg->localedir = getenv("LOCALEDIR")) == NULL)
     cg->localedir = localedir;
 
-  cg->home = getenv("USERPROFILE");
+  if (!homedir[0])
+  {
+    const char	*userprofile = getenv("USERPROFILE");
+				// User profile (home) directory
+    char	*homeptr;	// Pointer into homedir
+
+    DEBUG_printf(("cups_globals_alloc: USERPROFILE=\"%s\"", userprofile));
+
+    if (!strncmp(userprofile, "C:\\", 3))
+      userprofile += 2;
+
+    strlcpy(homedir, userprofile, sizeof(homedir));
+    for (homeptr = homedir; *homeptr; homeptr ++)
+    {
+      // Convert back slashes to forward slashes
+      if (*homeptr == '\\')
+        *homeptr = '/';
+    }
+
+    DEBUG_printf(("cups_globals_alloc: homedir=\"%s\"", homedir));
+  }
+
+  cg->home = homedir;
 
 #else
 #  ifdef HAVE_GETEUID

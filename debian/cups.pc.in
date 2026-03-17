@@ -1,0 +1,7 @@
+Name: cups
+Description: cups application integration library
+URL: https://www.cups.org/
+Version: @DEB_VERSION_UPSTREAM@
+Cflags:
+Libs: -lcups
+Libs.private:

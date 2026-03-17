@@ -1,6 +1,7 @@
 /*
  * Common filter routines for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright 2007-2014 by Apple Inc.
  * Copyright 1997-2006 by Easy Software Products.
  *
@@ -206,7 +207,7 @@ UpdatePageVars(void)
 
   switch (Orientation & 3)
   {
-    case 0 : /* Portait */
+    case 0 : /* Portrait */
         break;
 
     case 1 : /* Landscape */

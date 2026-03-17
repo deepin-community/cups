@@ -3,13 +3,14 @@
 *% Test PPD file #2 for CUPS.
 *%
 *% This file is used to test the CUPS PPD API functions and cannot be
-*% used with any known printers.  Look on the CUPS web site for working PPD
+*% used with any known printers.  Look on the CUPS website for working PPD
 *% files.
 *%
 *% If you are a PPD file developer, consider using the PPD compiler (ppdc)
 *% to create your PPD files - not only will it save you time, it produces
 *% consistently high-quality files.
 *%
+*% Copyright © 2020-2024 by OpenPrinting.
 *% Copyright (c) 2007-2018 by Apple Inc.
 *% Copyright (c) 2002-2006 by Easy Software Products.
 *%

@@ -1,7 +1,8 @@
 etc/cups/cups-files.conf
-lib/systemd/system/cups.path
-lib/systemd/system/cups.service
-lib/systemd/system/cups.socket
+usr/lib/systemd/system/cups.path
+usr/lib/systemd/system/cups.service
+usr/lib/systemd/system/cups.socket
+usr/lib/systemd/system/system-cups.slice
 usr/lib/cups/backend/http
 usr/lib/cups/backend/https
 usr/lib/cups/backend/ipp

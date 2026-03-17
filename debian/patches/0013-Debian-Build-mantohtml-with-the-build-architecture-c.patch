@@ -18,7 +18,7 @@ Forwarded: not-needed
  4 files changed, 21 insertions(+), 7 deletions(-)
 
 diff --git a/Makedefs.in b/Makedefs.in
-index f571fc8..e44c2c0 100644
+index aa6ec16..bb9615f 100644
 --- a/Makedefs.in
 +++ b/Makedefs.in
 @@ -23,6 +23,7 @@ CUPS_VERSION    =       @CUPS_VERSION@
@@ -30,7 +30,7 @@ index f571fc8..e44c2c0 100644
  CXX		=	@LIBTOOL_CXX@ @CXX@
  DSO		=	@DSO@
 diff --git a/configure.ac b/configure.ac
-index 76793ce..9eaeaa3 100644
+index d83884b..df6e0b4 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -25,6 +25,16 @@ sinclude(config-scripts/cups-opsys.m4)
@@ -51,10 +51,10 @@ index 76793ce..9eaeaa3 100644
  sinclude(config-scripts/cups-libtool.m4)
  sinclude(config-scripts/cups-compiler.m4)
 diff --git a/man/Makefile b/man/Makefile
-index 621fe60..e01591a 100644
+index d6e496a..d883fc2 100644
 --- a/man/Makefile
 +++ b/man/Makefile
-@@ -222,6 +222,5 @@ html:	$(MAN1) $(MAN5) $(MAN7) $(MAN8) mantohtml
+@@ -223,6 +223,5 @@ html:	$(MAN1) $(MAN5) $(MAN7) $(MAN8) mantohtml
  		./mantohtml $$file >../doc/help/man-`basename $$file .8`.html; \
  	done
  
@@ -64,10 +64,10 @@ index 621fe60..e01591a 100644
 +mantohtml:	mantohtml.c
 +	$(CC_FOR_BUILD) -o $@ $<
 diff --git a/man/mantohtml.c b/man/mantohtml.c
-index 0c9c883..6ba901a 100644
+index 354a80e..d163061 100644
 --- a/man/mantohtml.c
 +++ b/man/mantohtml.c
-@@ -11,8 +11,10 @@
+@@ -12,8 +12,10 @@
   * Include necessary headers.
   */
  
@@ -80,7 +80,7 @@ index 0c9c883..6ba901a 100644
  #include <unistd.h>
  
  
-@@ -811,7 +813,8 @@ main(int  argc,				/* I - Number of command-line args */
+@@ -812,7 +814,8 @@ main(int  argc,				/* I - Number of command-line args */
          * Anchor for HTML output...
          */
  
@@ -90,7 +90,7 @@ index 0c9c883..6ba901a 100644
        }
        else if (strncmp(line, ".\\\"", 3))
        {
-@@ -944,7 +947,8 @@ html_alternate(const char *s,		/* I - String */
+@@ -945,7 +948,8 @@ html_alternate(const char *s,		/* I - String */
  		manfile[1024],		// Man page filename
  		manurl[1024];		// Man page URL
  

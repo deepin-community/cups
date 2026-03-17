@@ -1,6 +1,7 @@
 /*
  * IEEE-1284 support functions for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2015 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -157,7 +158,7 @@ backendGetDeviceID(
       * bytes.  The 1284 spec says the length is stored MSB first...
       */
 
-      length = (int)((((unsigned)device_id[0] & 255) << 8) + ((unsigned)device_id[1] & 255));
+      length = (int)((((unsigned)device_id[0] & 255) << 8) | ((unsigned)device_id[1] & 255));
 
      /*
       * Check to see if the length is larger than our buffer; first
@@ -166,7 +167,7 @@ backendGetDeviceID(
       */
 
       if (length > device_id_size || length < 14)
-	length = (int)((((unsigned)device_id[1] & 255) << 8) + ((unsigned)device_id[0] & 255));
+	length = (int)((((unsigned)device_id[1] & 255) << 8) | ((unsigned)device_id[0] & 255));
 
       if (length > device_id_size)
 	length = device_id_size;

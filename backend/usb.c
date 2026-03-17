@@ -1,6 +1,7 @@
 /*
  * USB printer backend for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2012 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -164,7 +165,7 @@ main(int  argc,				/* I - Number of command-line arguments (6 or 7) */
     list_devices();
     return (CUPS_BACKEND_OK);
   }
-  else if (argc < 6 || argc > 7)
+  else if (argc != 6 && argc != 7)
   {
     _cupsLangPrintf(stderr,
                     _("Usage: %s job-id user title copies options [file]"),

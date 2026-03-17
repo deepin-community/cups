@@ -1,6 +1,7 @@
 //
 // Definitions for the CUPS PPD Compiler.
 //
+// Copyright © 2020-2024 by OpenPrinting.
 // Copyright 2007-2019 by Apple Inc.
 // Copyright 2002-2007 by Easy Software Products.
 //
@@ -16,6 +17,7 @@
 
 #  include <cups/file.h>
 #  include <stdlib.h>
+#  include <locale.h>
 
 
 //
@@ -467,10 +469,10 @@ class ppdcSource			//// Source File
 		*po_files,		// Message catalogs
 		*sizes,			// Predefined media sizes
 		*vars;			// Defined variables
-  int		cond_state,		// Cummulative conditional state
+  int		cond_state,		// Cumulative conditional state
 		*cond_current,		// Current #if state
 		cond_stack[101];	// #if state stack
-
+  struct lconv	*locdata;		// Locale data
 
   ppdcSource(const char *f = 0, cups_file_t *ffp = (cups_file_t *)0);
   ~ppdcSource();

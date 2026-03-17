@@ -3,16 +3,12 @@
  * commands such as IPP and Bonjour conformance tests.  This tool is
  * inspired by the UNIX "find" command, thus its name.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2025 by OpenPrinting.
  * Copyright © 2020 by the IEEE-ISTO Printer Working Group
  * Copyright © 2008-2018 by Apple Inc.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
  * information.
- */
-
-/*
- * Include necessary headers.
  */
 
 #define _CUPS_NO_DEPRECATED
@@ -129,7 +125,6 @@ typedef struct ippfind_srv_s		/* Service information */
 static DNSServiceRef dnssd_ref;		/* Master service reference */
 #elif defined(HAVE_AVAHI)
 static AvahiClient *avahi_client = NULL;/* Client information */
-static int	avahi_got_data = 0;	/* Got data from poll? */
 static AvahiSimplePoll *avahi_poll = NULL;
 					/* Poll information */
 #endif /* HAVE_MDNSRESPONDER */
@@ -139,6 +134,7 @@ static int	address_family = AF_UNSPEC;
 static int	bonjour_error = 0;	/* Error browsing/resolving? */
 static double	bonjour_timeout = 1.0;	/* Timeout in seconds */
 static int	ipp_version = 20;	/* IPP version for LIST */
+static double	last_update = 0.0;	/* Last update time */
 
 
 /*
@@ -170,7 +166,6 @@ static int		eval_expr(ippfind_srv_t *service,
 static int		exec_program(ippfind_srv_t *service, int num_args,
 			             char **args);
 static ippfind_srv_t	*get_service(cups_array_t *services, const char *serviceName, const char *regtype, const char *replyDomain) _CUPS_NONNULL(1,2,3,4);
-static double		get_time(void);
 static int		list_service(ippfind_srv_t *service);
 static ippfind_expr_t	*new_expr(ippfind_op_t op, int invert,
 			          const char *value, const char *regex,
@@ -178,9 +173,6 @@ static ippfind_expr_t	*new_expr(ippfind_op_t op, int invert,
 #ifdef HAVE_MDNSRESPONDER
 static void DNSSD_API	resolve_callback(DNSServiceRef sdRef, DNSServiceFlags flags, uint32_t interfaceIndex, DNSServiceErrorType errorCode, const char *fullName, const char *hostTarget, uint16_t port, uint16_t txtLen, const unsigned char *txtRecord, void *context) _CUPS_NONNULL(1,5,6,9, 10);
 #elif defined(HAVE_AVAHI)
-static int		poll_callback(struct pollfd *pollfds,
-			              unsigned int num_pollfds, int timeout,
-			              void *context);
 static void		resolve_callback(AvahiServiceResolver *res,
 					 AvahiIfIndex interface,
 					 AvahiProtocol protocol,
@@ -1146,8 +1138,6 @@ main(int  argc,				/* I - Number of command-line args */
     return (IPPFIND_EXIT_BONJOUR);
   }
 
-  avahi_simple_poll_set_func(avahi_poll, poll_callback, NULL);
-
   avahi_client = avahi_client_new(avahi_simple_poll_get(avahi_poll),
 			          0, client_callback, avahi_poll, &err);
   if (!avahi_client)
@@ -1305,17 +1295,18 @@ main(int  argc,				/* I - Number of command-line args */
 
  /*
   * Process browse/resolve requests...
+  *
+  * Note, _cupsGetClock() is 0-based, so there is no need to snapshot the start
+  * time here.
   */
 
   if (bonjour_timeout > 1.0)
-    endtime = get_time() + bonjour_timeout;
+    endtime = bonjour_timeout;
   else
-    endtime = get_time() + 300.0;
+    endtime = 300.0;
 
-  while (get_time() < endtime)
+  while (_cupsGetClock() < endtime)
   {
-    int		process = 0;		/* Process services? */
-
 #ifdef HAVE_MDNSRESPONDER
     int fd = DNSServiceRefSockFD(dnssd_ref);
 					/* File descriptor for DNS-SD */
@@ -1324,7 +1315,7 @@ main(int  argc,				/* I - Number of command-line args */
     FD_SET(fd, &sinput);
 
     stimeout.tv_sec  = 0;
-    stimeout.tv_usec = 500000;
+    stimeout.tv_usec = 100000;
 
     if (select(fd + 1, &sinput, NULL, NULL, &stimeout) < 0)
       continue;
@@ -1337,19 +1328,9 @@ main(int  argc,				/* I - Number of command-line args */
 
       DNSServiceProcessResult(dnssd_ref);
     }
-    else
-    {
-     /*
-      * Time to process services...
-      */
-
-      process = 1;
-    }
 
 #elif defined(HAVE_AVAHI)
-    avahi_got_data = 0;
-
-    if (avahi_simple_poll_iterate(avahi_poll, 500) > 0)
+    if (avahi_simple_poll_iterate(avahi_poll, 100) > 0)
     {
      /*
       * We've been told to exit the loop.  Perhaps the connection to
@@ -1359,112 +1340,101 @@ main(int  argc,				/* I - Number of command-line args */
       return (IPPFIND_EXIT_BONJOUR);
     }
 
-    if (!avahi_got_data)
-    {
-     /*
-      * Time to process services...
-      */
-
-      process = 1;
-    }
 #endif /* HAVE_MDNSRESPONDER */
 
-    if (process)
+   /*
+    * Process any services that we have found...
+    */
+
+    int	active = 0,			/* Number of active resolves */
+	processed = 0;			/* Number of processed services */
+
+    for (service = (ippfind_srv_t *)cupsArrayFirst(services);
+	 service;
+	 service = (ippfind_srv_t *)cupsArrayNext(services))
     {
-     /*
-      * Process any services that we have found...
-      */
+      if (service->is_processed)
+	processed ++;
 
-      int	active = 0,		/* Number of active resolves */
-		resolved = 0,		/* Number of resolved services */
-		processed = 0;		/* Number of processed services */
-
-      for (service = (ippfind_srv_t *)cupsArrayFirst(services);
-           service;
-           service = (ippfind_srv_t *)cupsArrayNext(services))
+      if (!service->ref && !service->is_resolved)
       {
-        if (service->is_processed)
-          processed ++;
+       /*
+	* Found a service, now resolve it (but limit to 50 active resolves...)
+	*/
 
-        if (service->is_resolved)
-          resolved ++;
-
-        if (!service->ref && !service->is_resolved)
-        {
-         /*
-          * Found a service, now resolve it (but limit to 50 active resolves...)
-          */
-
-          if (active < 50)
-          {
+	if (active < 50)
+	{
 #ifdef HAVE_MDNSRESPONDER
-	    service->ref = dnssd_ref;
-	    err          = DNSServiceResolve(&(service->ref),
-					     kDNSServiceFlagsShareConnection, 0,
-					     service->name, service->regtype,
-					     service->domain, resolve_callback,
-					     service);
+	  service->ref = dnssd_ref;
+	  err          = DNSServiceResolve(&(service->ref),
+					   kDNSServiceFlagsShareConnection, 0,
+					   service->name, service->regtype,
+					   service->domain, resolve_callback,
+					   service);
 
 #elif defined(HAVE_AVAHI)
-	    service->ref = avahi_service_resolver_new(avahi_client,
-						      AVAHI_IF_UNSPEC,
-						      AVAHI_PROTO_UNSPEC,
-						      service->name,
-						      service->regtype,
-						      service->domain,
-						      AVAHI_PROTO_UNSPEC, 0,
-						      resolve_callback,
-						      service);
-	    if (service->ref)
-	      err = 0;
-	    else
-	      err = avahi_client_errno(avahi_client);
+	  service->ref = avahi_service_resolver_new(avahi_client,
+						    AVAHI_IF_UNSPEC,
+						    AVAHI_PROTO_UNSPEC,
+						    service->name,
+						    service->regtype,
+						    service->domain,
+						    AVAHI_PROTO_UNSPEC, 0,
+						    resolve_callback,
+						    service);
+	  if (service->ref)
+	    err = 0;
+	  else
+	    err = avahi_client_errno(avahi_client);
 #endif /* HAVE_MDNSRESPONDER */
 
-	    if (err)
-	    {
-	      _cupsLangPrintf(stderr,
-	                      _("ippfind: Unable to browse or resolve: %s"),
-			      dnssd_error_string(err));
-	      return (IPPFIND_EXIT_BONJOUR);
-	    }
-
-	    active ++;
-          }
-        }
-        else if (service->is_resolved && !service->is_processed)
-        {
-	 /*
-	  * Resolved, not process this service against the expressions...
-	  */
-
-          if (service->ref)
-          {
-#ifdef HAVE_MDNSRESPONDER
-	    DNSServiceRefDeallocate(service->ref);
-#else
-            avahi_service_resolver_free(service->ref);
-#endif /* HAVE_MDNSRESPONDER */
-
-	    service->ref = NULL;
+	  if (err)
+	  {
+	    _cupsLangPrintf(stderr,
+			    _("ippfind: Unable to browse or resolve: %s"),
+			    dnssd_error_string(err));
+	    return (IPPFIND_EXIT_BONJOUR);
 	  }
 
-          if (eval_expr(service, expressions))
-            status = IPPFIND_EXIT_TRUE;
-
-          service->is_processed = 1;
-        }
-        else if (service->ref)
-          active ++;
+	  active ++;
+	}
       }
+      else if (service->is_resolved && !service->is_processed)
+      {
+       /*
+	* Resolved, not process this service against the expressions...
+	*/
 
-     /*
-      * If we have processed all services we have discovered, then we are done.
-      */
+	if (service->ref)
+	{
+#ifdef HAVE_MDNSRESPONDER
+	  DNSServiceRefDeallocate(service->ref);
+#else
+	  avahi_service_resolver_free(service->ref);
+#endif /* HAVE_MDNSRESPONDER */
 
-      if (processed == cupsArrayCount(services) && bonjour_timeout <= 1.0)
-        break;
+	  service->ref = NULL;
+	}
+
+	if (eval_expr(service, expressions))
+	  status = IPPFIND_EXIT_TRUE;
+
+	service->is_processed = 1;
+      }
+      else if (service->ref)
+	active ++;
     }
+
+   /*
+    * If we are running with the minimal timeout (-T 0) and have processed all
+    * services we have discovered, then we are done.
+    *
+    * The minimal discovery time is enforced to be at least 2.5 seconds. Otherwise,
+    * with the cold Avahi cache discovery of the network devices is not stable.
+    */
+
+    if (bonjour_timeout <= 1.0 && _cupsGetClock() >= 2.5 && (processed == cupsArrayCount(services) || (_cupsGetClock() - last_update) >= 1.0))
+      break;
   }
 
   if (bonjour_error)
@@ -1493,6 +1463,8 @@ browse_callback(
  /*
   * Only process "add" data...
   */
+
+  last_update = _cupsGetClock();
 
   (void)sdRef;
   (void)interfaceIndex;
@@ -1525,6 +1497,8 @@ browse_local_callback(
 {
   ippfind_srv_t	*service;		/* Service */
 
+
+  last_update = _cupsGetClock();
 
  /*
   * Only process "add" data...
@@ -1568,6 +1542,8 @@ browse_callback(
 					/* Client information */
   ippfind_srv_t	*service;		/* Service information */
 
+
+  last_update = _cupsGetClock();
 
   (void)interface;
   (void)protocol;
@@ -1935,7 +1911,7 @@ exec_program(ippfind_srv_t *service,	/* I - Service */
     if (strncmp(environ[i], "IPPFIND_", 8))
       myenvc ++;
 
-  if ((myenvp = calloc(sizeof(char *), (size_t)(myenvc + 1))) == NULL)
+  if ((myenvp = calloc((size_t)(myenvc + 1), sizeof(char *))) == NULL)
   {
     _cupsLangPuts(stderr, _("ippfind: Out of memory."));
     exit(IPPFIND_EXIT_MEMORY);
@@ -1960,7 +1936,7 @@ exec_program(ippfind_srv_t *service,	/* I - Service */
   * Allocate and copy command-line arguments...
   */
 
-  if ((myargv = calloc(sizeof(char *), (size_t)(num_args + 1))) == NULL)
+  if ((myargv = calloc((size_t)(num_args + 1), sizeof(char *))) == NULL)
   {
     _cupsLangPuts(stderr, _("ippfind: Out of memory."));
     exit(IPPFIND_EXIT_MEMORY);
@@ -2167,7 +2143,7 @@ get_service(cups_array_t *services,	/* I - Service array */
   * Yes, add the service...
   */
 
-  if ((service = calloc(sizeof(ippfind_srv_t), 1)) == NULL)
+  if ((service = calloc(1, sizeof(ippfind_srv_t))) == NULL)
     return (NULL);
 
   service->name     = strdup(serviceName);
@@ -2191,31 +2167,6 @@ get_service(cups_array_t *services,	/* I - Service array */
   service->fullName = strdup(fullName);
 
   return (service);
-}
-
-
-/*
- * 'get_time()' - Get the current time-of-day in seconds.
- */
-
-static double
-get_time(void)
-{
-#ifdef _WIN32
-  struct _timeb curtime;		/* Current Windows time */
-
-  _ftime(&curtime);
-
-  return (curtime.time + 0.001 * curtime.millitm);
-
-#else
-  struct timeval	curtime;	/* Current UNIX time */
-
-  if (gettimeofday(&curtime, NULL))
-    return (0.0);
-  else
-    return (curtime.tv_sec + 0.000001 * curtime.tv_usec);
-#endif /* _WIN32 */
 }
 
 
@@ -2503,46 +2454,16 @@ new_expr(ippfind_op_t op,		/* I - Operation */
       if (!strcmp(args[num_args], ";"))
         break;
 
-     temp->num_args = num_args;
-     temp->args     = malloc((size_t)num_args * sizeof(char *));
-     memcpy(temp->args, args, (size_t)num_args * sizeof(char *));
+    temp->num_args = num_args;
+    temp->args     = malloc((size_t)num_args * sizeof(char *));
+    if (temp->args == NULL)
+      return (NULL);
+
+    memcpy(temp->args, args, (size_t)num_args * sizeof(char *));
   }
 
   return (temp);
 }
-
-
-#ifdef HAVE_AVAHI
-/*
- * 'poll_callback()' - Wait for input on the specified file descriptors.
- *
- * Note: This function is needed because avahi_simple_poll_iterate is broken
- *       and always uses a timeout of 0 (!) milliseconds.
- *       (Avahi Ticket #364)
- */
-
-static int				/* O - Number of file descriptors matching */
-poll_callback(
-    struct pollfd *pollfds,		/* I - File descriptors */
-    unsigned int  num_pollfds,		/* I - Number of file descriptors */
-    int           timeout,		/* I - Timeout in milliseconds (unused) */
-    void          *context)		/* I - User data (unused) */
-{
-  int	val;				/* Return value */
-
-
-  (void)timeout;
-  (void)context;
-
-  val = poll(pollfds, num_pollfds, 500);
-
-  if (val > 0)
-    avahi_got_data = 1;
-
-  return (val);
-}
-#endif /* HAVE_AVAHI */
-
 
 /*
  * 'resolve_callback()' - Process resolve data.
@@ -2569,6 +2490,8 @@ resolve_callback(
   ippfind_srv_t		*service = (ippfind_srv_t *)context;
 					/* Service */
 
+
+  last_update = _cupsGetClock();
 
  /*
   * Only process "add" data...
@@ -2650,6 +2573,8 @@ resolve_callback(
 					/* Service */
   AvahiStringList *current;		/* Current TXT key/value pair */
 
+
+  last_update = _cupsGetClock();
 
   (void)address;
 

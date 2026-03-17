@@ -1,7 +1,9 @@
-cups-daemon: init.d-script-possible-missing-stop etc/init.d/cups 0 6
+cups-daemon: init.d-script-possible-missing-stop 0 6 [etc/init.d/cups]
 # CUPS is WantedBy=printer.target
-cups-daemon: systemd-service-file-refers-to-unusual-wantedby-target lib/systemd/system/cups.service printer.target
-cups-daemon: spare-manual-page usr/share/man/*man8/cups-snmp.8.gz
-cups-daemon: executable-in-usr-lib usr/lib/cups/backend/*
-cups-daemon: executable-in-usr-lib usr/lib/cups/daemon/*
-cups-daemon: executable-in-usr-lib usr/lib/cups/notifier/*
+cups-daemon: systemd-service-file-refers-to-unusual-wantedby-target printer.target [usr/lib/systemd/system/cups.service]
+cups-daemon: spare-manual-page [usr/share/man/*man8/cups-snmp.8.gz]
+cups-daemon: executable-in-usr-lib [usr/lib/cups/backend/*]
+cups-daemon: executable-in-usr-lib [usr/lib/cups/daemon/*]
+cups-daemon: executable-in-usr-lib [usr/lib/cups/notifier/*]
+# as long as init.d is supported, this is needed
+cups-daemon: depends-on-obsolete-package

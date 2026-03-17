@@ -1,6 +1,7 @@
 /*
  * File functions for the CUPS scheduler.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2014 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -315,7 +316,7 @@ cupsdRemoveFile(const char *filename)	/* I - File to remove */
   int			fd;		/* File descriptor */
   struct stat		info;		/* File information */
   char			buffer[512];	/* Data buffer */
-  int			i;		/* Looping var */
+  size_t			i;		/* Looping var */
 
 
  /*

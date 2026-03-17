@@ -1,6 +1,7 @@
 /*
  * Backend test program for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2014 by Apple Inc.
  * Copyright © 1997-2005 by Easy Software Products, all rights reserved.
  *
@@ -503,7 +504,7 @@ main(int  argc,				/* I - Number of command-line args */
   if (do_side_tests)
   {
     int			length;		/* Length of buffer */
-    char		buffer[2049];	/* Buffer for reponse */
+    char		buffer[2049];	/* Buffer for response */
     cups_sc_status_t	scstatus;	/* Status of side-channel command */
     static const char * const statuses[] =
     {

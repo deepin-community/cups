@@ -1,7 +1,7 @@
 /*
  * cupsGetDevices implementation for CUPS.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2008-2016 by Apple Inc.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
@@ -155,7 +155,7 @@ cupsGetDevices(
 
   if (status != HTTP_STATUS_OK)
   {
-    _cupsSetHTTPError(status);
+    _cupsSetHTTPError(http, status);
     return (cupsLastError());
   }
 

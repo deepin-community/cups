@@ -1,6 +1,7 @@
 /*
  * Device scanning mini-daemon for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1997-2006 by Easy Software Products.
  *
@@ -166,10 +167,10 @@ main(int  argc,				/* I - Number of command-line args */
     return (1);
   }
 
-  normal_user = (uid_t)atoi(argv[4]);
-  if (normal_user <= 0)
+  normal_user = (uid_t)strtoul(argv[4], NULL, 10);
+  if (normal_user == 0)
   {
-    fprintf(stderr, "ERROR: [cups-deviced] Bad user %d!\n", normal_user);
+    fprintf(stderr, "ERROR: [cups-deviced] Bad user %u!\n", (unsigned)normal_user);
 
     return (1);
   }

@@ -1,6 +1,7 @@
 /*
  * Option encoding routines for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products.
  *
@@ -299,6 +300,8 @@ static const _ipp_option_t ipp_options[] =
   { 0, "ppi-default",		IPP_TAG_INTEGER,	IPP_TAG_PRINTER },
   { 0, "prettyprint",		IPP_TAG_BOOLEAN,	IPP_TAG_JOB },
   { 0, "prettyprint-default",	IPP_TAG_BOOLEAN,	IPP_TAG_PRINTER },
+  { 0, "print-as-raster",	IPP_TAG_BOOLEAN,	IPP_TAG_JOB },
+  { 0, "print-as-raster-default", IPP_TAG_BOOLEAN,	IPP_TAG_PRINTER },
   { 0, "print-color-mode",	IPP_TAG_KEYWORD,	IPP_TAG_JOB,
 							IPP_TAG_DOCUMENT },
   { 0, "print-color-mode-default", IPP_TAG_KEYWORD,	IPP_TAG_PRINTER },
@@ -592,7 +595,7 @@ _cupsEncodeOption(
 	    if (*s == '-')
 	    {
 	      if (s[1])
-		upper = (int)strtol(s + 1, NULL, 10);
+		upper = atoi(s + 1);
 	      else
 		upper = 2147483647;
 	    }

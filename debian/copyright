@@ -38,6 +38,12 @@ Copyright: 2007-2019, Apple Inc.
   1999, Aladdin Enterprises.
 License: Zlib
 
+Files: debian/*
+Copyright: 2022-2025 Thorsten Alteholz <debian@alteholz.de>
+           2012-2021 Didier Raboud <odyx@debian.org>
+           1999-2012 all Contributors mentioned in debian/changelog
+License: Apache-2.0-with-GPL2-LGPL2-Exception
+
 Files: debian/local/*
 Copyright: 2009, Canonical Ltd.
 License: Apache-2.0

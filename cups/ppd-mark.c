@@ -1,6 +1,7 @@
 /*
  * Option marking routines for CUPS.
  *
+ * Copyright © 2020-2025 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -55,7 +56,6 @@ cupsMarkOptions(
   const char	*val,			/* Pointer into value */
 		*media,			/* media option */
 		*output_bin,		/* output-bin option */
-		*page_size,		/* PageSize option */
 		*ppd_keyword,		/* PPD keyword */
 		*print_color_mode,	/* print-color-mode option */
 		*print_quality,		/* print-quality option */
@@ -81,7 +81,6 @@ cupsMarkOptions(
 
   media         = cupsGetOption("media", num_options, options);
   output_bin    = cupsGetOption("output-bin", num_options, options);
-  page_size     = cupsGetOption("PageSize", num_options, options);
   print_quality = cupsGetOption("print-quality", num_options, options);
   sides         = cupsGetOption("sides", num_options, options);
 
@@ -130,21 +129,15 @@ cupsMarkOptions(
       * Mark it...
       */
 
-      if (!page_size || !page_size[0])
-      {
-        if (!_cups_strncasecmp(s, "Custom.", 7) || ppdPageSize(ppd, s))
-          ppd_mark_option(ppd, "PageSize", s);
-        else if ((ppd_keyword = _ppdCacheGetPageSize(cache, NULL, s, NULL)) != NULL)
-	  ppd_mark_option(ppd, "PageSize", ppd_keyword);
-      }
+      if (!_cups_strncasecmp(s, "Custom.", 7) && ppdPageSize(ppd, s))
+	ppd_mark_option(ppd, "PageSize", s);
+      else if ((ppd_keyword = _ppdCacheGetPageSize(cache, NULL, s, NULL)) != NULL)
+	ppd_mark_option(ppd, "PageSize", ppd_keyword);
 
-      if (cache && cache->source_option &&
-          !cupsGetOption(cache->source_option, num_options, options) &&
-	  (ppd_keyword = _ppdCacheGetInputSlot(cache, NULL, s)) != NULL)
+      if (cache && cache->source_option && (ppd_keyword = _ppdCacheGetInputSlot(cache, NULL, s)) != NULL)
 	ppd_mark_option(ppd, cache->source_option, ppd_keyword);
 
-      if (!cupsGetOption("MediaType", num_options, options) &&
-	  (ppd_keyword = _ppdCacheGetMediaType(cache, NULL, s)) != NULL)
+      if ((ppd_keyword = _ppdCacheGetMediaType(cache, NULL, s)) != NULL)
 	ppd_mark_option(ppd, "MediaType", ppd_keyword);
     }
   }
@@ -336,7 +329,7 @@ cupsMarkOptions(
     }
     else if (!_cups_strcasecmp(optptr->name, "mirror"))
       ppd_mark_option(ppd, "MirrorPrint", optptr->value);
-    else
+    else if (!media || (_cups_strcasecmp(optptr->name, (cache && cache->source_option) ? cache->source_option : "InputSlot") && _cups_strcasecmp(optptr->name, "MediaType") && _cups_strcasecmp(optptr->name, "PageRegion") && _cups_strcasecmp(optptr->name, "PageSize")))
       ppd_mark_option(ppd, optptr->name, optptr->value);
   }
 

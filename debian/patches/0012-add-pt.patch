@@ -9,10 +9,10 @@ Subject: add pt
  create mode 100644 man/pt/Makefile
 
 diff --git a/man/Makefile b/man/Makefile
-index 48f06c4..7c30dd2 100644
+index 35d1fc2..d5a2fbd 100644
 --- a/man/Makefile
 +++ b/man/Makefile
-@@ -63,7 +63,7 @@ MAN8	=	cupsaccept.8 \
+@@ -64,7 +64,7 @@ MAN8	=	cupsaccept.8 \
  		lpmove.8 \
  		lpc.8
  

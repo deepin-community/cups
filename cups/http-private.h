@@ -1,6 +1,7 @@
 /*
  * Private HTTP definitions for CUPS.
  *
+ * Copyright © 2020-2025 by OpenPrinting.
  * Copyright 2007-2018 by Apple Inc.
  * Copyright 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -120,6 +121,7 @@ extern "C" {
  * Constants...
  */
 
+#  define _HTTP_MAX_BUFFER	32768	/* Size of read buffer */
 #  define _HTTP_MAX_SBUFFER	65536	/* Size of (de)compression buffer */
 #  define _HTTP_RESOLVE_DEFAULT	0	/* Just resolve with default options */
 #  define _HTTP_RESOLVE_STDERR	1	/* Log resolve progress to stderr */
@@ -130,7 +132,8 @@ extern "C" {
 #  define _HTTP_TLS_ALLOW_RC4	1	/* Allow RC4 cipher suites */
 #  define _HTTP_TLS_ALLOW_DH	2	/* Allow DH/DHE key negotiation */
 #  define _HTTP_TLS_DENY_CBC	4	/* Deny CBC cipher suites */
-#  define _HTTP_TLS_SET_DEFAULT 128     /* Setting the default TLS options */
+#  define _HTTP_TLS_NO_SYSTEM	8	/* No system crypto policy */
+#  define _HTTP_TLS_SET_DEFAULT 128	/* Setting the default TLS options */
 
 #  define _HTTP_TLS_SSL3	0	/* Min/max version is SSL/3.0 */
 #  define _HTTP_TLS_1_0		1	/* Min/max version is TLS/1.0 */
@@ -231,8 +234,8 @@ struct _http_s				/**** HTTP connection structure ****/
   http_encoding_t	data_encoding;	/* Chunked or not */
   int			_data_remaining;/* Number of bytes left (deprecated) */
   int			used;		/* Number of bytes used in buffer */
-  char			buffer[HTTP_MAX_BUFFER];
-					/* Buffer for incoming data */
+  char			_buffer[HTTP_MAX_BUFFER];
+					/* Old read buffer (deprecated) */
   int			_auth_type;	/* Authentication in use (deprecated) */
   unsigned char		_md5_state[88];	/* MD5 state (deprecated) */
   char			nonce[HTTP_MAX_VALUE];
@@ -306,6 +309,8 @@ struct _http_s				/**** HTTP connection structure ****/
 					/* Allocated field values */
   			*default_fields[HTTP_FIELD_MAX];
 					/* Default field values, if any */
+  char			buffer[_HTTP_MAX_BUFFER];
+					/* Read buffer */
 };
 #  endif /* !_HTTP_NO_PRIVATE */
 

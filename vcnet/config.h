@@ -1,7 +1,7 @@
 /*
  * Configuration file for CUPS on Windows.
  *
- * Copyright © 2021-2022 by OpenPrinting
+ * Copyright © 2021-2025 by OpenPrinting
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products.
  *
@@ -100,8 +100,8 @@ typedef unsigned long useconds_t;
  * Version of software...
  */
 
-#define CUPS_SVERSION "CUPS v2.4.2"
-#define CUPS_MINIMAL "CUPS/2.4.2"
+#define CUPS_SVERSION "CUPS v2.4.16"
+#define CUPS_MINIMAL "CUPS/2.4.16"
 
 
 /*
@@ -167,6 +167,13 @@ typedef unsigned long useconds_t;
  */
 
 #define CUPS_DEFAULT_ERROR_POLICY "stop-printer"
+
+
+/*
+ * Default PeerCred value...
+ */
+
+#define CUPS_DEFAULT_PEER_CRED "on"
 
 
 /*
@@ -473,6 +480,13 @@ typedef unsigned long useconds_t;
 
 
 /*
+ * Do we have the timegm function?
+ */
+
+/* #undef HAVE_TIMEGM */
+
+
+/*
  * Do we have rresvport_af()?
  */
 
@@ -742,13 +756,6 @@ typedef unsigned long useconds_t;
 /* #undef HAVE_SYS_STATFS_H */
 /* #undef HAVE_SYS_STATVFS_H */
 /* #undef HAVE_SYS_VFS_H */
-
-
-/*
- * Location of macOS localization bundle, if any.
- */
-
-/* #undef CUPS_BUNDLEDIR */
 
 
 /*

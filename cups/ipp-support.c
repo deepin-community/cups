@@ -1,6 +1,7 @@
 /*
  * Internet Printing Protocol support functions for CUPS.
  *
+ * Copyright © 2020-2025 by OpenPrinting.
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -742,7 +743,7 @@ ippAttributeString(
           {
             unsigned year;		/* Year */
 
-            year = ((unsigned)val->date[0] << 8) + (unsigned)val->date[1];
+            year = ((unsigned)val->date[0] << 8) | (unsigned)val->date[1];
 
 	    if (val->date[9] == 0 && val->date[10] == 0)
 	      snprintf(temp, sizeof(temp), "%04u-%02u-%02uT%02u:%02u:%02uZ",
@@ -1382,9 +1383,9 @@ ippCreateRequestedArray(ipp_t *request)	/* I - IPP request */
     "job-account-id",
     "job-account-id-default",
     "job-account-id-supported",
-    "job-accounting-sheets"
-    "job-accounting-sheets-default"
-    "job-accounting-sheets-supported"
+    "job-accounting-sheets",
+    "job-accounting-sheets-default",
+    "job-accounting-sheets-supported",
     "job-accounting-user-id",
     "job-accounting-user-id-default",
     "job-accounting-user-id-supported",
@@ -1764,6 +1765,9 @@ ippCreateRequestedArray(ipp_t *request)	/* I - IPP request */
     "printer-state-change-time",
     "printer-state-message",
     "printer-state-reasons",
+    "printer-strings-languages-supported",
+					/* IPP JPS3 */
+    "printer-strings-uri",		/* IPP JPS3 */
     "printer-supply",
     "printer-supply-description",
     "printer-supply-info-uri",

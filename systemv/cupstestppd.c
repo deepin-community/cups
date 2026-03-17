@@ -3,6 +3,7 @@
  *
  * THIS PROGRAM IS DEPRECATED AND WILL BE REMOVED IN A FUTURE VERSION OF CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -3241,7 +3242,7 @@ check_sizes(ppd_file_t *ppd,		/* I - PPD file */
 
    /*
     * Verify that the size name is Adobe standard name if it's a standard size
-    * and the dimentional name if it's not a standard size.  Suffix should be
+    * and the dimensional name if it's not a standard size.  Suffix should be
     * .Fullbleed, etc., or numeric, e.g., Letter, Letter.Fullbleed,
     * Letter.Transverse, Letter1, Letter2, 4x8, 55x91mm, 55x91mm.Fullbleed, etc.
     */

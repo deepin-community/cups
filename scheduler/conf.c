@@ -1,7 +1,7 @@
 /*
  * Configuration routines for the CUPS scheduler.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2025 by OpenPrinting.
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -47,6 +47,7 @@ typedef enum
 {
   CUPSD_VARTYPE_INTEGER,		/* Integer option */
   CUPSD_VARTYPE_TIME,			/* Time interval option */
+  CUPSD_VARTYPE_NULLSTRING,		/* String option or NULL/empty string */
   CUPSD_VARTYPE_STRING,			/* String option */
   CUPSD_VARTYPE_BOOLEAN,		/* Boolean option */
   CUPSD_VARTYPE_PATHNAME,		/* File/directory name option */
@@ -69,7 +70,7 @@ static const cupsd_var_t	cupsd_vars[] =
 {
   { "AutoPurgeJobs", 		&JobAutoPurge,		CUPSD_VARTYPE_BOOLEAN },
 #ifdef HAVE_DNSSD
-  { "BrowseDNSSDSubTypes",	&DNSSDSubTypes,		CUPSD_VARTYPE_STRING },
+  { "BrowseDNSSDSubTypes",	&DNSSDSubTypes,		CUPSD_VARTYPE_NULLSTRING },
 #endif /* HAVE_DNSSD */
   { "BrowseWebIF",		&BrowseWebIF,		CUPSD_VARTYPE_BOOLEAN },
   { "Browsing",			&Browsing,		CUPSD_VARTYPE_BOOLEAN },
@@ -120,7 +121,7 @@ static const cupsd_var_t	cupsd_vars[] =
   { "MaxSubscriptionsPerPrinter",&MaxSubscriptionsPerPrinter,	CUPSD_VARTYPE_INTEGER },
   { "MaxSubscriptionsPerUser",	&MaxSubscriptionsPerUser,	CUPSD_VARTYPE_INTEGER },
   { "MultipleOperationTimeout",	&MultipleOperationTimeout,	CUPSD_VARTYPE_TIME },
-  { "PageLogFormat",		&PageLogFormat,		CUPSD_VARTYPE_STRING },
+  { "PageLogFormat",		&PageLogFormat,		CUPSD_VARTYPE_NULLSTRING },
   { "PreserveJobFiles",		&JobFiles,		CUPSD_VARTYPE_TIME },
   { "PreserveJobHistory",	&JobHistory,		CUPSD_VARTYPE_TIME },
   { "ReloadTimeout",		&ReloadTimeout,		CUPSD_VARTYPE_TIME },
@@ -154,6 +155,7 @@ static const cupsd_var_t	cupsfiles_vars[] =
 #endif /* HAVE_TLS */
   { "ServerRoot",		&ServerRoot,		CUPSD_VARTYPE_PATHNAME },
   { "StateDir",			&StateDir,		CUPSD_VARTYPE_STRING },
+  { "StripUserDomain",		&StripUserDomain,	CUPSD_VARTYPE_BOOLEAN },
   { "SyncOnClose",		&SyncOnClose,		CUPSD_VARTYPE_BOOLEAN },
 #ifdef HAVE_AUTHORIZATION_H
   { "SystemGroupAuthKey",	&SystemGroupAuthKey,	CUPSD_VARTYPE_STRING },
@@ -558,6 +560,18 @@ cupsdReadConfiguration(void)
 
   cupsdDeleteAllListeners();
 
+ /*
+  * Allocate array Listeners
+  */
+
+  Listeners = cupsArrayNew(NULL, NULL);
+
+  if (!Listeners)
+  {
+    fprintf(stderr, "Unable to allocate memory for array Listeners.\n");
+    return (0);
+  }
+
   old_remote_port = RemotePort;
   RemotePort      = 0;
 
@@ -605,11 +619,11 @@ cupsdReadConfiguration(void)
   ClassifyOverride  = 0;
 
 #ifdef HAVE_TLS
-#  ifdef HAVE_GNUTLS
+#  if defined HAVE_GNUTLS || defined HAVE_OPENSSL
   cupsdSetString(&ServerKeychain, "ssl");
 #  else
   cupsdSetString(&ServerKeychain, "/Library/Keychains/System.keychain");
-#  endif /* HAVE_GNUTLS */
+#  endif /* HAVE_GNUTLS || HAVE_OPENSSL */
 
   _httpTLSSetOptions(_HTTP_TLS_NONE, _HTTP_TLS_1_0, _HTTP_TLS_MAX);
 #endif /* HAVE_TLS */
@@ -717,6 +731,7 @@ cupsdReadConfiguration(void)
   LogFilePerm              = CUPS_DEFAULT_LOG_FILE_PERM;
   LogFileGroup             = Group;
   LogLevel                 = CUPSD_LOG_WARN;
+  StripUserDomain          = FALSE;
   LogTimeFormat            = CUPSD_TIME_STANDARD;
   MaxClients               = 100;
   MaxClientsPerHost        = 0;
@@ -777,6 +792,13 @@ cupsdReadConfiguration(void)
   IdleExitTimeout = 60;
 #endif /* HAVE_ONDEMAND */
 
+  if (!strcmp(CUPS_DEFAULT_PEER_CRED, "off"))
+    PeerCred = CUPSD_PEERCRED_OFF;
+  else if (!strcmp(CUPS_DEFAULT_PEER_CRED, "root-only"))
+    PeerCred = CUPSD_PEERCRED_ROOTONLY;
+  else
+    PeerCred = CUPSD_PEERCRED_ON;
+
  /*
   * Setup environment variables...
   */
@@ -811,11 +833,7 @@ cupsdReadConfiguration(void)
     cupsdLogMessage(CUPSD_LOG_INFO, "No %s, using defaults.", CupsFilesFile);
   else
   {
-#ifdef HAVE_SYSTEMD_SD_JOURNAL_H
-    sd_journal_print(LOG_ERR, "Unable to open \"%s\" - %s", CupsFilesFile, strerror(errno));
-#else
-    syslog(LOG_LPR, "Unable to open \"%s\" - %s", CupsFilesFile, strerror(errno));
-#endif /* HAVE_SYSTEMD_SD_JOURNAL_H */
+    fprintf(stderr, "Unable to read \"%s\" - %s\n", CupsFilesFile, strerror(errno));
 
     return (0);
   }
@@ -937,6 +955,17 @@ cupsdReadConfiguration(void)
   ServerNameIsIP = !*slash;
 
  /*
+  * If the ErrorLog value contains "%s", close the current log file (if any)
+  * so that the proper ServerName value is used when logging.
+  */
+
+  if (ErrorLog && strstr(ErrorLog, "%s") && ErrorFile && ErrorFile != LogStderr)
+  {
+    cupsFileClose(ErrorFile);
+    ErrorFile = NULL;
+  }
+
+ /*
   * Make sure ServerAdmin is initialized...
   */
 
@@ -1045,28 +1074,6 @@ cupsdReadConfiguration(void)
 	Group = 65534;
       }
     }
-  }
-
- /*
-  * Check that we have at least one listen/port line; if not, report this
-  * as an error and exit!
-  */
-
-  if (cupsArrayCount(Listeners) == 0)
-  {
-   /*
-    * No listeners!
-    */
-
-    cupsdLogMessage(CUPSD_LOG_EMERG,
-                    "No valid Listen or Port lines were found in the "
-		    "configuration file.");
-
-   /*
-    * Commit suicide...
-    */
-
-    cupsdEndProcess(getpid(), 0);
   }
 
  /*
@@ -1359,136 +1366,150 @@ cupsdReadConfiguration(void)
       DefaultPolicyPtr = p = cupsdAddPolicy("default");
 
       cupsdLogMessage(CUPSD_LOG_INFO, "<Policy default>");
+	cupsdLogMessage(CUPSD_LOG_INFO, "JobPrivateAccess default");
+	cupsdAddString(&(p->job_access), "@OWNER");
+	cupsdAddString(&(p->job_access), "@SYSTEM");
 
-      cupsdLogMessage(CUPSD_LOG_INFO, "JobPrivateAccess default");
-      cupsdAddString(&(p->job_access), "@OWNER");
-      cupsdAddString(&(p->job_access), "@SYSTEM");
+	cupsdLogMessage(CUPSD_LOG_INFO, "JobPrivateValues default");
+	cupsdAddString(&(p->job_attrs), "job-name");
+	cupsdAddString(&(p->job_attrs), "job-originating-host-name");
+	cupsdAddString(&(p->job_attrs), "job-originating-user-name");
+	cupsdAddString(&(p->job_attrs), "phone");
 
-      cupsdLogMessage(CUPSD_LOG_INFO, "JobPrivateValues default");
-      cupsdAddString(&(p->job_attrs), "job-name");
-      cupsdAddString(&(p->job_attrs), "job-originating-host-name");
-      cupsdAddString(&(p->job_attrs), "job-originating-user-name");
-      cupsdAddString(&(p->job_attrs), "phone");
+	cupsdLogMessage(CUPSD_LOG_INFO, "SubscriptionPrivateAccess default");
+	cupsdAddString(&(p->sub_access), "@OWNER");
+	cupsdAddString(&(p->sub_access), "@SYSTEM");
 
-      cupsdLogMessage(CUPSD_LOG_INFO, "SubscriptionPrivateAccess default");
-      cupsdAddString(&(p->sub_access), "@OWNER");
-      cupsdAddString(&(p->sub_access), "@SYSTEM");
+	cupsdLogMessage(CUPSD_LOG_INFO, "SubscriptionPrivateValues default");
+	cupsdAddString(&(p->job_attrs), "notify-events");
+	cupsdAddString(&(p->job_attrs), "notify-pull-method");
+	cupsdAddString(&(p->job_attrs), "notify-recipient-uri");
+	cupsdAddString(&(p->job_attrs), "notify-subscriber-user-name");
+	cupsdAddString(&(p->job_attrs), "notify-user-data");
 
-      cupsdLogMessage(CUPSD_LOG_INFO, "SubscriptionPrivateValues default");
-      cupsdAddString(&(p->job_attrs), "notify-events");
-      cupsdAddString(&(p->job_attrs), "notify-pull-method");
-      cupsdAddString(&(p->job_attrs), "notify-recipient-uri");
-      cupsdAddString(&(p->job_attrs), "notify-subscriber-user-name");
-      cupsdAddString(&(p->job_attrs), "notify-user-data");
+	cupsdLogMessage(CUPSD_LOG_INFO, "<Limit Create-Job Print-Job Print-URI Validate-Job>");
+	  po = cupsdAddPolicyOp(p, NULL, IPP_CREATE_JOB);
+	  cupsdAddPolicyOp(p, po, IPP_PRINT_JOB);
+	  cupsdAddPolicyOp(p, po, IPP_PRINT_URI);
+	  cupsdAddPolicyOp(p, po, IPP_VALIDATE_JOB);
 
-      cupsdLogMessage(CUPSD_LOG_INFO,
-                      "<Limit Create-Job Print-Job Print-URI Validate-Job>");
-      cupsdLogMessage(CUPSD_LOG_INFO, "Order Deny,Allow");
+	  cupsdLogMessage(CUPSD_LOG_INFO, "Order Deny,Allow");
+	  po->order_type = CUPSD_AUTH_ALLOW;
+	cupsdLogMessage(CUPSD_LOG_INFO, "</Limit>");
 
-      po = cupsdAddPolicyOp(p, NULL, IPP_CREATE_JOB);
-      po->order_type = CUPSD_AUTH_ALLOW;
+	cupsdLogMessage(CUPSD_LOG_INFO, "<Limit Send-Document Send-URI Hold-Job Release-Job Restart-Job Purge-Jobs Set-Job-Attributes Create-Job-Subscription Renew-Subscription Cancel-Subscription Get-Notifications Reprocess-Job Cancel-Current-Job Suspend-Current-Job Resume-Job Cancel-My-Jobs Close-Job CUPS-Move-Job>");
+	  po = cupsdAddPolicyOp(p, NULL, IPP_SEND_DOCUMENT);
+	  cupsdAddPolicyOp(p, po, IPP_SEND_URI);
+	  cupsdAddPolicyOp(p, po, IPP_HOLD_JOB);
+	  cupsdAddPolicyOp(p, po, IPP_RELEASE_JOB);
+	  cupsdAddPolicyOp(p, po, IPP_RESTART_JOB);
+	  cupsdAddPolicyOp(p, po, IPP_PURGE_JOBS);
+	  cupsdAddPolicyOp(p, po, IPP_SET_JOB_ATTRIBUTES);
+	  cupsdAddPolicyOp(p, po, IPP_CREATE_JOB_SUBSCRIPTION);
+	  cupsdAddPolicyOp(p, po, IPP_RENEW_SUBSCRIPTION);
+	  cupsdAddPolicyOp(p, po, IPP_CANCEL_SUBSCRIPTION);
+	  cupsdAddPolicyOp(p, po, IPP_GET_NOTIFICATIONS);
+	  cupsdAddPolicyOp(p, po, IPP_REPROCESS_JOB);
+	  cupsdAddPolicyOp(p, po, IPP_CANCEL_CURRENT_JOB);
+	  cupsdAddPolicyOp(p, po, IPP_SUSPEND_CURRENT_JOB);
+	  cupsdAddPolicyOp(p, po, IPP_RESUME_JOB);
+	  cupsdAddPolicyOp(p, po, IPP_CANCEL_MY_JOBS);
+	  cupsdAddPolicyOp(p, po, IPP_CLOSE_JOB);
+	  cupsdAddPolicyOp(p, po, CUPS_MOVE_JOB);
 
-      cupsdAddPolicyOp(p, po, IPP_PRINT_JOB);
-      cupsdAddPolicyOp(p, po, IPP_PRINT_URI);
-      cupsdAddPolicyOp(p, po, IPP_VALIDATE_JOB);
+	  cupsdLogMessage(CUPSD_LOG_INFO, "Order Deny,Allow");
+	  po->order_type = CUPSD_AUTH_ALLOW;
 
-      cupsdLogMessage(CUPSD_LOG_INFO, "</Limit>");
+	  cupsdLogMessage(CUPSD_LOG_INFO, "Require user @OWNER @SYSTEM");
+	  po->level = CUPSD_AUTH_USER;
+	  cupsdAddName(po, "@OWNER");
+	  cupsdAddName(po, "@SYSTEM");
+	cupsdLogMessage(CUPSD_LOG_INFO, "</Limit>");
 
-      cupsdLogMessage(CUPSD_LOG_INFO,
-                      "<Limit Send-Document Send-URI Cancel-Job Hold-Job "
-                      "Release-Job Restart-Job Purge-Jobs "
-		      "Set-Job-Attributes Create-Job-Subscription "
-		      "Renew-Subscription Cancel-Subscription "
-		      "Get-Notifications Reprocess-Job Cancel-Current-Job "
-		      "Suspend-Current-Job Resume-Job "
-		      "Cancel-My-Jobs Close-Job CUPS-Move-Job "
-		      "CUPS-Authenticate-Job CUPS-Get-Document>");
-      cupsdLogMessage(CUPSD_LOG_INFO, "Order Deny,Allow");
+	cupsdLogMessage(CUPSD_LOG_INFO, "<Limit CUPS-Authenticate-Job>");
+	  po = cupsdAddPolicyOp(p, NULL, CUPS_GET_DOCUMENT);
 
-      po = cupsdAddPolicyOp(p, NULL, IPP_SEND_DOCUMENT);
-      po->order_type = CUPSD_AUTH_ALLOW;
-      po->level      = CUPSD_AUTH_USER;
+	  cupsdLogMessage(CUPSD_LOG_INFO, "Order Deny,Allow");
+	  po->order_type = CUPSD_AUTH_ALLOW;
 
-      cupsdAddName(po, "@OWNER");
-      cupsdAddName(po, "@SYSTEM");
-      cupsdLogMessage(CUPSD_LOG_INFO, "Require user @OWNER @SYSTEM");
+	  cupsdLogMessage(CUPSD_LOG_INFO, "AuthType Default");
+	  po->type = CUPSD_AUTH_DEFAULT;
 
-      cupsdAddPolicyOp(p, po, IPP_SEND_URI);
-      cupsdAddPolicyOp(p, po, IPP_CANCEL_JOB);
-      cupsdAddPolicyOp(p, po, IPP_HOLD_JOB);
-      cupsdAddPolicyOp(p, po, IPP_RELEASE_JOB);
-      cupsdAddPolicyOp(p, po, IPP_RESTART_JOB);
-      cupsdAddPolicyOp(p, po, IPP_PURGE_JOBS);
-      cupsdAddPolicyOp(p, po, IPP_SET_JOB_ATTRIBUTES);
-      cupsdAddPolicyOp(p, po, IPP_CREATE_JOB_SUBSCRIPTION);
-      cupsdAddPolicyOp(p, po, IPP_RENEW_SUBSCRIPTION);
-      cupsdAddPolicyOp(p, po, IPP_CANCEL_SUBSCRIPTION);
-      cupsdAddPolicyOp(p, po, IPP_GET_NOTIFICATIONS);
-      cupsdAddPolicyOp(p, po, IPP_REPROCESS_JOB);
-      cupsdAddPolicyOp(p, po, IPP_CANCEL_CURRENT_JOB);
-      cupsdAddPolicyOp(p, po, IPP_SUSPEND_CURRENT_JOB);
-      cupsdAddPolicyOp(p, po, IPP_RESUME_JOB);
-      cupsdAddPolicyOp(p, po, IPP_CANCEL_MY_JOBS);
-      cupsdAddPolicyOp(p, po, IPP_CLOSE_JOB);
-      cupsdAddPolicyOp(p, po, CUPS_MOVE_JOB);
-      cupsdAddPolicyOp(p, po, CUPS_AUTHENTICATE_JOB);
-      cupsdAddPolicyOp(p, po, CUPS_GET_DOCUMENT);
+	  cupsdLogMessage(CUPSD_LOG_INFO, "Require user @OWNER @SYSTEM");
+	  po->level = CUPSD_AUTH_USER;
+	  cupsdAddName(po, "@OWNER");
+	  cupsdAddName(po, "@SYSTEM");
+	cupsdLogMessage(CUPSD_LOG_INFO, "</Limit>");
 
-      cupsdLogMessage(CUPSD_LOG_INFO, "</Limit>");
+	cupsdLogMessage(CUPSD_LOG_INFO, "<Limit Pause-Printer Resume-Printer  Set-Printer-Attributes Enable-Printer Disable-Printer Pause-Printer-After-Current-Job Hold-New-Jobs Release-Held-New-Jobs Deactivate-Printer Activate-Printer Restart-Printer Shutdown-Printer Startup-Printer Promote-Job Schedule-Job-After Cancel-Jobs CUPS-Add-Printer CUPS-Delete-Printer CUPS-Add-Class CUPS-Delete-Class CUPS-Accept-Jobs CUPS-Reject-Jobs CUPS-Set-Default>");
+	  po = cupsdAddPolicyOp(p, NULL, IPP_PAUSE_PRINTER);
+	  cupsdAddPolicyOp(p, po, IPP_RESUME_PRINTER);
+	  cupsdAddPolicyOp(p, po, IPP_SET_PRINTER_ATTRIBUTES);
+	  cupsdAddPolicyOp(p, po, IPP_ENABLE_PRINTER);
+	  cupsdAddPolicyOp(p, po, IPP_DISABLE_PRINTER);
+	  cupsdAddPolicyOp(p, po, IPP_PAUSE_PRINTER_AFTER_CURRENT_JOB);
+	  cupsdAddPolicyOp(p, po, IPP_HOLD_NEW_JOBS);
+	  cupsdAddPolicyOp(p, po, IPP_RELEASE_HELD_NEW_JOBS);
+	  cupsdAddPolicyOp(p, po, IPP_DEACTIVATE_PRINTER);
+	  cupsdAddPolicyOp(p, po, IPP_ACTIVATE_PRINTER);
+	  cupsdAddPolicyOp(p, po, IPP_RESTART_PRINTER);
+	  cupsdAddPolicyOp(p, po, IPP_SHUTDOWN_PRINTER);
+	  cupsdAddPolicyOp(p, po, IPP_STARTUP_PRINTER);
+	  cupsdAddPolicyOp(p, po, IPP_PROMOTE_JOB);
+	  cupsdAddPolicyOp(p, po, IPP_SCHEDULE_JOB_AFTER);
+	  cupsdAddPolicyOp(p, po, IPP_CANCEL_JOBS);
+	  cupsdAddPolicyOp(p, po, CUPS_ADD_PRINTER);
+	  cupsdAddPolicyOp(p, po, CUPS_DELETE_PRINTER);
+	  cupsdAddPolicyOp(p, po, CUPS_ADD_CLASS);
+	  cupsdAddPolicyOp(p, po, CUPS_DELETE_CLASS);
+	  cupsdAddPolicyOp(p, po, CUPS_ACCEPT_JOBS);
+	  cupsdAddPolicyOp(p, po, CUPS_REJECT_JOBS);
+	  cupsdAddPolicyOp(p, po, CUPS_SET_DEFAULT);
 
-      cupsdLogMessage(CUPSD_LOG_INFO,
-                      "<Limit Pause-Printer Resume-Printer "
-                      "Set-Printer-Attributes Enable-Printer "
-		      "Disable-Printer Pause-Printer-After-Current-Job "
-		      "Hold-New-Jobs Release-Held-New-Jobs "
-		      "Deactivate-Printer Activate-Printer Restart-Printer "
-		      "Shutdown-Printer Startup-Printer Promote-Job "
-		      "Schedule-Job-After Cancel-Jobs CUPS-Add-Printer "
-		      "CUPS-Delete-Printer CUPS-Add-Class CUPS-Delete-Class "
-		      "CUPS-Accept-Jobs CUPS-Reject-Jobs CUPS-Set-Default>");
-      cupsdLogMessage(CUPSD_LOG_INFO, "Order Deny,Allow");
-      cupsdLogMessage(CUPSD_LOG_INFO, "AuthType Default");
+	  cupsdLogMessage(CUPSD_LOG_INFO, "Order Deny,Allow");
+	  po->order_type = CUPSD_AUTH_ALLOW;
 
-      po = cupsdAddPolicyOp(p, NULL, IPP_PAUSE_PRINTER);
-      po->order_type = CUPSD_AUTH_ALLOW;
-      po->type       = CUPSD_AUTH_DEFAULT;
-      po->level      = CUPSD_AUTH_USER;
+	  cupsdLogMessage(CUPSD_LOG_INFO, "AuthType Default");
+	  po->type = CUPSD_AUTH_DEFAULT;
 
-      cupsdAddName(po, "@SYSTEM");
-      cupsdLogMessage(CUPSD_LOG_INFO, "Require user @SYSTEM");
+	  cupsdLogMessage(CUPSD_LOG_INFO, "Require user @SYSTEM");
+	  po->level = CUPSD_AUTH_USER;
+	  cupsdAddName(po, "@SYSTEM");
+	cupsdLogMessage(CUPSD_LOG_INFO, "</Limit>");
 
-      cupsdAddPolicyOp(p, po, IPP_RESUME_PRINTER);
-      cupsdAddPolicyOp(p, po, IPP_SET_PRINTER_ATTRIBUTES);
-      cupsdAddPolicyOp(p, po, IPP_ENABLE_PRINTER);
-      cupsdAddPolicyOp(p, po, IPP_DISABLE_PRINTER);
-      cupsdAddPolicyOp(p, po, IPP_PAUSE_PRINTER_AFTER_CURRENT_JOB);
-      cupsdAddPolicyOp(p, po, IPP_HOLD_NEW_JOBS);
-      cupsdAddPolicyOp(p, po, IPP_RELEASE_HELD_NEW_JOBS);
-      cupsdAddPolicyOp(p, po, IPP_DEACTIVATE_PRINTER);
-      cupsdAddPolicyOp(p, po, IPP_ACTIVATE_PRINTER);
-      cupsdAddPolicyOp(p, po, IPP_RESTART_PRINTER);
-      cupsdAddPolicyOp(p, po, IPP_SHUTDOWN_PRINTER);
-      cupsdAddPolicyOp(p, po, IPP_STARTUP_PRINTER);
-      cupsdAddPolicyOp(p, po, IPP_PROMOTE_JOB);
-      cupsdAddPolicyOp(p, po, IPP_SCHEDULE_JOB_AFTER);
-      cupsdAddPolicyOp(p, po, IPP_CANCEL_JOBS);
-      cupsdAddPolicyOp(p, po, CUPS_ADD_PRINTER);
-      cupsdAddPolicyOp(p, po, CUPS_DELETE_PRINTER);
-      cupsdAddPolicyOp(p, po, CUPS_ADD_CLASS);
-      cupsdAddPolicyOp(p, po, CUPS_DELETE_CLASS);
-      cupsdAddPolicyOp(p, po, CUPS_ACCEPT_JOBS);
-      cupsdAddPolicyOp(p, po, CUPS_REJECT_JOBS);
-      cupsdAddPolicyOp(p, po, CUPS_SET_DEFAULT);
+	cupsdLogMessage(CUPSD_LOG_INFO, "<Limit Cancel-Job>");
+	  po = cupsdAddPolicyOp(p, NULL, IPP_CANCEL_JOB);
 
-      cupsdLogMessage(CUPSD_LOG_INFO, "</Limit>");
+	  cupsdLogMessage(CUPSD_LOG_INFO, "Order Deny,Allow");
+	  po->order_type = CUPSD_AUTH_ALLOW;
 
-      cupsdLogMessage(CUPSD_LOG_INFO, "<Limit All>");
-      cupsdLogMessage(CUPSD_LOG_INFO, "Order Deny,Allow");
+	  cupsdLogMessage(CUPSD_LOG_INFO, "Require user @OWNER " CUPS_DEFAULT_PRINTOPERATOR_AUTH);
+	  po->level = CUPSD_AUTH_USER;
+	  cupsdAddName(po, "@OWNER");
+	  cupsdAddName(po, CUPS_DEFAULT_PRINTOPERATOR_AUTH);
+	cupsdLogMessage(CUPSD_LOG_INFO, "</Limit>");
 
-      po = cupsdAddPolicyOp(p, NULL, IPP_ANY_OPERATION);
-      po->order_type = CUPSD_AUTH_ALLOW;
+	cupsdLogMessage(CUPSD_LOG_INFO, "<Limit CUPS-Authenticate-Job>");
+	  po = cupsdAddPolicyOp(p, NULL, CUPS_AUTHENTICATE_JOB);
 
-      cupsdLogMessage(CUPSD_LOG_INFO, "</Limit>");
+	  cupsdLogMessage(CUPSD_LOG_INFO, "AuthType Default");
+	  po->type = CUPSD_AUTH_DEFAULT;
+
+	  cupsdLogMessage(CUPSD_LOG_INFO, "Order Deny,Allow");
+	  po->order_type = CUPSD_AUTH_ALLOW;
+
+	  cupsdLogMessage(CUPSD_LOG_INFO, "Require user @OWNER " CUPS_DEFAULT_PRINTOPERATOR_AUTH);
+	  po->level = CUPSD_AUTH_USER;
+	  cupsdAddName(po, "@OWNER");
+	  cupsdAddName(po, CUPS_DEFAULT_PRINTOPERATOR_AUTH);
+	cupsdLogMessage(CUPSD_LOG_INFO, "</Limit>");
+
+	cupsdLogMessage(CUPSD_LOG_INFO, "<Limit All>");
+	  po = cupsdAddPolicyOp(p, NULL, IPP_ANY_OPERATION);
+
+	  cupsdLogMessage(CUPSD_LOG_INFO, "Order Deny,Allow");
+	  po->order_type = CUPSD_AUTH_ALLOW;
+	cupsdLogMessage(CUPSD_LOG_INFO, "</Limit>");
       cupsdLogMessage(CUPSD_LOG_INFO, "</Policy>");
     }
   }
@@ -1560,11 +1581,14 @@ cupsdReadConfiguration(void)
 
     MimeDatabase = mimeNew();
     mimeSetErrorCallback(MimeDatabase, mime_error_cb, NULL);
+    _cupsRWInit(&MimeDatabase->lock);
 
+    _cupsRWLockWrite(&MimeDatabase->lock);
     MimeDatabase = mimeLoadTypes(MimeDatabase, mimedir);
     MimeDatabase = mimeLoadTypes(MimeDatabase, ServerRoot);
     MimeDatabase = mimeLoadFilters(MimeDatabase, mimedir, temp);
     MimeDatabase = mimeLoadFilters(MimeDatabase, ServerRoot, temp);
+    _cupsRWUnlock(&MimeDatabase->lock);
 
     if (!MimeDatabase)
     {
@@ -1826,7 +1850,7 @@ get_addr_and_mask(const char *value,	/* I - String from config file */
 
     family  = AF_INET6;
 
-    for (i = 0, ptr = value + 1; *ptr && i < 8; i ++)
+    for (i = 0, ptr = value + 1; *ptr && i >= 0 && i < 8; i ++)
     {
       if (*ptr == ']')
         break;
@@ -1863,8 +1887,7 @@ get_addr_and_mask(const char *value,	/* I - String from config file */
 	* Merge everything into a 32-bit IPv4 address in ip[3]...
 	*/
 
-	ip[3] = ((((((unsigned)val[0] << 8) | (unsigned)val[1]) << 8) |
-	         (unsigned)val[2]) << 8) | (unsigned)val[3];
+	ip[3] = (val[0] << 24) | (val[1] << 16) | (val[2] << 8) | val[3];
 
 	if (ipcount < 4)
 	  mask[3] = (0xffffffff << (32 - 8 * ipcount)) & 0xffffffff;
@@ -1932,8 +1955,7 @@ get_addr_and_mask(const char *value,	/* I - String from config file */
     * Merge everything into a 32-bit IPv4 address in ip[3]...
     */
 
-    ip[3] = ((((((unsigned)val[0] << 8) | (unsigned)val[1]) << 8) |
-             (unsigned)val[2]) << 8) | (unsigned)val[3];
+    ip[3] = (val[0] << 24) | (val[1] << 16) | (val[2] << 8) | val[3];
 
     if (ipcount < 4)
       mask[3] = (0xffffffff << (32 - 8 * ipcount)) & 0xffffffff;
@@ -1960,8 +1982,7 @@ get_addr_and_mask(const char *value,	/* I - String from config file */
                  mask + 3) != 4)
         return (0);
 
-      mask[3] |= (((((unsigned)mask[0] << 8) | (unsigned)mask[1]) << 8) |
-                  (unsigned)mask[2]) << 8;
+      mask[3] |= (mask[0] << 24) | (mask[1] << 16) | (mask[2] << 8);
       mask[0] = mask[1] = mask[2] = 0;
     }
     else
@@ -1975,7 +1996,7 @@ get_addr_and_mask(const char *value,	/* I - String from config file */
 #ifdef AF_INET6
       if (family == AF_INET6)
       {
-        if (i > 128)
+        if (i < 0 || i > 128)
 	  return (0);
 
         i = 128 - i;
@@ -2009,7 +2030,7 @@ get_addr_and_mask(const char *value,	/* I - String from config file */
       else
 #endif /* AF_INET6 */
       {
-        if (i > 32)
+        if (i < 0 || i > 32)
 	  return (0);
 
         mask[0] = 0xffffffff;
@@ -2679,7 +2700,7 @@ parse_variable(
   char			temp[1024];	/* Temporary string */
 
 
-  for (i = num_vars, var = vars; i > 0; i --, var ++)
+  for (i = num_vars, var = vars; i; i --, var ++)
     if (!_cups_strcasecmp(line, var->name))
       break;
 
@@ -2687,16 +2708,16 @@ parse_variable(
   {
    /*
     * Unknown directive!  Output an error message and continue...
+    *
+    * Return value 1 is on purpose - we ignore unknown directives to log
+    * error, but do not stop the scheduler in case error in configuration
+    * is set to be fatal.
     */
 
-    if (!value)
-      cupsdLogMessage(CUPSD_LOG_ERROR, "Missing value for %s on line %d of %s.",
-		      line, linenum, filename);
-    else
-      cupsdLogMessage(CUPSD_LOG_ERROR, "Unknown directive %s on line %d of %s.",
-		      line, linenum, filename);
+    cupsdLogMessage(CUPSD_LOG_ERROR, "Unknown directive %s on line %d of %s.",
+		    line, linenum, filename);
 
-    return (0);
+    return (1);
   }
 
   switch (var->type)
@@ -2721,7 +2742,7 @@ parse_variable(
 	  int	n;		/* Number */
 	  char	*units;		/* Units */
 
-	  n = strtol(value, &units, 0);
+	  n = (int)strtol(value, &units, 0);
 
 	  if (units && *units)
 	  {
@@ -2774,7 +2795,7 @@ parse_variable(
 	}
 	else
 	{
-	  int n = strtol(value, NULL, 8);
+	  int n = (int)strtol(value, NULL, 8);
 					/* Permissions value */
 
 	  if (n < 0)
@@ -2919,7 +2940,17 @@ parse_variable(
 	cupsdSetString((char **)var->ptr, temp);
 	break;
 
+    case CUPSD_VARTYPE_NULLSTRING :
+	cupsdSetString((char **)var->ptr, value);
+	break;
+
     case CUPSD_VARTYPE_STRING :
+        if (!value)
+        {
+	  cupsdLogMessage(CUPSD_LOG_ERROR, "Missing value for %s on line %d of %s.", line, linenum, filename);
+	  return (0);
+        }
+
 	cupsdSetString((char **)var->ptr, value);
 	break;
   }
@@ -2941,7 +2972,6 @@ read_cupsd_conf(cups_file_t *fp)	/* I - File to read from */
 			temp[HTTP_MAX_BUFFER],
 					/* Temporary buffer for value */
 			*value;		/* Pointer to value */
-  int			valuelen;	/* Length of value */
   http_addrlist_t	*addrlist,	/* Address list */
 			*addr;		/* Current address */
 
@@ -3053,6 +3083,8 @@ read_cupsd_conf(cups_file_t *fp)	/* I - File to read from */
 	    min_version = _HTTP_TLS_1_3;
 	  else if (!_cups_strcasecmp(start, "None"))
 	    options = _HTTP_TLS_NONE;
+	  else if (!_cups_strcasecmp(start, "NoSystem"))
+	    options |= _HTTP_TLS_NO_SYSTEM;
 	  else if (_cups_strcasecmp(start, "NoEmptyFragments"))
 	    cupsdLogMessage(CUPSD_LOG_WARN, "Unknown SSL option %s at line %d.", start, linenum);
         }
@@ -3073,6 +3105,26 @@ read_cupsd_conf(cups_file_t *fp)	/* I - File to read from */
 
       cupsd_listener_t	*lis;		/* New listeners array */
 
+
+     /*
+      * If we are launched on-demand, do not use domain sockets from the config
+      * file.  Also check that the domain socket path is not too long...
+      */
+
+#ifdef HAVE_ONDEMAND
+      if (*value == '/' && OnDemand)
+      {
+        if (strcmp(value, CUPS_DEFAULT_DOMAINSOCKET))
+          cupsdLogMessage(CUPSD_LOG_INFO, "Ignoring %s address %s at line %d - only using domain socket from launchd/systemd.", line, value, linenum);
+        continue;
+      }
+#endif // HAVE_ONDEMAND
+
+      if (*value == '/' && strlen(value) > (sizeof(addr->addr.un.sun_path) - 1))
+      {
+        cupsdLogMessage(CUPSD_LOG_INFO, "Ignoring %s address %s at line %d - too long.", line, value, linenum);
+        continue;
+      }
 
      /*
       * Get the address list...
@@ -3121,17 +3173,6 @@ read_cupsd_conf(cups_file_t *fp)	/* I - File to read from */
        /*
         * Allocate another listener...
 	*/
-
-        if (!Listeners)
-	  Listeners = cupsArrayNew(NULL, NULL);
-
-	if (!Listeners)
-	{
-          cupsdLogMessage(CUPSD_LOG_ERROR,
-	                  "Unable to allocate %s at line %d - %s.",
-	                  line, linenum, strerror(errno));
-          break;
-	}
 
         if ((lis = calloc(1, sizeof(cupsd_listener_t))) == NULL)
 	{
@@ -3374,17 +3415,16 @@ read_cupsd_conf(cups_file_t *fp)	/* I - File to read from */
       if (!ServerAlias)
         ServerAlias = cupsArrayNew(NULL, NULL);
 
-      for (; *value;)
+      while (*value)
       {
+        size_t valuelen; /* Length of value */
+
         for (valuelen = 0; value[valuelen]; valuelen ++)
 	  if (_cups_isspace(value[valuelen]) || value[valuelen] == ',')
-	    break;
-
-        if (value[valuelen])
-        {
-	  value[valuelen] = '\0';
-	  valuelen ++;
-	}
+    {
+      value[valuelen ++] = '\0';
+      break;
+    }
 
 	cupsdAddAlias(ServerAlias, value);
 
@@ -3427,9 +3467,10 @@ read_cupsd_conf(cups_file_t *fp)	/* I - File to read from */
 		      line, value ? " " : "", value ? value : "", linenum,
 		      ConfigurationFile, CupsFilesFile);
     }
-    else
-      parse_variable(ConfigurationFile, linenum, line, value,
-                     sizeof(cupsd_vars) / sizeof(cupsd_vars[0]), cupsd_vars);
+    else if (!parse_variable(ConfigurationFile, linenum, line, value,
+			     sizeof(cupsd_vars) / sizeof(cupsd_vars[0]), cupsd_vars) &&
+	     (FatalErrors & CUPSD_FATAL_CONFIG))
+      return (0);
   }
 
   return (1);
@@ -3443,8 +3484,8 @@ read_cupsd_conf(cups_file_t *fp)	/* I - File to read from */
 static int				/* O - 1 on success, 0 on failure */
 read_cups_files_conf(cups_file_t *fp)	/* I - File to read from */
 {
-  int		i,			/* Looping var */
-		linenum;		/* Current line number */
+  size_t		i;		/* Looping var */
+  int		linenum;		/* Current line number */
   char		line[HTTP_MAX_BUFFER],	/* Line from file */
 		*value;			/* Value from line */
   struct group	*group;			/* Group */
@@ -3505,7 +3546,7 @@ read_cups_files_conf(cups_file_t *fp)	/* I - File to read from */
       */
 
       if (isdigit(value[0]))
-        Group = (gid_t)atoi(value);
+        Group = (gid_t)strtoul(value, NULL, 10);
       else
       {
         endgrent();
@@ -3530,7 +3571,7 @@ read_cups_files_conf(cups_file_t *fp)	/* I - File to read from */
       */
 
       if (isdigit(value[0]))
-        LogFileGroup = (gid_t)atoi(value);
+        LogFileGroup = (gid_t)strtoul(value, NULL, 10);
       else
       {
         endgrent();
@@ -3554,9 +3595,9 @@ read_cups_files_conf(cups_file_t *fp)	/* I - File to read from */
       * PassEnv variable [... variable]
       */
 
-      int valuelen;			/* Length of variable name */
+      size_t valuelen;			/* Length of variable name */
 
-      for (; *value;)
+      while (*value)
       {
         for (valuelen = 0; value[valuelen]; valuelen ++)
 	  if (_cups_isspace(value[valuelen]) || value[valuelen] == ',')
@@ -3564,11 +3605,10 @@ read_cups_files_conf(cups_file_t *fp)	/* I - File to read from */
 
         if (value[valuelen])
         {
-	  value[valuelen] = '\0';
-	  valuelen ++;
+	  value[valuelen ++] = '\0';
 	}
 
-        for (i = 0; i < (int)(sizeof(prohibited_env) / sizeof(prohibited_env[0])); i ++)
+        for (i = 0; i < (sizeof(prohibited_env) / sizeof(prohibited_env[0])); i ++)
         {
           if (!strcmp(value, prohibited_env[i]))
           {
@@ -3581,12 +3621,37 @@ read_cups_files_conf(cups_file_t *fp)	/* I - File to read from */
           }
 	}
 
-        if (i >= (int)(sizeof(prohibited_env) / sizeof(prohibited_env[0])))
+        if (i >= sizeof(prohibited_env) / sizeof(prohibited_env[0]))
           cupsdSetEnv(value, NULL);
 
         for (value += valuelen; *value; value ++)
 	  if (!_cups_isspace(*value) || *value != ',')
 	    break;
+      }
+    }
+    else if (!_cups_strcasecmp(line, "PeerCred") && value)
+    {
+     /*
+      * PeerCred {off,on,root-only}
+      */
+
+      if (!_cups_strcasecmp(value, "off"))
+      {
+        PeerCred = CUPSD_PEERCRED_OFF;
+      }
+      else if (!_cups_strcasecmp(value, "on"))
+      {
+        PeerCred = CUPSD_PEERCRED_ON;
+      }
+      else if (!_cups_strcasecmp(value, "root-only"))
+      {
+        PeerCred = CUPSD_PEERCRED_ROOTONLY;
+      }
+      else
+      {
+	cupsdLogMessage(CUPSD_LOG_ERROR, "Unknown PeerCred \"%s\" on line %d of %s.", value, linenum, CupsFilesFile);
+        if (FatalErrors & CUPSD_FATAL_CONFIG)
+          return (0);
       }
     }
     else if (!_cups_strcasecmp(line, "PrintcapFormat") && value)
@@ -3650,7 +3715,7 @@ read_cups_files_conf(cups_file_t *fp)	/* I - File to read from */
         while (isspace(*valueptr & 255))
 	  *valueptr++ = '\0';
 
-        for (i = 0; i < (int)(sizeof(prohibited_env) / sizeof(prohibited_env[0])); i ++)
+        for (i = 0; i < (sizeof(prohibited_env) / sizeof(prohibited_env[0])); i ++)
         {
           if (!strcmp(value, prohibited_env[i]))
           {
@@ -3663,7 +3728,7 @@ read_cups_files_conf(cups_file_t *fp)	/* I - File to read from */
           }
 	}
 
-        if (i >= (int)(sizeof(prohibited_env) / sizeof(prohibited_env[0])))
+        if (i >= (sizeof(prohibited_env) / sizeof(prohibited_env[0])))
 	  cupsdSetEnv(value, valueptr);
       }
       else
@@ -3691,7 +3756,7 @@ read_cups_files_conf(cups_file_t *fp)	/* I - File to read from */
 
       if (isdigit(value[0] & 255))
       {
-        int uid = atoi(value);
+        uid_t uid = (uid_t)strtoul(value, NULL, 10);
 
 	if (!uid)
 	{
@@ -3704,7 +3769,7 @@ read_cups_files_conf(cups_file_t *fp)	/* I - File to read from */
             return (0);
         }
         else
-	  User = (uid_t)atoi(value);
+	  User = uid;
       }
       else
       {

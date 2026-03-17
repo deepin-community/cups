@@ -1,7 +1,7 @@
 /*
  * Authentication certificate routines for the CUPS scheduler.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2016 by Apple Inc.
  * Copyright © 1997-2006 by Easy Software Products.
  *
@@ -52,7 +52,7 @@ cupsdAddCert(int        pid,		/* I - Process ID */
   * Allocate memory for the certificate...
   */
 
-  if ((cert = calloc(sizeof(cupsd_cert_t), 1)) == NULL)
+  if ((cert = calloc(1, sizeof(cupsd_cert_t))) == NULL)
     return;
 
  /*
@@ -447,7 +447,7 @@ ctcompare(const char *a,		/* I - First string */
  /*
   * The while loop finishes when *a == '\0' or *b == '\0'
   * so after the while loop either both *a and *b == '\0',
-  * or one points inside a string, so when we apply logical OR on *a,
+  * or one points inside a string, so when we apply bitwise OR on *a,
   * *b and result, we get a non-zero return value if the compared strings don't match.
   */
 

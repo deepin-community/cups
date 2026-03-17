@@ -1,16 +1,12 @@
 /*
  * Administration CGI for CUPS.
  *
- * Copyright © 2021-2022 by OpenPrinting
+ * Copyright © 2021-2024 by OpenPrinting
  * Copyright © 2007-2021 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
  * information.
- */
-
-/*
- * Include necessary headers...
  */
 
 #include "cgi-private.h"
@@ -47,7 +43,6 @@ static void	do_menu(http_t *http);
 static void	do_set_allowed_users(http_t *http);
 static void	do_set_default(http_t *http);
 static void	do_set_options(http_t *http, int is_class);
-static void	do_set_sharing(http_t *http);
 static char	*get_option_value(ppd_file_t *ppd, const char *name,
 		                  char *buffer, size_t bufsize);
 static double	get_points(double number, const char *uval);
@@ -119,7 +114,7 @@ main(void)
 					/* Printer or class name */
 		*server_port = getenv("SERVER_PORT");
 					/* Port number string */
-      int	port = atoi(server_port ? server_port : "0");
+      int	port = server_port ? atoi(server_port) : 0;
       					/* Port number */
       char	uri[1024];		/* URL */
 
@@ -140,8 +135,6 @@ main(void)
       do_set_allowed_users(http);
     else if (!strcmp(op, "set-as-default"))
       do_set_default(http);
-    else if (!strcmp(op, "set-sharing"))
-      do_set_sharing(http);
     else if (!strcmp(op, "find-new-printers") ||
              !strcmp(op, "list-available-printers"))
       do_list_printers(http);
@@ -335,9 +328,9 @@ do_am_class(http_t *http,		/* I - HTTP connection */
 
   title = cgiText(modify ? _("Modify Class") : _("Add Class"));
   op    = cgiGetVariable("OP");
-  name  = cgiGetVariable("PRINTER_NAME");
+  name  = cgiGetTextfield("PRINTER_NAME");
 
-  if (cgiGetVariable("PRINTER_LOCATION") == NULL)
+  if (cgiGetTextfield("PRINTER_LOCATION") == NULL)
   {
    /*
     * Build a CUPS_GET_PRINTERS request, which requires the
@@ -544,10 +537,10 @@ do_am_class(http_t *http,		/* I - HTTP connection */
                NULL, uri);
 
   ippAddString(request, IPP_TAG_PRINTER, IPP_TAG_TEXT, "printer-location",
-               NULL, cgiGetVariable("PRINTER_LOCATION"));
+               NULL, cgiGetTextfield("PRINTER_LOCATION"));
 
   ippAddString(request, IPP_TAG_PRINTER, IPP_TAG_TEXT, "printer-info",
-               NULL, cgiGetVariable("PRINTER_INFO"));
+               NULL, cgiGetTextfield("PRINTER_INFO"));
 
   ippAddBoolean(request, IPP_TAG_PRINTER, "printer-is-accepting-jobs", 1);
 
@@ -664,7 +657,7 @@ do_am_printer(http_t *http,		/* I - HTTP connection */
 
     httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
                      "localhost", 0, "/printers/%s",
-		     cgiGetVariable("PRINTER_NAME"));
+		     cgiGetTextfield("PRINTER_NAME"));
     ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri",
                  NULL, uri);
 
@@ -687,7 +680,7 @@ do_am_printer(http_t *http,		/* I - HTTP connection */
     fprintf(stderr, "DEBUG: file->mimetype=%s\n", file->mimetype);
   }
 
-  if ((name = cgiGetVariable("PRINTER_NAME")) != NULL)
+  if ((name = cgiGetTextfield("PRINTER_NAME")) != NULL)
   {
     for (ptr = name; *ptr; ptr ++)
       if ((*ptr >= 0 && *ptr <= ' ') || *ptr == 127 || *ptr == '/' || *ptr == '\\' || *ptr == '?' || *ptr == '\'' || *ptr == '\"' || *ptr == '#')
@@ -867,7 +860,7 @@ do_am_printer(http_t *http,		/* I - HTTP connection */
     else
       maxrate = 19200;
 
-    for (i = 0; i < 10; i ++)
+    for (i = 0; i < (int)(sizeof(baudrates)/sizeof(baudrates[0])); i ++)
       if (baudrates[i] > maxrate)
         break;
       else
@@ -880,7 +873,7 @@ do_am_printer(http_t *http,		/* I - HTTP connection */
     cgiCopyTemplateLang("choose-serial.tmpl");
     cgiEndHTML();
   }
-  else if (!name || !cgiGetVariable("PRINTER_LOCATION"))
+  else if (!name || !cgiGetTextfield("PRINTER_LOCATION"))
   {
     cgiStartHTML(title);
 
@@ -916,10 +909,10 @@ do_am_printer(http_t *http,		/* I - HTTP connection */
 
 #ifdef __APPLE__
       if (!strncmp(var, "usb:", 4))
-        cgiSetVariable("printer_is_shared", "1");
+        cgiSetVariable("PRINTER_IS_SHARED", "1");
       else
 #endif /* __APPLE__ */
-        cgiSetVariable("printer_is_shared", "0");
+        cgiSetVariable("PRINTER_IS_SHARED", "0");
 
       cgiCopyTemplateLang("add-printer.tmpl");
     }
@@ -1119,7 +1112,7 @@ do_am_printer(http_t *http,		/* I - HTTP connection */
 
     httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
                      "localhost", 0, "/printers/%s",
-		     cgiGetVariable("PRINTER_NAME"));
+		     cgiGetTextfield("PRINTER_NAME"));
     ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri",
                  NULL, uri);
 
@@ -1132,10 +1125,10 @@ do_am_printer(http_t *http,		/* I - HTTP connection */
     }
 
     ippAddString(request, IPP_TAG_PRINTER, IPP_TAG_TEXT, "printer-location",
-                 NULL, cgiGetVariable("PRINTER_LOCATION"));
+                 NULL, cgiGetTextfield("PRINTER_LOCATION"));
 
     ippAddString(request, IPP_TAG_PRINTER, IPP_TAG_TEXT, "printer-info",
-                 NULL, cgiGetVariable("PRINTER_INFO"));
+                 NULL, cgiGetTextfield("PRINTER_INFO"));
 
     strlcpy(uri, cgiGetVariable("DEVICE_URI"), sizeof(uri));
 
@@ -1166,9 +1159,7 @@ do_am_printer(http_t *http,		/* I - HTTP connection */
 
     ippAddBoolean(request, IPP_TAG_PRINTER, "printer-is-accepting-jobs", 1);
 
-    var = cgiGetVariable("printer_is_shared");
-    ippAddBoolean(request, IPP_TAG_PRINTER, "printer-is-shared",
-                  var && (!strcmp(var, "1") || !strcmp(var, "on")));
+    ippAddBoolean(request, IPP_TAG_PRINTER, "printer-is-shared", cgiGetCheckbox("PRINTER_IS_SHARED"));
 
     ippAddInteger(request, IPP_TAG_PRINTER, IPP_TAG_ENUM, "printer-state",
                   IPP_PRINTER_IDLE);
@@ -1307,37 +1298,39 @@ do_config_server(http_t *http)		/* I - HTTP connection */
     * Get the checkbox values from the form...
     */
 
-    debug_logging        = cgiGetVariable("DEBUG_LOGGING") ? "1" : "0";
-    remote_admin         = cgiGetVariable("REMOTE_ADMIN") ? "1" : "0";
-    remote_any           = cgiGetVariable("REMOTE_ANY") ? "1" : "0";
-    share_printers       = cgiGetVariable("SHARE_PRINTERS") ? "1" : "0";
-    user_cancel_any      = cgiGetVariable("USER_CANCEL_ANY") ? "1" : "0";
+    debug_logging        = cgiGetCheckbox("DEBUG_LOGGING") ? "1" : "0";
+    remote_admin         = cgiGetCheckbox("REMOTE_ADMIN") ? "1" : "0";
+    remote_any           = cgiGetCheckbox("REMOTE_ANY") ? "1" : "0";
+    share_printers       = cgiGetCheckbox("SHARE_PRINTERS") ? "1" : "0";
+    user_cancel_any      = cgiGetCheckbox("USER_CANCEL_ANY") ? "1" : "0";
 
-    advanced = cgiGetVariable("ADVANCEDSETTINGS") != NULL;
+    advanced = cgiGetCheckbox("ADVANCEDSETTINGS");
     if (advanced)
     {
      /*
       * Get advanced settings...
       */
 
-      browse_web_if        = cgiGetVariable("BROWSE_WEB_IF") ? "Yes" : "No";
-      max_clients          = cgiGetVariable("MAX_CLIENTS");
-      max_log_size         = cgiGetVariable("MAX_LOG_SIZE");
-      preserve_jobs        = cgiGetVariable("PRESERVE_JOBS");
+      browse_web_if        = cgiGetCheckbox("BROWSE_WEB_IF") ? "Yes" : "No";
+      max_clients          = cgiGetTextfield("MAX_CLIENTS");
+      max_log_size         = cgiGetTextfield("MAX_LOG_SIZE");
+      preserve_jobs        = cgiGetCheckbox("PRESERVE_JOBS") ? "1" : "0";
 
-      if (preserve_jobs)
+      if (atoi(preserve_jobs))
       {
-        max_jobs             = cgiGetVariable("MAX_JOBS");
-	preserve_job_history = cgiGetVariable("PRESERVE_JOB_HISTORY");
-	preserve_job_files   = cgiGetVariable("PRESERVE_JOB_FILES");
+        max_jobs             = cgiGetTextfield("MAX_JOBS");
+	preserve_job_history = cgiGetTextfield("PRESERVE_JOB_HISTORY");
+	preserve_job_files   = cgiGetTextfield("PRESERVE_JOB_FILES");
 
 	if (!max_jobs || atoi(max_jobs) < 0)
 	  max_jobs = "500";
 
-	if (!preserve_job_history)
-	  preserve_job_history = "On";
+	if (!preserve_job_history || !preserve_job_history[0] ||
+	    (strcasecmp(preserve_job_history, "yes") && strcasecmp(preserve_job_history, "no") && !atoi(preserve_job_history)))
+	  preserve_job_history = "Yes";
 
-	if (!preserve_job_files)
+	if (!preserve_job_files || !preserve_job_files[0] ||
+	    (strcasecmp(preserve_job_files, "yes") && strcasecmp(preserve_job_files, "no") && !atoi(preserve_job_files)))
 	  preserve_job_files = "1d";
       }
       else
@@ -1374,8 +1367,10 @@ do_config_server(http_t *http)		/* I - HTTP connection */
     * Get authentication settings...
     */
 
-    if (cgiGetVariable("KERBEROS"))
+    if (cgiGetCheckbox("KERBEROS"))
+    {
       strlcpy(default_auth_type, "Negotiate", sizeof(default_auth_type));
+    }
     else
     {
       val = cupsGetOption("DefaultAuthType", num_settings, settings);
@@ -1795,7 +1790,7 @@ do_delete_class(http_t *http)		/* I - HTTP connection */
     return;
   }
 
-  if ((pclass = cgiGetVariable("PRINTER_NAME")) != NULL)
+  if ((pclass = cgiGetTextfield("PRINTER_NAME")) != NULL)
     httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
                      "localhost", 0, "/classes/%s", pclass);
   else
@@ -1880,7 +1875,7 @@ do_delete_printer(http_t *http)		/* I - HTTP connection */
     return;
   }
 
-  if ((printer = cgiGetVariable("PRINTER_NAME")) != NULL)
+  if ((printer = cgiGetTextfield("PRINTER_NAME")) != NULL)
     httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
                      "localhost", 0, "/printers/%s", printer);
   else
@@ -2171,22 +2166,32 @@ do_menu(http_t *http)			/* I - HTTP connection */
   if ((val = cupsGetOption(CUPS_SERVER_DEBUG_LOGGING, num_settings,
                            settings)) != NULL && atoi(val))
     cgiSetVariable("DEBUG_LOGGING", "CHECKED");
+  else
+    cgiSetVariable("DEBUG_LOGGING", "");
 
   if ((val = cupsGetOption(CUPS_SERVER_REMOTE_ADMIN, num_settings,
                            settings)) != NULL && atoi(val))
     cgiSetVariable("REMOTE_ADMIN", "CHECKED");
+  else
+    cgiSetVariable("REMOTE_ADMIN", "");
 
   if ((val = cupsGetOption(CUPS_SERVER_REMOTE_ANY, num_settings,
                            settings)) != NULL && atoi(val))
     cgiSetVariable("REMOTE_ANY", "CHECKED");
+  else
+    cgiSetVariable("REMOTE_ANY", "");
 
   if ((val = cupsGetOption(CUPS_SERVER_SHARE_PRINTERS, num_settings,
                            settings)) != NULL && atoi(val))
     cgiSetVariable("SHARE_PRINTERS", "CHECKED");
+  else
+    cgiSetVariable("SHARE_PRINTERS", "");
 
   if ((val = cupsGetOption(CUPS_SERVER_USER_CANCEL_ANY, num_settings,
                            settings)) != NULL && atoi(val))
     cgiSetVariable("USER_CANCEL_ANY", "CHECKED");
+  else
+    cgiSetVariable("USER_CANCEL_ANY", "");
 
 #ifdef HAVE_GSSAPI
   cgiSetVariable("HAVE_GSSAPI", "1");
@@ -2205,6 +2210,8 @@ do_menu(http_t *http)			/* I - HTTP connection */
   if (!_cups_strcasecmp(val, "yes") || !_cups_strcasecmp(val, "on") ||
       !_cups_strcasecmp(val, "true"))
     cgiSetVariable("BROWSE_WEB_IF", "CHECKED");
+  else
+    cgiSetVariable("BROWSE_WEB_IF", "");
 
   if ((val = cupsGetOption("PreserveJobHistory", num_settings,
                            settings)) == NULL)
@@ -2288,7 +2295,7 @@ do_set_allowed_users(http_t *http)	/* I - HTTP connection */
 
 
   is_class = cgiGetVariable("IS_CLASS");
-  printer  = cgiGetVariable("PRINTER_NAME");
+  printer  = cgiGetTextfield("PRINTER_NAME");
 
   if (!printer)
   {
@@ -2299,7 +2306,7 @@ do_set_allowed_users(http_t *http)	/* I - HTTP connection */
     return;
   }
 
-  users = cgiGetVariable("users");
+  users = cgiGetTextfield("users");
   type  = cgiGetVariable("type");
 
   if (!users || !type ||
@@ -2541,7 +2548,7 @@ do_set_default(http_t *http)		/* I - HTTP connection */
 
 
   is_class = cgiGetVariable("IS_CLASS");
-  printer  = cgiGetVariable("PRINTER_NAME");
+  printer  = cgiGetTextfield("PRINTER_NAME");
   title    = cgiText(_("Set As Server Default"));
 
   if (!printer)
@@ -2651,7 +2658,7 @@ do_set_options(http_t *http,		/* I - HTTP connection */
   * Get the printer name...
   */
 
-  if ((printer = cgiGetVariable("PRINTER_NAME")) != NULL)
+  if ((printer = cgiGetTextfield("PRINTER_NAME")) != NULL)
     httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
                      "localhost", 0, is_class ? "/classes/%s" : "/printers/%s",
 		     printer);
@@ -3350,99 +3357,6 @@ do_set_options(http_t *http,		/* I - HTTP connection */
 
 
 /*
- * 'do_set_sharing()' - Set printer-is-shared value.
- */
-
-static void
-do_set_sharing(http_t *http)		/* I - HTTP connection */
-{
-  ipp_t		*request,		/* IPP request */
-		*response;		/* IPP response */
-  char		uri[HTTP_MAX_URI];	/* Printer URI */
-  const char	*printer,		/* Printer name */
-		*is_class,		/* Is a class? */
-		*shared;		/* Sharing value */
-
-
-  is_class = cgiGetVariable("IS_CLASS");
-  printer  = cgiGetVariable("PRINTER_NAME");
-  shared   = cgiGetVariable("SHARED");
-
-  if (!printer || !shared)
-  {
-    cgiSetVariable("ERROR", cgiText(_("Missing form variable")));
-    cgiStartHTML(cgiText(_("Set Publishing")));
-    cgiCopyTemplateLang("error.tmpl");
-    cgiEndHTML();
-    return;
-  }
-
- /*
-  * Build a CUPS-Add-Printer/CUPS-Add-Class request, which requires the
-  * following attributes:
-  *
-  *    attributes-charset
-  *    attributes-natural-language
-  *    printer-uri
-  *    printer-is-shared
-  */
-
-  request = ippNewRequest(is_class ? CUPS_ADD_CLASS : CUPS_ADD_PRINTER);
-
-  httpAssembleURIf(HTTP_URI_CODING_ALL, uri, sizeof(uri), "ipp", NULL,
-                   "localhost", 0, is_class ? "/classes/%s" : "/printers/%s",
-		   printer);
-  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_URI, "printer-uri",
-               NULL, uri);
-
-  ippAddBoolean(request, IPP_TAG_OPERATION, "printer-is-shared", (char)atoi(shared));
-
- /*
-  * Do the request and get back a response...
-  */
-
-  if ((response = cupsDoRequest(http, request, "/admin/")) != NULL)
-  {
-    cgiSetIPPVars(response, NULL, NULL, NULL, 0);
-
-    ippDelete(response);
-  }
-
-  if (cupsLastError() == IPP_NOT_AUTHORIZED)
-  {
-    puts("Status: 401\n");
-    exit(0);
-  }
-  else if (cupsLastError() > IPP_OK_CONFLICT)
-  {
-    cgiStartHTML(cgiText(_("Set Publishing")));
-    cgiShowIPPError(_("Unable to change printer-is-shared attribute"));
-  }
-  else
-  {
-   /*
-    * Redirect successful updates back to the printer page...
-    */
-
-    char	url[1024],		/* Printer/class URL */
-		refresh[1024];		/* Refresh URL */
-
-
-    cgiRewriteURL(uri, url, sizeof(url), NULL);
-    cgiFormEncode(uri, url, sizeof(uri));
-    snprintf(refresh, sizeof(refresh), "5;URL=/admin/?OP=redirect&URL=%s", uri);
-    cgiSetVariable("refresh_page", refresh);
-
-    cgiStartHTML(cgiText(_("Set Publishing")));
-    cgiCopyTemplateLang(is_class ? "class-modified.tmpl" :
-                                   "printer-modified.tmpl");
-  }
-
-  cgiEndHTML();
-}
-
-
-/*
  * 'get_option_value()' - Return the value of an option.
  *
  * This function also handles generation of custom option values.
@@ -3510,8 +3424,8 @@ get_option_value(
     uval = cgiGetVariable("PageSize.Units");
 
     if (!val || !lval || !uval ||
-        (width = strtod(val, NULL)) == 0.0 ||
-        (length = strtod(lval, NULL)) == 0.0 ||
+        (width = atof(val)) == 0.0 ||
+        (length = atof(lval)) == 0.0 ||
         (strcmp(uval, "pt") && strcmp(uval, "in") && strcmp(uval, "ft") &&
 	 strcmp(uval, "cm") && strcmp(uval, "mm") && strcmp(uval, "m")))
       return (NULL);
@@ -3543,7 +3457,7 @@ get_option_value(
       case PPD_CUSTOM_CURVE :
       case PPD_CUSTOM_INVCURVE :
       case PPD_CUSTOM_REAL :
-	  if ((number = strtod(val, NULL)) == 0.0 ||
+	  if ((number = atof(val)) == 0.0 ||
 	      number < cparam->minimum.custom_real ||
 	      number > cparam->maximum.custom_real)
 	    return (NULL);
@@ -3564,7 +3478,7 @@ get_option_value(
       case PPD_CUSTOM_POINTS :
           snprintf(keyword, sizeof(keyword), "%s.Units", coption->keyword);
 
-	  if ((number = strtod(val, NULL)) == 0.0 ||
+	  if ((number = atof(val)) == 0.0 ||
 	      (uval = cgiGetVariable(keyword)) == NULL ||
 	      (strcmp(uval, "pt") && strcmp(uval, "in") && strcmp(uval, "ft") &&
 	       strcmp(uval, "cm") && strcmp(uval, "mm") && strcmp(uval, "m")))
@@ -3624,7 +3538,7 @@ get_option_value(
 	case PPD_CUSTOM_CURVE :
 	case PPD_CUSTOM_INVCURVE :
 	case PPD_CUSTOM_REAL :
-	    if ((number = strtod(val, NULL)) == 0.0 ||
+	    if ((number = atof(val)) == 0.0 ||
 		number < cparam->minimum.custom_real ||
 		number > cparam->maximum.custom_real)
 	      return (NULL);
@@ -3645,7 +3559,7 @@ get_option_value(
 	case PPD_CUSTOM_POINTS :
 	    snprintf(keyword, sizeof(keyword), "%s.Units", coption->keyword);
 
-	    if ((number = strtod(val, NULL)) == 0.0 ||
+	    if ((number = atof(val)) == 0.0 ||
 		(uval = cgiGetVariable(keyword)) == NULL ||
 		(strcmp(uval, "pt") && strcmp(uval, "in") &&
 		 strcmp(uval, "ft") && strcmp(uval, "cm") &&
@@ -3706,7 +3620,8 @@ get_option_value(
     if (bufptr == buffer || (bufend - bufptr) < 2)
       return (NULL);
 
-    memcpy(bufptr, "}", 2);
+    bufptr[0] = '}';
+    bufptr[1] = '\0';
   }
 
   return (buffer);

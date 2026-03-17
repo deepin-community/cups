@@ -1,16 +1,12 @@
 /*
  * IPP backend for CUPS.
  *
- * Copyright © 2021-2022 by OpenPrinting
+ * Copyright © 2021-2025 by OpenPrinting
  * Copyright © 2007-2021 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
  * information.
- */
-
-/*
- * Include necessary headers.
  */
 
 #include "backend-private.h"
@@ -70,9 +66,6 @@ typedef struct _cups_monitor_s		/**** Monitoring data ****/
 /*
  * Globals...
  */
-
-static const char 	*auth_info_required;
-					/* New auth-info-required value */
 #if defined(HAVE_GSSAPI) && defined(HAVE_XPC)
 static pid_t		child_pid = 0;	/* Child process ID */
 #endif /* HAVE_GSSAPI && HAVE_XPC */
@@ -90,9 +83,9 @@ static int		job_canceled = 0,
 					/* Job cancelled? */
 			uri_credentials = 0;
 					/* Credentials supplied in URI? */
-static char		username[256] = "",
+static char		device_username[256] = "",
 					/* Username for device URI */
-			*password = NULL;
+			*device_password = NULL;
 					/* Password for device URI */
 static const char * const pattrs[] =	/* Printer attributes we want */
 {
@@ -114,6 +107,7 @@ static const char * const pattrs[] =	/* Printer attributes we want */
   "multiple-document-handling-supported",
   "operations-supported",
   "print-color-mode-supported",
+  "print-scaling-supported",
   "printer-alert",
   "printer-alert-description",
   "printer-is-accepting-jobs",
@@ -149,6 +143,7 @@ static char		mandatory_attrs[1024] = "";
  * Local functions...
  */
 
+static void		adjust_options(int num_options, cups_option_t *options);
 static void		cancel_job(http_t *http, const char *uri, int id,
 			           const char *resource, const char *user,
 				   int version);
@@ -165,7 +160,8 @@ static ipp_t		*new_request(ipp_op_t op, int version, const char *uri,
 				     ppd_file_t *ppd,
 				     ipp_attribute_t *media_col_sup,
 				     ipp_attribute_t *doc_handling_sup,
-				     ipp_attribute_t *print_color_mode_sup);
+				     ipp_attribute_t *print_color_mode_sup,
+				     ipp_attribute_t *print_scaling_sup);
 static const char	*password_cb(const char *prompt, http_t *http,
 			             const char *method, const char *resource,
 			             int *user_data);
@@ -202,6 +198,7 @@ main(int  argc,				/* I - Number of command-line args */
 		hostname[1024],		/* Hostname */
 		resource[1024],		/* Resource info (printer name) */
 		addrname[256],		/* Address name */
+		username[IPP_MAX_NAME],	/* Requesting user name */
 		*optptr,		/* Pointer to URI options */
 		*name,			/* Name of option */
 		*value,			/* Value of option */
@@ -219,7 +216,7 @@ main(int  argc,				/* I - Number of command-line args */
   off_t		compatsize = 0;		/* Size of compatibility file */
   int		port;			/* Port number (not used) */
   char		uri[HTTP_MAX_URI];	/* Updated URI without user/pass */
-  char		print_job_name[1024];	/* Update job-name for Print-Job */
+  char		print_job_name[256];	/* Update job-name for Print-Job */
   http_status_t	http_status;		/* Status of HTTP request */
   ipp_status_t	ipp_status;		/* Status of IPP request */
   http_t	*http;			/* HTTP connection */
@@ -253,6 +250,7 @@ main(int  argc,				/* I - Number of command-line args */
   ipp_attribute_t *printer_state;	/* printer-state attribute */
   ipp_attribute_t *printer_accepting;	/* printer-is-accepting-jobs */
   ipp_attribute_t *print_color_mode_sup;/* Does printer support print-color-mode? */
+  ipp_attribute_t *print_scaling_sup;	/* print-scaling-supported */
   int		create_job = 0,		/* Does printer support Create-Job? */
 		get_job_attrs = 0,	/* Does printer support Get-Job-Attributes? */
 		send_document = 0,	/* Does printer support Send-Document? */
@@ -260,7 +258,8 @@ main(int  argc,				/* I - Number of command-line args */
 		validate_retried = 0,	/* Was Validate-Job request retried? */
 		copies,			/* Number of copies for job */
 		copies_remaining;	/* Number of copies remaining */
-  const char	*content_type,		/* CONTENT_TYPE environment variable */
+  const char	*auth_info_required,		/* New auth-info-required value */
+    *content_type,		/* CONTENT_TYPE environment variable */
 		*final_content_type,	/* FINAL_CONTENT_TYPE environment var */
 		*document_format;	/* document-format value */
   int		fd;			/* File descriptor */
@@ -328,6 +327,8 @@ main(int  argc,				/* I - Number of command-line args */
     return (CUPS_BACKEND_STOP);
   }
 
+  strlcpy(username, argv[2], sizeof(username));
+
  /*
   * Get the device URI...
   */
@@ -354,11 +355,11 @@ main(int  argc,				/* I - Number of command-line args */
 
   if (!getuid() && (value = getenv("AUTH_UID")) != NULL)
   {
-    uid_t	uid = (uid_t)atoi(value);
+    uid_t	uid = (uid_t)strtoul(value, NULL, 10);
 					/* User ID */
 
 #  ifdef HAVE_XPC
-    if (uid > 0)
+    if (uid)
     {
       if (argc == 6)
         return (run_as_user(argv, uid, device_uri, 0));
@@ -385,7 +386,7 @@ main(int  argc,				/* I - Number of command-line args */
     }
 
 #  else /* No XPC, just try to run as the user ID */
-    if (uid > 0)
+    if (uid)
       setuid(uid);
 #  endif /* HAVE_XPC */
   }
@@ -411,7 +412,7 @@ main(int  argc,				/* I - Number of command-line args */
   */
 
   httpSeparateURI(HTTP_URI_CODING_ALL, device_uri, scheme, sizeof(scheme),
-                  username, sizeof(username), hostname, sizeof(hostname), &port,
+                  device_username, sizeof(device_username), hostname, sizeof(hostname), &port,
 		  resource, sizeof(resource));
 
   if (!port)
@@ -421,6 +422,19 @@ main(int  argc,				/* I - Number of command-line args */
     cupsSetEncryption(HTTP_ENCRYPTION_ALWAYS);
   else
     cupsSetEncryption(HTTP_ENCRYPTION_IF_REQUESTED);
+
+  if (!strcmp(auth_info_required, "negotiate") &&
+      (isdigit(hostname[0] & 255) || hostname[0] == '['))
+  {
+   /*
+    * IP addresses are not allowed with Kerberos...
+    */
+
+    _cupsLangPrintFilter(stderr, "ERROR",
+			 _("IP address is not allowed as hostname when using Negotiate - use FQDN."));
+    update_reasons(NULL, "-connecting-to-device");
+    return (CUPS_BACKEND_FAILED);
+  }
 
  /*
   * See if there are any options...
@@ -567,12 +581,13 @@ main(int  argc,				/* I - Number of command-line args */
 #endif /* HAVE_LIBZ */
       else if (!_cups_strcasecmp(name, "contimeout"))
       {
+        int value_int = atoi(value);
        /*
         * Set the connection timeout...
 	*/
 
-	if (atoi(value) > 0)
-	  contimeout = atoi(value);
+	if (value_int > 0)
+	  contimeout = value_int;
       }
       else
       {
@@ -622,16 +637,16 @@ main(int  argc,				/* I - Number of command-line args */
 
   cupsSetPasswordCB2((cups_password_cb2_t)password_cb, &password_tries);
 
-  if (username[0])
+  if (device_username[0])
   {
    /*
     * Use authentication information in the device URI...
     */
 
-    if ((password = strchr(username, ':')) != NULL)
-      *password++ = '\0';
+    if ((device_password = strchr(device_username, ':')) != NULL)
+      *device_password++ = '\0';
 
-    cupsSetUser(username);
+    cupsSetUser(device_username);
     uri_credentials = 1;
   }
   else
@@ -644,11 +659,11 @@ main(int  argc,				/* I - Number of command-line args */
 
     if (ptr)
     {
-      strlcpy(username, ptr, sizeof(username));
+      strlcpy(device_username, ptr, sizeof(device_username));
       cupsSetUser(ptr);
     }
 
-    password = getenv("AUTH_PASSWORD");
+    device_password = getenv("AUTH_PASSWORD");
   }
 
  /*
@@ -789,8 +804,6 @@ main(int  argc,				/* I - Number of command-line args */
 
   if (job_canceled)
     return (CUPS_BACKEND_OK);
-  else if (!http)
-    return (CUPS_BACKEND_FAILED);
 
   if (httpIsEncrypted(http))
   {
@@ -807,12 +820,12 @@ main(int  argc,				/* I - Number of command-line args */
 					/* Trust keywords */
     static const char	* const trust_msgs[] =
     {
-      "Credentials are OK/trusted",
-      "Credentials are invalid",
-      "Credentials have changed",
-      "Credentials are expired",
-      "Credentials have been renewed",
-      "Credentials are unknown/new"
+      _("Credentials are OK/trusted"),
+      _("Credentials are invalid"),
+      _("Credentials have changed"),
+      _("Credentials are expired"),
+      _("Credentials have been renewed"),
+      _("Credentials are unknown/new")
     };
 
     fputs("DEBUG: Connection is encrypted.\n", stderr);
@@ -837,6 +850,7 @@ main(int  argc,				/* I - Number of command-line args */
       if (trusts[trust])
       {
         update_reasons(NULL, trusts[trust]);
+	_cupsLangPrintFilter(stderr, "ALERT", "%s", trust_msgs[trust]);
         return (CUPS_BACKEND_STOP);
       }
 
@@ -895,6 +909,7 @@ main(int  argc,				/* I - Number of command-line args */
   operations_sup       = NULL;
   doc_handling_sup     = NULL;
   print_color_mode_sup = NULL;
+  print_scaling_sup    = NULL;
 
   do
   {
@@ -1165,6 +1180,15 @@ main(int  argc,				/* I - Number of command-line args */
 
     print_color_mode_sup = ippFindAttribute(supported, "print-color-mode-supported", IPP_TAG_KEYWORD);
 
+    if ((print_scaling_sup = ippFindAttribute(supported, "print-scaling-supported", IPP_TAG_KEYWORD)) != NULL)
+    {
+      int count = ippGetCount(print_scaling_sup);
+
+      fprintf(stderr, "DEBUG: print-scaling-supported (%d values)\n", count);
+      for (i = 0; i < count; i ++)
+        fprintf(stderr, "DEBUG: [%d] = %s\n", i, ippGetString(print_scaling_sup, i, NULL));
+    }
+
     if ((operations_sup = ippFindAttribute(supported, "operations-supported",
 					   IPP_TAG_ENUM)) != NULL)
     {
@@ -1354,12 +1378,13 @@ main(int  argc,				/* I - Number of command-line args */
         * the printer...
         */
 
-        for (i = 0; i < (int)(sizeof(hashes) / sizeof(hashes[0])); i ++)
-          if (ippContainsString(encryption_sup, hashes[i]))
+        size_t j;
+        for (j = 0; j < (sizeof(hashes) / sizeof(hashes[0])); j ++)
+          if (ippContainsString(encryption_sup, hashes[j]))
+          {
+            num_options = cupsAddOption("job-password-encryption", hashes[j], num_options, &options);
             break;
-
-        if (i < (int)(sizeof(hashes) / sizeof(hashes[0])))
-          num_options = cupsAddOption("job-password-encryption", hashes[i], num_options, &options);
+          }
       }
     }
   }
@@ -1439,7 +1464,7 @@ main(int  argc,				/* I - Number of command-line args */
 
   monitor.uri           = uri;
   monitor.hostname      = hostname;
-  monitor.user          = argv[2];
+  monitor.user          = username;
   monitor.resource      = resource;
   monitor.port          = port;
   monitor.version       = version;
@@ -1459,6 +1484,10 @@ main(int  argc,				/* I - Number of command-line args */
   }
   else
   {
+   /*
+    * TODO: make this compatible with UTF-8 - possible UTF-8 truncation here..
+    */
+
     snprintf(print_job_name, sizeof(print_job_name), "%s - %s", argv[1],
              argv[3]);
     monitor.job_name = print_job_name;
@@ -1472,10 +1501,10 @@ main(int  argc,				/* I - Number of command-line args */
 
   while (!job_canceled && validate_job)
   {
-    request = new_request(IPP_OP_VALIDATE_JOB, version, uri, argv[2],
+    request = new_request(IPP_OP_VALIDATE_JOB, version, uri, username,
                           monitor.job_name, num_options, options, compression,
 			  copies_sup ? copies : 1, document_format, pc, ppd,
-			  media_col_sup, doc_handling_sup, print_color_mode_sup);
+			  media_col_sup, doc_handling_sup, print_color_mode_sup, print_scaling_sup);
 
     response = cupsDoRequest(http, request, resource);
 
@@ -1511,6 +1540,28 @@ main(int  argc,				/* I - Number of command-line args */
           num_options = cupsAddOption("sides", "one-sided", num_options, &options);
         }
       }
+    }
+    else if ((ipp_status == IPP_STATUS_ERROR_BAD_REQUEST || ipp_status == IPP_STATUS_ERROR_INTERNAL) && !strcmp(username, argv[2]))
+    {
+     /*
+      * Issue #1145: Some printers have trouble with valid character in the
+      * requesting-user-name attribute.  Sanitize the username and try again
+      * if so...
+      */
+
+      char	*argptr = argv[2],	/* Pointer into local username */
+		*userptr = username;	/* Pointer into requesting-user-name value */
+
+      fputs("DEBUG: Trying sanitized requesting-user-name value.\n", stderr);
+
+      while (*argptr && userptr < (username + sizeof(username) - 1))
+      {
+        if (isalnum(*argptr & 255))
+          *userptr++ = *argptr;
+        argptr ++;
+      }
+
+      *userptr = '\0';
     }
 
     ippDelete(response);
@@ -1595,10 +1646,10 @@ main(int  argc,				/* I - Number of command-line args */
 
     request = new_request((num_files > 1 || create_job) ? IPP_OP_CREATE_JOB :
                                                           IPP_OP_PRINT_JOB,
-			  version, uri, argv[2], monitor.job_name, num_options,
+			  version, uri, username, monitor.job_name, num_options,
 			  options, compression, copies_sup ? copies : 1,
 			  document_format, pc, ppd, media_col_sup,
-			  doc_handling_sup, print_color_mode_sup);
+			  doc_handling_sup, print_color_mode_sup, print_scaling_sup);
 
    /*
     * Do the request...
@@ -1807,9 +1858,9 @@ main(int  argc,				/* I - Number of command-line args */
         ippAddInteger(request, IPP_TAG_OPERATION, IPP_TAG_INTEGER, "job-id",
 	              job_id);
 
-	if (argv[2][0])
+	if (username[0])
 	  ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
-                       "requesting-user-name", NULL, argv[2]);
+                       "requesting-user-name", NULL, username);
 
 	ippAddBoolean(request, IPP_TAG_OPERATION, "last-document",
         	      (i + 1) >= num_files);
@@ -1890,7 +1941,7 @@ main(int  argc,				/* I - Number of command-line args */
 
           if (ippContainsString(reasons, "document-format-error"))
             ipp_status = IPP_STATUS_ERROR_DOCUMENT_FORMAT_ERROR;
-          else if (ippContainsString(reasons, "document-unprintable"))
+          else if (ippContainsString(reasons, "document-unprintable-error"))
             ipp_status = IPP_STATUS_ERROR_DOCUMENT_UNPRINTABLE;
 
 	  ippDelete(response);
@@ -1927,7 +1978,7 @@ main(int  argc,				/* I - Number of command-line args */
 
       fputs("JOBSTATE: cups-retry-as-raster\n", stderr);
       if (job_id > 0)
-	cancel_job(http, uri, job_id, resource, argv[2], version);
+	cancel_job(http, uri, job_id, resource, username, version);
 
       goto cleanup;
     }
@@ -1943,7 +1994,7 @@ main(int  argc,				/* I - Number of command-line args */
         */
 
 	if (job_id > 0)
-	  cancel_job(http, uri, job_id, resource, argv[2], version);
+	  cancel_job(http, uri, job_id, resource, username, version);
 
         goto cleanup;
       }
@@ -1982,7 +2033,7 @@ main(int  argc,				/* I - Number of command-line args */
       ipp_status = IPP_STATUS_ERROR_INTERNAL;
 
       if (job_id > 0)
-	cancel_job(http, uri, job_id, resource, argv[2], version);
+	cancel_job(http, uri, job_id, resource, username, version);
 
       goto cleanup;
     }
@@ -2030,7 +2081,7 @@ main(int  argc,				/* I - Number of command-line args */
       * Check printer state...
       */
 
-      check_printer_state(http, uri, resource, argv[2], version);
+      check_printer_state(http, uri, resource, username, version);
 
       if (cupsLastError() <= IPP_STATUS_OK_CONFLICTING)
         password_tries = 0;
@@ -2048,9 +2099,9 @@ main(int  argc,				/* I - Number of command-line args */
       ippAddInteger(request, IPP_TAG_OPERATION, IPP_TAG_INTEGER, "job-id",
         	    job_id);
 
-      if (argv[2][0])
+      if (username[0])
 	ippAddString(request, IPP_TAG_OPERATION, IPP_TAG_NAME,
-	             "requesting-user-name", NULL, argv[2]);
+	             "requesting-user-name", NULL, username);
 
       ippAddStrings(request, IPP_TAG_OPERATION, IPP_TAG_KEYWORD,
                     "requested-attributes", sizeof(jattrs) / sizeof(jattrs[0]),
@@ -2089,14 +2140,7 @@ main(int  argc,				/* I - Number of command-line args */
 	password_tries = 0;
       else
       {
-	if (ipp_status != IPP_STATUS_ERROR_SERVICE_UNAVAILABLE &&
-	    ipp_status != IPP_STATUS_ERROR_BUSY)
-	{
-	  ippDelete(response);
-          ipp_status = IPP_STATUS_OK;
-          break;
-	}
-	else if (ipp_status == IPP_STATUS_ERROR_INTERNAL)
+	if (ipp_status == IPP_STATUS_ERROR_INTERNAL)
 	{
 	  waitjob_tries ++;
 
@@ -2106,6 +2150,13 @@ main(int  argc,				/* I - Number of command-line args */
 	    ipp_status = IPP_STATUS_OK;
 	    break;
 	  }
+	}
+	else if (ipp_status != IPP_STATUS_ERROR_SERVICE_UNAVAILABLE &&
+	    ipp_status != IPP_STATUS_ERROR_BUSY)
+	{
+	  ippDelete(response);
+	  ipp_status = IPP_STATUS_OK;
+	  break;
 	}
       }
 
@@ -2177,7 +2228,7 @@ main(int  argc,				/* I - Number of command-line args */
 
   if (job_canceled > 0 && job_id > 0)
   {
-    cancel_job(http, uri, job_id, resource, argv[2], version);
+    cancel_job(http, uri, job_id, resource, username, version);
 
     if (cupsLastError() > IPP_STATUS_OK_CONFLICTING)
       _cupsLangPrintFilter(stderr, "ERROR", _("Unable to cancel print job."));
@@ -2187,7 +2238,7 @@ main(int  argc,				/* I - Number of command-line args */
   * Check the printer state and report it if necessary...
   */
 
-  check_printer_state(http, uri, resource, argv[2], version);
+  check_printer_state(http, uri, resource, username, version);
 
   if (cupsLastError() <= IPP_STATUS_OK_CONFLICTING)
     password_tries = 0;
@@ -2285,6 +2336,59 @@ main(int  argc,				/* I - Number of command-line args */
     return (CUPS_BACKEND_RETRY_CURRENT);
   else
     return (CUPS_BACKEND_OK);
+}
+
+
+/*
+ * 'adjust_options()' - Adjust options which have the same meaning.
+ *
+ * In case the backend gets PPD option and IPP attribute of the same meaning
+ * among options array, adjust their values to reflect the same choices,
+ * if the values differ (preferring PPD option values).
+ *
+ * Support for each PPD x IPP option pair is added adhoc, based on demand.
+ */
+
+static void
+adjust_options(int num_options,			/* I - Number of options */
+	       cups_option_t *options)		/* I - Array of job options */
+{
+  const char *ppd_option_value = NULL;		/* PPD option value */
+  const char *ipp_attr_value = NULL;		/* IPP attribute value */
+
+
+  fprintf(stderr, "DEBUG: adjust_options()\n");
+
+  if (options == NULL || num_options < 2)
+  {
+    fprintf(stderr, "DEBUG: adjust_options(): Invalid values.\n");
+    return;
+  }
+
+ /*
+  * PPD option ColorModel and IPP attribute print-color-mode
+  */
+
+  ppd_option_value = cupsGetOption("ColorModel", num_options, options);
+  ipp_attr_value = cupsGetOption("print-color-mode", num_options, options);
+
+  if (!ppd_option_value || !ipp_attr_value)
+    return;
+
+  if (strcmp(ipp_attr_value, "monochrome") && (!strcmp(ppd_option_value, "Gray")
+					       || !strcmp(ppd_option_value, "FastGray")
+					       || !strcmp(ppd_option_value, "DeviceGray")))
+  {
+    fprintf(stderr, "DEBUG: adjust_options(): Adjusting print-color-mode to monochrome.\n");
+    num_options = cupsAddOption("print-color-mode", "monochrome", num_options, &options);
+  }
+  else if (strcmp(ipp_attr_value, "color") && (!strcmp(ppd_option_value, "CMY")
+					       || !strcmp(ppd_option_value, "CMYK")
+					       || !strcmp(ppd_option_value, "RGB")))
+  {
+    fprintf(stderr, "DEBUG: adjust_options(): Adjusting print-color-mode to color.\n");
+    num_options = cupsAddOption("print-color-mode", "color", num_options, &options);
+  }
 }
 
 
@@ -2460,8 +2564,8 @@ monitor_printer(
   http = httpConnect2(monitor->hostname, monitor->port, NULL, AF_UNSPEC,
                       monitor->encryption, 1, 0, NULL);
   httpSetTimeout(http, 30.0, timeout_cb, NULL);
-  if (username[0])
-    cupsSetUser(username);
+  if (device_username[0])
+    cupsSetUser(device_username);
 
   cupsSetPasswordCB2((cups_password_cb2_t)password_cb, &password_tries);
 
@@ -2626,7 +2730,7 @@ monitor_printer(
             new_reasons |= _CUPS_JSR_JOB_RELEASE_WAIT;
           else if (!strcmp(attr->values[i].string.text, "document-format-error"))
             new_reasons |= _CUPS_JSR_DOCUMENT_FORMAT_ERROR;
-          else if (!strcmp(attr->values[i].string.text, "document-unprintable"))
+          else if (!strcmp(attr->values[i].string.text, "document-unprintable-error"))
             new_reasons |= _CUPS_JSR_DOCUMENT_UNPRINTABLE;
 
 	  if (!job_canceled && (!strncmp(attr->values[i].string.text, "job-canceled-", 13) || !strcmp(attr->values[i].string.text, "aborted-by-system")))
@@ -2747,8 +2851,9 @@ new_request(
     ppd_file_t      *ppd,		/* I - PPD file data */
     ipp_attribute_t *media_col_sup,	/* I - media-col-supported values */
     ipp_attribute_t *doc_handling_sup,  /* I - multiple-document-handling-supported values */
-    ipp_attribute_t *print_color_mode_sup)
-					/* I - Printer supports print-color-mode */
+    ipp_attribute_t *print_color_mode_sup,
+					/* I - Printer supports print-color-mode? */
+    ipp_attribute_t *print_scaling_sup)	/* I - print-scaling-supported values */
 {
   ipp_t		*request;		/* Request data */
   const char	*keyword;		/* PWG keyword */
@@ -2814,6 +2919,9 @@ new_request(
       fputs("DEBUG: Adding standard IPP operation/job attributes.\n", stderr);
 
       copies = _cupsConvertOptions(request, ppd, pc, media_col_sup, doc_handling_sup, print_color_mode_sup, user, format, copies, num_options, options);
+
+      if ((keyword = cupsGetOption("print-scaling", num_options, options)) != NULL && ippContainsString(print_scaling_sup, keyword))
+        ippAddString(request, IPP_TAG_JOB, IPP_TAG_KEYWORD, "print-scaling", NULL, keyword);
 
      /*
       * Map FaxOut options...
@@ -2899,6 +3007,11 @@ new_request(
       */
 
       fputs("DEBUG: Adding all operation/job attributes.\n", stderr);
+      adjust_options(num_options, options);
+
+      if (format && (!strcmp(format, "image/pwg-raster") || !strcmp(format, "image/urf")))
+        num_options = cupsRemoveOption("copies", num_options, &options);
+
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_OPERATION);
       cupsEncodeOptions2(request, num_options, options, IPP_TAG_JOB);
     }
@@ -2929,9 +3042,9 @@ password_cb(const char *prompt,		/* I - Prompt (not used) */
 
 
   fprintf(stderr, "DEBUG: password_cb(prompt=\"%s\", http=%p, method=\"%s\", "
-                  "resource=\"%s\", password_tries=%p(%d)), password=%p\n",
-          prompt, http, method, resource, password_tries, *password_tries,
-          password);
+                  "resource=\"%s\", password_tries=%p(%d)), device_password=%p\n",
+          prompt, (void *)http, method, resource, (void *)password_tries, *password_tries,
+          (void *)device_password);
 
   (void)prompt;
   (void)method;
@@ -2942,8 +3055,6 @@ password_cb(const char *prompt,		/* I - Prompt (not used) */
    /*
     * Remember that we need to authenticate...
     */
-
-    auth_info_required = "username,password";
 
     if (httpGetSubField(http, HTTP_FIELD_WWW_AUTHENTICATE, "username",
 			def_username))
@@ -2956,13 +3067,13 @@ password_cb(const char *prompt,		/* I - Prompt (not used) */
     }
   }
 
-  if (password && *password && *password_tries < 3)
+  if (device_password && *device_password && *password_tries < 3)
   {
     (*password_tries) ++;
 
-    cupsSetUser(username);
+    cupsSetUser(device_username);
 
-    return (password);
+    return (device_password);
   }
   else
   {
@@ -3244,16 +3355,16 @@ run_as_user(char       *argv[],		/* I - Command-line arguments */
 	    int        fd)		/* I - File to print */
 {
   const char		*auth_negotiate,/* AUTH_NEGOTIATE env var */
-			*content_type;	/* [FINAL_]CONTENT_TYPE env vars */
+			*content_type,	/* [FINAL_]CONTENT_TYPE env vars */
+			*auth_info_required;	/* New auth-info-required value */
   xpc_connection_t	conn;		/* Connection to XPC service */
   xpc_object_t		request;	/* Request message dictionary */
   __block xpc_object_t	response;	/* Response message dictionary */
-  dispatch_semaphore_t	sem;		/* Semaphore for waiting for response */
   int			status = CUPS_BACKEND_FAILED;
 					/* Status of request */
 
 
-  fprintf(stderr, "DEBUG: Running IPP backend as UID %d.\n", (int)uid);
+  fprintf(stderr, "DEBUG: Running IPP backend as UID %u.\n", (unsigned)uid);
 
  /*
   * Connect to the user agent for the specified UID...
@@ -3283,7 +3394,7 @@ run_as_user(char       *argv[],		/* I - Command-line arguments */
 				         fprintf(stderr, "DEBUG: Connection invalid for service %s.\n",
 					         xpc_connection_get_name(conn));
 				       else
-				         fprintf(stderr, "DEBUG: Unxpected error for service %s: %s\n",
+				         fprintf(stderr, "DEBUG: Unexpected error for service %s: %s\n",
 					         xpc_connection_get_name(conn),
 						 xpc_dictionary_get_string(event, XPC_ERROR_KEY_DESCRIPTION));
 				     }
@@ -3303,8 +3414,9 @@ run_as_user(char       *argv[],		/* I - Command-line arguments */
   xpc_dictionary_set_string(request, "title", argv[3]);
   xpc_dictionary_set_string(request, "copies", argv[4]);
   xpc_dictionary_set_string(request, "options", argv[5]);
-  xpc_dictionary_set_string(request, "auth-info-required",
-                            getenv("AUTH_INFO_REQUIRED"));
+  if ((auth_info_required = getenv("AUTH_INFO_REQUIRED")) != NULL)
+    xpc_dictionary_set_string(request, "auth-info-required",
+                              auth_info_required);
   if ((auth_negotiate = getenv("AUTH_NEGOTIATE")) != NULL)
     xpc_dictionary_set_string(request, "auth-negotiate", auth_negotiate);
   if ((content_type = getenv("CONTENT_TYPE")) != NULL)
@@ -3315,24 +3427,9 @@ run_as_user(char       *argv[],		/* I - Command-line arguments */
   xpc_dictionary_set_fd(request, "stderr", 2);
   xpc_dictionary_set_fd(request, "side-channel", CUPS_SC_FD);
 
-  sem      = dispatch_semaphore_create(0);
-  response = NULL;
+  response = xpc_connection_send_message_with_reply_sync(conn, request);
 
-  xpc_connection_send_message_with_reply(conn, request,
-                                         dispatch_get_global_queue(0,0),
-					 ^(xpc_object_t reply)
-					 {
-					   /* Save the response and wake up */
-					   if (xpc_get_type(reply)
-					           == XPC_TYPE_DICTIONARY)
-					     response = xpc_retain(reply);
-
-					   dispatch_semaphore_signal(sem);
-					 });
-
-  dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
   xpc_release(request);
-  dispatch_release(sem);
 
   if (response)
   {
@@ -3366,24 +3463,8 @@ run_as_user(char       *argv[],		/* I - Command-line arguments */
   xpc_dictionary_set_int64(request, "command", kPMWaitForJob);
   xpc_dictionary_set_fd(request, "stderr", 2);
 
-  sem      = dispatch_semaphore_create(0);
-  response = NULL;
-
-  xpc_connection_send_message_with_reply(conn, request,
-                                         dispatch_get_global_queue(0,0),
-					 ^(xpc_object_t reply)
-					 {
-					   /* Save the response and wake up */
-					   if (xpc_get_type(reply)
-					           == XPC_TYPE_DICTIONARY)
-					     response = xpc_retain(reply);
-
-					   dispatch_semaphore_signal(sem);
-					 });
-
-  dispatch_semaphore_wait(sem, DISPATCH_TIME_FOREVER);
+  response = xpc_connection_send_message_with_reply_sync(conn, request);
   xpc_release(request);
-  dispatch_release(sem);
 
   if (response)
   {

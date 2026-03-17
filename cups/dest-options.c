@@ -1,7 +1,7 @@
 /*
  * Destination option/media support for CUPS.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2012-2019 by Apple Inc.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
@@ -685,7 +685,7 @@ cupsCopyDestInfo(
 		delay,			/* Current retry delay */
 		prev_delay;		/* Next retry delay */
   const char	*uri;			/* Printer URI */
-  char		resource[1024];		/* Resource path */
+  char		resource[1024];		/* URI resource path */
   int		version;		/* IPP version */
   ipp_status_t	status;			/* Status of request */
   _cups_globals_t *cg = _cupsGlobals();	/* Pointer to library globals */
@@ -700,6 +700,13 @@ cupsCopyDestInfo(
   DEBUG_printf(("cupsCopyDestInfo(http=%p, dest=%p(%s))", (void *)http, (void *)dest, dest ? dest->name : ""));
 
  /*
+  * Range check input...
+  */
+
+  if (!dest)
+    return (NULL);
+
+ /*
   * Get the default connection as needed...
   */
 
@@ -708,6 +715,9 @@ cupsCopyDestInfo(
     DEBUG_puts("1cupsCopyDestInfo: Default server connection.");
     http   = _cupsConnect();
     dflags = CUPS_DEST_FLAGS_NONE;
+
+    if (!http)
+      return (NULL);
   }
 #ifdef AF_LOCAL
   else if (httpAddrFamily(http->hostaddr) == AF_LOCAL)
@@ -716,23 +726,31 @@ cupsCopyDestInfo(
     dflags = CUPS_DEST_FLAGS_NONE;
   }
 #endif /* AF_LOCAL */
-  else if ((strcmp(http->hostname, cg->server) && cg->server[0] != '/') || cg->ipp_port != httpAddrPort(http->hostaddr))
-  {
-    DEBUG_printf(("1cupsCopyDestInfo: Connection to device (%s).", http->hostname));
-    dflags = CUPS_DEST_FLAGS_DEVICE;
-  }
   else
   {
-    DEBUG_printf(("1cupsCopyDestInfo: Connection to server (%s).", http->hostname));
-    dflags = CUPS_DEST_FLAGS_NONE;
+    // Guess the destination flags based on the printer URI's host and port...
+    char	scheme[32],		/* URI scheme */
+		userpass[256],		/* URI username:password */
+		host[256];		/* URI host */
+    int		port;			/* URI port */
+
+    if ((uri = cupsGetOption("printer-uri-supported", dest->num_options, dest->options)) == NULL || httpSeparateURI(HTTP_URI_CODING_ALL, uri, scheme, sizeof(scheme), userpass, sizeof(userpass), host, sizeof(host), &port, resource, sizeof(resource)) < HTTP_URI_STATUS_OK)
+    {
+      strlcpy(host, "localhost", sizeof(host));
+      port = cg->ipp_port;
+    }
+
+    if (strcmp(http->hostname, host) || port != httpAddrPort(http->hostaddr))
+    {
+      DEBUG_printf(("1cupsCopyDestInfo: Connection to device (%s).", http->hostname));
+      dflags = CUPS_DEST_FLAGS_DEVICE;
+    }
+    else
+    {
+      DEBUG_printf(("1cupsCopyDestInfo: Connection to server (%s).", http->hostname));
+      dflags = CUPS_DEST_FLAGS_NONE;
+    }
   }
-
- /*
-  * Range check input...
-  */
-
-  if (!http || !dest)
-    return (NULL);
 
  /*
   * Get the printer URI and resource path...
@@ -1621,7 +1639,7 @@ cups_collection_string(
 		  const ipp_uchar_t *date = ippGetDate(member, j);
 					/* Date value */
 
-		  year = ((unsigned)date[0] << 8) + (unsigned)date[1];
+		  year = (date[0] << 8) | date[1];
 
 		  if (date[9] == 0 && date[10] == 0)
 		    snprintf(temp, sizeof(temp), "%04u-%02u-%02uT%02u:%02u:%02uZ", year, date[2], date[3], date[4], date[5], date[6]);

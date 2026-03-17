@@ -3,7 +3,7 @@
 #
 # Original version by Jason McMullan <jmcc@ontv.com>.
 #
-# Copyright © 2020-2022 by OpenPrinting
+# Copyright © 2020-2023 by OpenPrinting
 # Copyright © 2007-2019 by Apple Inc.
 # Copyright © 1999-2007 by Easy Software Products, all rights reserved.
 #
@@ -41,12 +41,12 @@
 
 Summary: CUPS
 Name: cups
-Version: 2.4.2
+Version: 2.4.16
 Release: 0
 Epoch: 1
 License: GPL
 Group: System Environment/Daemons
-Source: https://github.com/openprinting/cups/releases/download/v2.4.2/cups-2.4.2-source.tar.gz
+Source: https://github.com/openprinting/cups/releases/download/v2.4.16/cups-2.4.16-source.tar.gz
 Url: https://openprinting.github.io/cups
 Packager: Anonymous <anonymous@example.com>
 Vendor: OpenPrinting

@@ -1,7 +1,7 @@
 /*
  * IPP utilities for CUPS.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products.
  *
@@ -25,9 +25,11 @@
 #ifndef O_BINARY
 #  define O_BINARY 0
 #endif /* O_BINARY */
-#ifndef MSG_DONTWAIT
+#ifdef _AIX
+#  define MSG_DONTWAIT MSG_NONBLOCK
+#elif !defined(MSG_DONTWAIT)
 #  define MSG_DONTWAIT 0
-#endif /* !MSG_DONTWAIT */
+#endif /* _AIX */
 
 
 /*
@@ -179,7 +181,7 @@ cupsDoIORequest(http_t     *http,	/* I - Connection to server or @code CUPS_HTTP
   else
     length = ippLength(request);
 
-  DEBUG_printf(("2cupsDoIORequest: Request length=%ld, total length=%ld", (long)ippLength(request), (long)length));
+  DEBUG_printf(("2cupsDoIORequest: Request length=%lu, total length=%lu", (unsigned long)ippLength(request), (unsigned long)length));
 
  /*
   * Clear any "Local" authentication data since it is probably stale...
@@ -241,7 +243,7 @@ cupsDoIORequest(http_t     *http,	/* I - Connection to server or @code CUPS_HTTP
         (status >= HTTP_STATUS_BAD_REQUEST && status != HTTP_STATUS_UNAUTHORIZED &&
 	 status != HTTP_STATUS_UPGRADE_REQUIRED))
     {
-      _cupsSetHTTPError(status);
+      _cupsSetHTTPError(http, status);
       break;
     }
 
@@ -413,7 +415,7 @@ cupsGetResponse(http_t     *http,	/* I - Connection to server or @code CUPS_HTTP
 
     httpFlush(http);
 
-    _cupsSetHTTPError(status);
+    _cupsSetHTTPError(http, status);
 
    /*
     * Then handle encryption and authentication...
@@ -432,8 +434,6 @@ cupsGetResponse(http_t     *http,	/* I - Connection to server or @code CUPS_HTTP
       else
         http->status = HTTP_STATUS_CUPS_AUTHORIZATION_CANCELED;
     }
-
-#ifdef HAVE_TLS
     else if (status == HTTP_STATUS_UPGRADE_REQUIRED)
     {
      /*
@@ -442,10 +442,14 @@ cupsGetResponse(http_t     *http,	/* I - Connection to server or @code CUPS_HTTP
 
       DEBUG_puts("2cupsGetResponse: Need encryption...");
 
+#ifdef HAVE_TLS
       if (!httpReconnect2(http, 30000, NULL))
         httpEncryption(http, HTTP_ENCRYPTION_REQUIRED);
-    }
+
+#else
+      http->status = HTTP_STATUS_CUPS_PKI_ERROR;
 #endif /* HAVE_TLS */
+    }
   }
 
   if (response)
@@ -805,7 +809,7 @@ cupsSendRequest(http_t     *http,	/* I - Connection to server or @code CUPS_HTTP
     {
       int temp_status;			/* Temporary status */
 
-      _cupsSetHTTPError(status);
+      _cupsSetHTTPError(http, status);
 
       do
       {
@@ -871,7 +875,7 @@ cupsSendRequest(http_t     *http,	/* I - Connection to server or @code CUPS_HTTP
 	  * Don't try using the Expect: header the next time around...
 	  */
 
-	  expect = (http_status_t)0;
+	  expect = HTTP_STATUS_NONE;
 
           DEBUG_puts("2cupsSendRequest: Reconnecting after "
 	             "HTTP_EXPECTATION_FAILED.");
@@ -963,7 +967,7 @@ cupsWriteRequestData(
       _httpUpdate(http, &status);
       if (status >= HTTP_STATUS_MULTIPLE_CHOICES)
       {
-        _cupsSetHTTPError(status);
+        _cupsSetHTTPError(http, status);
 
 	do
 	{
@@ -1130,7 +1134,8 @@ _cupsSetError(ipp_status_t status,	/* I - IPP status code */
  */
 
 void
-_cupsSetHTTPError(http_status_t status)	/* I - HTTP status code */
+_cupsSetHTTPError(http_t	*http,	/* I - HTTP connection */
+		  http_status_t	status)	/* I - HTTP status code */
 {
   switch (status)
   {
@@ -1175,8 +1180,8 @@ _cupsSetHTTPError(http_status_t status)	/* I - HTTP status code */
         break;
 
     case HTTP_STATUS_ERROR :
-	_cupsSetError(IPP_STATUS_ERROR_INTERNAL, strerror(errno), 0);
-        break;
+	_cupsSetError(IPP_STATUS_ERROR_INTERNAL, http->error != 0 ? strerror(http->error) : "Internal Server Error", 0);
+	break;
 
     default :
 	DEBUG_printf(("4_cupsSetHTTPError: HTTP error %d mapped to "

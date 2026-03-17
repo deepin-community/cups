@@ -1,10 +1,12 @@
 /*
  * Policy routines for the CUPS scheduler.
  *
- * Copyright 2007-2011, 2014 by Apple Inc.
- * Copyright 1997-2006 by Easy Software Products, all rights reserved.
+ * Copyright © 2020-2024 by OpenPrinting.
+ * Copyright © 2007-2011, 2014 by Apple Inc.
+ * Copyright © 1997-2006 by Easy Software Products, all rights reserved.
  *
- * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
+ * Licensed under Apache License v2.0.  See the file "LICENSE" for more
+ * information.
  */
 
 /*
@@ -116,7 +118,7 @@ cupsdCheckPolicy(cupsd_policy_t *p,	/* I - Policy */
   {
     cupsdLogMessage(CUPSD_LOG_CRIT, "cupsdCheckPolicy: p=%p, con=%p.", p, con);
 
-    return ((http_status_t)0);
+    return (HTTP_STATUS_SERVER_ERROR);
   }
 
  /*
@@ -126,7 +128,7 @@ cupsdCheckPolicy(cupsd_policy_t *p,	/* I - Policy */
   if ((po = cupsdFindPolicyOp(p, con->request->request.op.operation_id)) == NULL)
   {
     cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdCheckPolicy: No matching operation, returning 0.");
-    return ((http_status_t)0);
+    return (HTTP_STATUS_OK);
   }
 
   con->best = po;
@@ -270,7 +272,7 @@ cupsdGetPrivateAttrs(
 #ifdef DEBUG
   cupsdLogMessage(CUPSD_LOG_DEBUG2,
                   "cupsdGetPrivateAttrs(policy=%p(%s), con=%p(%d), "
-		  "printer=%p(%s), owner=\"%s\")", policy, policy->name, con,
+		  "printer=%p(%s), owner=\"%s\")", policy, policy ? policy->name : "", con,
 		  con->number, printer, printer ? printer->name : "", owner);
 #endif /* DEBUG */
 
@@ -316,6 +318,10 @@ cupsdGetPrivateAttrs(
 #endif /* DEBUG */
 
     return (NULL);
+  }
+  else if (name && !_cups_strcasecmp(name, "all"))
+  {
+    return (attrs_ptr);
   }
 
  /*

@@ -1,7 +1,7 @@
 /*
  * IPP Everywhere printer application for CUPS.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2020 by the IEEE-ISTO Printer Working Group.
  * Copyright © 2010-2021 by Apple Inc.
  *
@@ -335,6 +335,7 @@ static void		*process_job(ippeve_job_t *job);
 static void		process_state_message(ippeve_job_t *job, char *message);
 static int		register_printer(ippeve_printer_t *printer);
 static int		respond_http(ippeve_client_t *client, http_status_t code, const char *content_coding, const char *type, size_t length);
+static void		respond_ignored(ippeve_client_t *client, ipp_attribute_t *attr);
 static void		respond_ipp(ippeve_client_t *client, ipp_status_t status, const char *message, ...) _CUPS_FORMAT(3, 4);
 static void		respond_unsupported(ippeve_client_t *client, ipp_attribute_t *attr);
 static void		run_printer(ippeve_printer_t *printer);
@@ -402,7 +403,7 @@ main(int  argc,				/* I - Number of command-line args */
 		duplex = 0,		/* Duplex mode */
 		ppm = 10,		/* Pages per minute for mono */
 		ppm_color = 0,		/* Pages per minute for color */
-		web_forms = 1;		/* Enable web site forms? */
+		web_forms = 1;		/* Enable website forms? */
   ipp_t		*attrs = NULL;		/* Printer attributes */
   char		directory[1024] = "";	/* Spool directory */
   cups_array_t	*docformats = NULL;	/* Supported formats */
@@ -1633,9 +1634,9 @@ create_printer(
     {
       snprintf(path, sizeof(path), "%s/command/%s", cg->cups_serverbin, command);
 
-      if (access(command, X_OK))
+      if (access(path, X_OK))
       {
-        _cupsLangPrintf(stderr, _("Unable to execute command \"%s\": %s"), command, strerror(errno));
+        _cupsLangPrintf(stderr, _("Unable to execute command \"%s\": %s"), path, strerror(errno));
 	return (NULL);
       }
 
@@ -1680,7 +1681,7 @@ create_printer(
     * Extract up to 3 icons...
     */
 
-    for (i = 1, iconsptr = strchr(icons, ','); iconsptr && i < 3; i ++, iconsptr = strchr(iconsptr, ','))
+    for (i = 1, iconsptr = strchr(printer->icons[0], ','); iconsptr && i < 3; i ++, iconsptr = strchr(iconsptr, ','))
     {
       *iconsptr++ = '\0';
       printer->icons[i] = iconsptr;
@@ -2269,19 +2270,17 @@ dnssd_client_cb(
   if (!c)
     return;
 
-  switch (state)
+  if (state == AVAHI_CLIENT_FAILURE)
   {
-    default :
-        fprintf(stderr, "Ignored Avahi state %d.\n", state);
-	break;
-
-    case AVAHI_CLIENT_FAILURE:
-	if (avahi_client_errno(c) == AVAHI_ERR_DISCONNECTED)
-	{
-	  fputs("Avahi server crashed, exiting.\n", stderr);
-	  exit(1);
-	}
-	break;
+    if (avahi_client_errno(c) == AVAHI_ERR_DISCONNECTED)
+    {
+      fputs("Avahi server crashed, exiting.\n", stderr);
+      exit(1);
+    }
+  }
+  else
+  {
+    fprintf(stderr, "Ignored Avahi state %d.\n", state);
   }
 }
 #endif /* HAVE_MDNSRESPONDER */
@@ -4097,14 +4096,20 @@ ippserver_attr_cb(
     "identify-actions-default",
     "identify-actions-supported",
     "ipp-features-supported",
-    "ipp-versions-supproted",
+    "ipp-versions-supported",
     "ippget-event-life",
+    "job-creation-attributes-supported",
     "job-hold-until-supported",
     "job-hold-until-time-supported",
     "job-ids-supported",
     "job-k-octets-supported",
+    "job-priority-default",
+    "job-priority-supported",
     "job-settable-attributes-supported",
+    "job-sheets-default",
+    "job-sheets-supported",
     "multiple-document-jobs-supported",
+    "multiple-document-handling-supported",
     "multiple-operation-time-out",
     "multiple-operation-time-out-action",
     "natural-language-configured",
@@ -4116,6 +4121,7 @@ ippserver_attr_cb(
     "notify-max-events-supported",
     "notify-pull-method-supported",
     "operations-supported",
+    "pdl-override-supported",
     "printer-alert",
     "printer-alert-description",
     "printer-camera-image-uri",
@@ -4127,18 +4133,25 @@ ippserver_attr_cb(
     "printer-detailed-status-messages",
     "printer-dns-sd-name",
     "printer-fax-log-uri",
+    "printer-geo-location",
     "printer-get-attributes-supported",
     "printer-icons",
     "printer-id",
     "printer-info",
     "printer-is-accepting-jobs",
+    "printer-location",
     "printer-message-date-time",
     "printer-message-from-operator",
     "printer-message-time",
     "printer-more-info",
+    "printer-name",
+    "printer-organization",
+    "printer-organizational-unit",
     "printer-service-type",
     "printer-settable-attributes-supported",
     "printer-state",
+    "printer-state-change-date-time",
+    "printer-state-change-time",
     "printer-state-message",
     "printer-state-reasons",
     "printer-static-resource-directory-uri",
@@ -4149,6 +4162,7 @@ ippserver_attr_cb(
     "printer-supply-info-uri",
     "printer-up-time",
     "printer-uri-supported",
+    "printer-uuid",
     "printer-xri-supported",
     "queued-job-count",
     "reference-uri-scheme-supported",
@@ -5854,7 +5868,7 @@ process_client(ippeve_client_t *client)	/* I - Client */
   }
 
  /*
-  * Close the conection to the client and return...
+  * Close the connection to the client and return...
   */
 
   delete_client(client);
@@ -6863,7 +6877,10 @@ process_job(ippeve_job_t *job)		/* I - Job */
     }
 
     if (mystdout < 0)
-      mystdout = open("/dev/null", O_WRONLY | O_BINARY);
+    {
+      if ((mystdout = open("/dev/null", O_WRONLY | O_BINARY)) < 0)
+        fprintf(stderr, "[Job %d] Unable to redirect command output to /dev/null: %s", job->id, strerror(errno));
+    }
 
     if (pipe(mypipe))
     {
@@ -6877,14 +6894,20 @@ process_job(ippeve_job_t *job)		/* I - Job */
       * Child comes here...
       */
 
-      close(1);
-      dup2(mystdout, 1);
-      close(mystdout);
+      if (mystdout >= 0)
+      {
+	close(1);
+        dup2(mystdout, 1);
+        close(mystdout);
+      }
 
-      close(2);
-      dup2(mypipe[1], 2);
-      close(mypipe[0]);
-      close(mypipe[1]);
+      if (mypipe[1] >= 0)
+      {
+	close(2);
+	dup2(mypipe[1], 2);
+	close(mypipe[0]);
+	close(mypipe[1]);
+      }
 
       execve(job->printer->command, myargv, myenvp);
       exit(errno);
@@ -7492,7 +7515,7 @@ respond_http(
     * 100-continue doesn't send any headers...
     */
 
-    return (httpWriteResponse(client->http, HTTP_STATUS_CONTINUE) == 0);
+    return (!httpWriteResponse(client->http, HTTP_STATUS_CONTINUE));
   }
 
  /*
@@ -7541,7 +7564,7 @@ respond_http(
 
   httpSetLength(client->http, length);
 
-  if (httpWriteResponse(client->http, code) < 0)
+  if (httpWriteResponse(client->http, code))
     return (0);
 
  /*
@@ -7575,6 +7598,26 @@ respond_http(
   }
 
   return (1);
+}
+
+
+/*
+ * 'respond_ignored()' - Respond with an ignored attribute.
+ */
+
+static void
+respond_ignored(
+    ippeve_client_t *client,		/* I - Client */
+    ipp_attribute_t *attr)		/* I - Attribute */
+{
+  ipp_attribute_t	*temp;		/* Copy of attribute */
+
+
+  if (!ippGetStatusCode(client->response))
+    respond_ipp(client, IPP_STATUS_OK_IGNORED_OR_SUBSTITUTED, "Unsupported %s %s%s value.", ippGetName(attr), ippGetCount(attr) > 1 ? "1setOf " : "", ippTagString(ippGetValueTag(attr)));
+
+  temp = ippCopyAttribute(client->response, attr, 0);
+  ippSetGroupTag(client->response, &temp, IPP_TAG_UNSUPPORTED_GROUP);
 }
 
 
@@ -7621,8 +7664,8 @@ respond_ipp(ippeve_client_t *client,	/* I - Client */
 
 static void
 respond_unsupported(
-    ippeve_client_t   *client,		/* I - Client */
-    ipp_attribute_t *attr)		/* I - Atribute */
+    ippeve_client_t *client,		/* I - Client */
+    ipp_attribute_t *attr)		/* I - Attribute */
 {
   ipp_attribute_t	*temp;		/* Copy of attribute */
 
@@ -7836,17 +7879,22 @@ show_media(ippeve_client_t  *client)	/* I - Client connection */
     return (1);
   }
 
-  num_ready   = ippGetCount(media_col_ready);
-  num_sizes   = ippGetCount(media_sizes);
   num_sources = ippGetCount(media_sources);
-  num_types   = ippGetCount(media_types);
 
+ /*
+  * Make sure the number of trays is consistent.
+  */
+ 
   if (num_sources != ippGetCount(input_tray))
   {
     html_printf(client, "<p>Error: Different number of trays in media-source-supported and printer-input-tray defined for printer.</p>\n");
     html_footer(client);
     return (1);
   }
+
+  num_ready   = ippGetCount(media_col_ready);
+  num_sizes   = ippGetCount(media_sizes);
+  num_types   = ippGetCount(media_types);
 
  /*
   * Process form data if present...
@@ -8596,6 +8644,7 @@ valid_job_attributes(
 {
   int			i,		/* Looping var */
 			count,		/* Number of values */
+			fidelity,	/* "ipp-attribute-fidelity" value */
 			valid = 1;	/* Valid attributes? */
   ipp_attribute_t	*attr,		/* Current attribute */
 			*supported;	/* xxx-supported attribute */
@@ -8611,22 +8660,32 @@ valid_job_attributes(
   * Check the various job template attributes...
   */
 
-  if ((attr = ippFindAttribute(client->request, "copies", IPP_TAG_ZERO)) != NULL)
-  {
-    if (ippGetCount(attr) != 1 || ippGetValueTag(attr) != IPP_TAG_INTEGER ||
-        ippGetInteger(attr, 0) < 1 || ippGetInteger(attr, 0) > 999)
-    {
-      respond_unsupported(client, attr);
-      valid = 0;
-    }
-  }
-
   if ((attr = ippFindAttribute(client->request, "ipp-attribute-fidelity", IPP_TAG_ZERO)) != NULL)
   {
     if (ippGetCount(attr) != 1 || ippGetValueTag(attr) != IPP_TAG_BOOLEAN)
     {
       respond_unsupported(client, attr);
       valid = 0;
+    }
+  }
+
+  fidelity = ippGetBoolean(attr, 0);
+
+  if ((attr = ippFindAttribute(client->request, "copies", IPP_TAG_ZERO)) != NULL)
+  {
+    if (ippGetCount(attr) != 1 || ippGetValueTag(attr) != IPP_TAG_INTEGER ||
+        ippGetInteger(attr, 0) < 1 || ippGetInteger(attr, 0) > 999)
+    {
+      if (fidelity)
+      {
+        respond_unsupported(client, attr);
+        valid = 0;
+      }
+      else
+      {
+        respond_ignored(client, attr);
+        ippDeleteAttribute(client->request, attr);
+      }
     }
   }
 
@@ -8665,7 +8724,9 @@ valid_job_attributes(
     ippSetGroupTag(client->request, &attr, IPP_TAG_JOB);
   }
   else
+  {
     ippAddString(client->request, IPP_TAG_JOB, IPP_TAG_NAME, "job-name", NULL, "Untitled");
+  }
 
   if ((attr = ippFindAttribute(client->request, "job-priority", IPP_TAG_ZERO)) != NULL)
   {
@@ -8706,8 +8767,16 @@ valid_job_attributes(
 
       if (!ippContainsString(supported, ippGetString(attr, 0, NULL)))
       {
-	respond_unsupported(client, attr);
-	valid = 0;
+        if (fidelity)
+        {
+	  respond_unsupported(client, attr);
+	  valid = 0;
+	}
+	else
+	{
+	  respond_ignored(client, attr);
+	  ippDeleteAttribute(client->request, attr);
+	}
       }
     }
   }
@@ -8747,8 +8816,16 @@ valid_job_attributes(
 
 	if (!ippContainsString(supported, ippGetString(member, 0, NULL)))
 	{
-	  respond_unsupported(client, attr);
-	  valid = 0;
+	  if (fidelity)
+	  {
+	    respond_unsupported(client, attr);
+	    valid = 0;
+	  }
+	  else
+	  {
+	    respond_ignored(client, attr);
+	    ippDeleteAttribute(client->request, attr);
+	  }
 	}
       }
     }
@@ -8778,18 +8855,49 @@ valid_job_attributes(
 
 	  for (i = 0; i < count ; i ++)
 	  {
+	    int	x_min, x_max;		// Min/max width
+	    int y_min, y_max;		// Min/max length
+
 	    size  = ippGetCollection(supported, i);
 	    x_dim = ippFindAttribute(size, "x-dimension", IPP_TAG_ZERO);
 	    y_dim = ippFindAttribute(size, "y-dimension", IPP_TAG_ZERO);
 
-	    if (ippContainsInteger(x_dim, x_value) && ippContainsInteger(y_dim, y_value))
+            if (ippGetValueTag(x_dim) == IPP_TAG_INTEGER)
+            {
+              x_min = ippGetInteger(x_dim, 0) - 100;
+              x_max = ippGetInteger(x_dim, 0) + 100;
+            }
+            else
+            {
+              x_min = ippGetRange(x_dim, 0, &x_max);
+            }
+
+            if (ippGetValueTag(y_dim) == IPP_TAG_INTEGER)
+            {
+              y_min = ippGetInteger(y_dim, 0) - 100;
+              y_max = ippGetInteger(y_dim, 0) + 100;
+            }
+            else
+            {
+              y_min = ippGetRange(y_dim, 0, &y_max);
+            }
+
+	    if ((x_value < x_min || x_value > x_max) && (y_value < y_min || y_value > y_max))
 	      break;
 	  }
 
 	  if (i >= count)
 	  {
-	    respond_unsupported(client, attr);
-	    valid = 0;
+	    if (fidelity)
+	    {
+	      respond_unsupported(client, attr);
+	      valid = 0;
+	    }
+	    else
+	    {
+	      respond_ignored(client, attr);
+	      ippDeleteAttribute(client->request, attr);
+	    }
 	  }
 	}
       }
@@ -8869,8 +8977,16 @@ valid_job_attributes(
 
       if (i >= count)
       {
-	respond_unsupported(client, attr);
-	valid = 0;
+        if (fidelity)
+        {
+	  respond_unsupported(client, attr);
+	  valid = 0;
+	}
+	else
+	{
+	  respond_ignored(client, attr);
+	  ippDeleteAttribute(client->request, attr);
+	}
       }
     }
   }
@@ -8889,14 +9005,30 @@ valid_job_attributes(
     {
       if (!ippContainsString(supported, sides))
       {
-	respond_unsupported(client, attr);
-	valid = 0;
+        if (fidelity)
+        {
+	  respond_unsupported(client, attr);
+	  valid = 0;
+	}
+	else
+	{
+	  respond_ignored(client, attr);
+	  ippDeleteAttribute(client->request, attr);
+	}
       }
     }
     else if (strcmp(sides, "one-sided"))
     {
-      respond_unsupported(client, attr);
-      valid = 0;
+      if (fidelity)
+      {
+	respond_unsupported(client, attr);
+	valid = 0;
+      }
+      else
+      {
+        respond_ignored(client, attr);
+        ippDeleteAttribute(client->request, attr);
+      }
     }
   }
 

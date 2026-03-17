@@ -13,10 +13,10 @@ Bug: https://github.com/OpenPrinting/cups/pull/27
  2 files changed, 6 insertions(+)
 
 diff --git a/conf/mime.convs.in b/conf/mime.convs.in
-index 57b459d..e042e01 100644
+index 91f36e0..b8bc400 100644
 --- a/conf/mime.convs.in
 +++ b/conf/mime.convs.in
-@@ -44,6 +44,9 @@ application/postscript		application/vnd.cups-postscript	66	pstops
+@@ -45,6 +45,9 @@ application/postscript		application/vnd.cups-postscript	66	pstops
  application/vnd.cups-raster	image/pwg-raster		100	rastertopwg
  application/vnd.cups-raster	image/urf			100	rastertopwg
  
@@ -27,10 +27,10 @@ index 57b459d..e042e01 100644
  #
  # Raw filter...
 diff --git a/conf/mime.types b/conf/mime.types
-index fcd6b6e..ebb0525 100644
+index 62c4889..e10ab56 100644
 --- a/conf/mime.types
 +++ b/conf/mime.types
-@@ -108,6 +108,9 @@ image/x-alias			pix short(8,8) short(8,24)
+@@ -109,6 +109,9 @@ image/x-alias			pix short(8,8) short(8,24)
  image/x-bitmap			bmp string(0,BM) + !printable(2,14)
  image/x-icon			ico
  

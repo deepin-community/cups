@@ -1,7 +1,7 @@
 dnl
 dnl Default cupsd configuration settings for CUPS.
 dnl
-dnl Copyright © 2021-2022 by OpenPrinting.
+dnl Copyright © 2020-2025 by OpenPrinting.
 dnl Copyright © 2007-2018 by Apple Inc.
 dnl Copyright © 2006-2007 by Easy Software Products, all rights reserved.
 dnl
@@ -24,40 +24,6 @@ AC_ARG_WITH([languages], AS_HELP_STRING([--with-languages], [set installed langu
     ])
 ])
 AC_SUBST([LANGUAGES])
-
-dnl macOS bundle-based localization support
-AC_ARG_WITH([bundledir], AS_HELP_STRING([--with-bundledir], [set localization bundle directory]), [
-    CUPS_BUNDLEDIR="$withval"
-], [
-    AS_IF([test "x$host_os_name" = xdarwin -a $host_os_version -ge 100], [
-        CUPS_BUNDLEDIR="/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/PrintCore.framework/Versions/A"
-	LANGUAGES=""
-    ], [
-	CUPS_BUNDLEDIR=""
-    ])
-])
-
-AC_SUBST([CUPS_BUNDLEDIR])
-AS_IF([test "x$CUPS_BUNDLEDIR" != x], [
-    AC_DEFINE_UNQUOTED([CUPS_BUNDLEDIR], ["$CUPS_BUNDLEDIR"], [macOS bundle directory.])
-])
-
-AC_ARG_WITH([bundlelang], AS_HELP_STRING([--with-bundlelang], [set localization bundle base language (English or en)]), [
-    cups_bundlelang="$withval"
-], [
-    AS_IF([test $host_os_version -ge 190], [
-	cups_bundlelang="en"
-    ], [
-	cups_bundlelang="English"
-    ])
-])
-
-AS_IF([test "x$cups_bundlelang" != x -a "x$CUPS_BUNDLEDIR" != x], [
-    CUPS_RESOURCEDIR="$CUPS_BUNDLEDIR/Resources/$cups_bundlelang.lproj"
-], [
-    CUPS_RESOURCEDIR=""
-])
-AC_SUBST([CUPS_RESOURCEDIR])
 
 dnl Default executable file permissions
 AC_ARG_WITH([exe_file_perm], AS_HELP_STRING([--with-exe-file-perm], [set default executable permissions value, default=0755]), [
@@ -128,6 +94,15 @@ AC_ARG_WITH([log_level], AS_HELP_STRING([--with-log-level], [set default LogLeve
 ])
 AC_SUBST([CUPS_LOG_LEVEL])
 AC_DEFINE_UNQUOTED([CUPS_DEFAULT_LOG_LEVEL], ["$CUPS_LOG_LEVEL"], [Default LogLevel value.])
+
+dnl Default PeerCred
+AC_ARG_WITH([peer_cred], AS_HELP_STRING([--with-peer-cred], [set default PeerCred value (on/off/root-only), default=on]), [
+    CUPS_PEER_CRED="$withval"
+], [
+    CUPS_PEER_CRED="on"
+])
+AC_SUBST([CUPS_PEER_CRED])
+AC_DEFINE_UNQUOTED([CUPS_DEFAULT_PEER_CRED], ["$CUPS_PEER_CRED"], [Default PeerCred value.])
 
 dnl Default AccessLogLevel
 AC_ARG_WITH(access_log_level, [  --with-access-log-level set default AccessLogLevel value, default=none],
@@ -335,7 +310,7 @@ AS_IF([test x$default_printcap != xno], [
     AS_IF([test "x$default_printcap" = "xdefault"], [
 	AS_CASE([$host_os_name], [darwin*], [
 	    CUPS_DEFAULT_PRINTCAP="/Library/Preferences/org.cups.printers.plist"
-	], [sunos*], [
+	], [sunos* | solaris*], [
 	    CUPS_DEFAULT_PRINTCAP="/etc/printers.conf"
 	], [*], [
 	    CUPS_DEFAULT_PRINTCAP="/etc/printcap"

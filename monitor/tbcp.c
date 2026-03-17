@@ -1,6 +1,7 @@
 /*
  * TBCP port monitor for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright 2007-2014 by Apple Inc.
  * Copyright 1993-2006 by Easy Software Products.
  *
@@ -41,7 +42,7 @@ main(int  argc,				/* I - Number of command-line args */
   * Check command-line...
   */
 
-  if (argc < 6 || argc > 7)
+  if (argc != 6 && argc != 7)
   {
     _cupsLangPrintf(stderr,
                     _("Usage: %s job-id user title copies options [file]"),

@@ -1,6 +1,7 @@
 /*
  * Option routines for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright 2007-2017 by Apple Inc.
  * Copyright 1997-2007 by Easy Software Products.
  *
@@ -684,7 +685,7 @@ cups_find_option(
     else
     {
      /*
-      * Start wih previous on left side...
+      * Start with previous on left side...
       */
 
       left  = prev;

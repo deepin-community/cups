@@ -1,6 +1,7 @@
 /*
  * Raster benchmark program for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright 2007-2016 by Apple Inc.
  * Copyright 1997-2006 by Easy Software Products.
  *
@@ -125,7 +126,7 @@ compute_median(double *secs)		/* I - Array of time samples */
 
 
  /*
-  * Sort the array into ascending order using a quicky bubble sort...
+  * Sort the array into ascending order using a quick bubble sort...
   */
 
   for (i = 0; i < (TEST_PASSES - 1); i ++)

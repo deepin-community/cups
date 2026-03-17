@@ -5,8 +5,8 @@ etc/dbus-1/system.d/cups.conf
 # Installed by dh_installpam (debian/cups-daemon.cups.pam)
 etc/pam.d/cups
 # Deprecated, not installed (use xinetd)
-lib/systemd/system/cups-lpd.socket
-lib/systemd/system/cups-lpd@.service
+usr/lib/systemd/system/cups-lpd.socket
+usr/lib/systemd/system/cups-lpd@.service
 # Not decided whether worth installing or not yet
 usr/bin/ippeveprinter
 usr/lib/cups/command/ippevepcl

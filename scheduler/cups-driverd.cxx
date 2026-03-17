@@ -5,7 +5,7 @@
  * created from driver information files, and dynamically generated PPD files
  * using driver helper programs.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2025 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products.
  *
@@ -152,7 +152,7 @@ static ppd_info_t	*add_ppd(const char *filename, const char *name,
 				 size_t size, int model_number, int type,
 				 const char *scheme);
 static int		cat_drv(const char *name, int request_id);
-static void		cat_ppd(const char *name, int request_id);
+static void		cat_ppd(const char *name, int request_id) _CUPS_NORETURN;
 static int		cat_static(const char *name, int request_id);
 static int		cat_tar(const char *name, int request_id);
 static int		compare_inodes(struct stat *a, struct stat *b);
@@ -162,12 +162,12 @@ static int		compare_names(const ppd_info_t *p0,
 			              const ppd_info_t *p1);
 static int		compare_ppds(const ppd_info_t *p0,
 			             const ppd_info_t *p1);
-static void		dump_ppds_dat(const char *filename);
+static void		dump_ppds_dat(const char *filename) _CUPS_NORETURN;
 static void		free_array(cups_array_t *a);
 static cups_file_t	*get_file(const char *name, int request_id,
 			          const char *subdir, char *buffer,
 			          size_t bufsize, char **subfile);
-static void		list_ppds(int request_id, int limit, const char *opt);
+static void		list_ppds(int request_id, int limit, const char *opt) _CUPS_NORETURN;
 static int		load_drivers(cups_array_t *include,
 			             cups_array_t *exclude);
 static int		load_drv(const char *filename, const char *name,
@@ -175,7 +175,7 @@ static int		load_drv(const char *filename, const char *name,
 static void		load_ppd(const char *filename, const char *name,
 			         const char *scheme, struct stat *fileinfo,
 			         ppd_info_t *ppd, cups_file_t *fp, off_t end);
-static int		load_ppds(const char *d, const char *p, int descend);
+static void		load_ppds(const char *d, const char *p, int descend);
 static void		load_ppds_dat(char *filename, size_t filesize,
 			              int verbose);
 static int		load_tar(const char *filename, const char *name,
@@ -1107,26 +1107,6 @@ list_ppds(int        request_id,	/* I - Request ID */
 #endif /* __APPLE__ */
 
  /*
-  * Cull PPD files that are no longer present...
-  */
-
-  for (ppd = (ppd_info_t *)cupsArrayFirst(PPDsByName);
-       ppd;
-       ppd = (ppd_info_t *)cupsArrayNext(PPDsByName))
-    if (!ppd->found)
-    {
-     /*
-      * Remove this PPD file from the list...
-      */
-
-      cupsArrayRemove(PPDsByName, ppd);
-      cupsArrayRemove(PPDsByMakeModel, ppd);
-      free(ppd);
-
-      ChangedPPD = 1;
-    }
-
- /*
   * Write the new ppds.dat file...
   */
 
@@ -1144,10 +1124,11 @@ list_ppds(int        request_id,	/* I - Request ID */
 
       cupsFileWrite(fp, (char *)&ppdsync, sizeof(ppdsync));
 
-      for (ppd = (ppd_info_t *)cupsArrayFirst(PPDsByName);
-	   ppd;
-	   ppd = (ppd_info_t *)cupsArrayNext(PPDsByName))
-	cupsFileWrite(fp, (char *)&(ppd->record), sizeof(ppd_rec_t));
+      for (ppd = (ppd_info_t *)cupsArrayFirst(PPDsByName); ppd; ppd = (ppd_info_t *)cupsArrayNext(PPDsByName))
+      {
+        if (ppd->found)
+	  cupsFileWrite(fp, (char *)&(ppd->record), sizeof(ppd_rec_t));
+      }
 
       cupsFileClose(fp);
 
@@ -1316,7 +1297,8 @@ list_ppds(int        request_id,	/* I - Request ID */
       */
 
       if (ppd->record.type < PPD_TYPE_POSTSCRIPT ||
-	  ppd->record.type >= PPD_TYPE_DRV)
+	  ppd->record.type >= PPD_TYPE_DRV ||
+	  !ppd->found)
 	continue;
 
       if (cupsArrayFind(exclude, ppd->record.scheme) ||
@@ -1429,7 +1411,8 @@ list_ppds(int        request_id,	/* I - Request ID */
       */
 
       if (ppd->record.type < PPD_TYPE_POSTSCRIPT ||
-	  ppd->record.type >= PPD_TYPE_DRV)
+	  ppd->record.type >= PPD_TYPE_DRV ||
+	  !ppd->found)
 	continue;
 
       if (cupsArrayFind(exclude, ppd->record.scheme) ||
@@ -1451,7 +1434,8 @@ list_ppds(int        request_id,	/* I - Request ID */
     */
 
     if (ppd->record.type < PPD_TYPE_POSTSCRIPT ||
-        ppd->record.type >= PPD_TYPE_DRV)
+        ppd->record.type >= PPD_TYPE_DRV ||
+        !ppd->found)
       continue;
 
    /*
@@ -1978,7 +1962,6 @@ load_ppd(const char  *filename,		/* I - Real filename */
   cups_array_t	*products,		/* Product array */
 		*psversions,		/* PSVersion array */
 		*cups_languages;	/* cupsLanguages array */
-  int		new_ppd;		/* Is this a new PPD? */
   struct				/* LanguageVersion translation table */
   {
     const char	*version,		/* LanguageVersion string */
@@ -2237,7 +2220,7 @@ load_ppd(const char  *filename,		/* I - Real filename */
   if (ptr)
   {
    /*
-    * Setup the country suffix...
+    * Set the country suffix...
     */
 
     country[0] = '_';
@@ -2278,9 +2261,7 @@ load_ppd(const char  *filename,		/* I - Real filename */
   * Record the PPD file...
   */
 
-  new_ppd = !ppd;
-
-  if (new_ppd)
+  if (!ppd)
   {
    /*
     * Add new PPD file...
@@ -2362,7 +2343,7 @@ load_ppd(const char  *filename,		/* I - Real filename */
  * 'load_ppds()' - Load PPD files recursively.
  */
 
-static int				/* O - 1 on success, 0 on failure */
+static void
 load_ppds(const char *d,		/* I - Actual directory */
           const char *p,		/* I - Virtual path in name */
 	  int        descend)		/* I - Descend into directories? */
@@ -2390,20 +2371,25 @@ load_ppds(const char *d,		/* I - Actual directory */
       fprintf(stderr, "ERROR: [cups-driverd] Unable to stat \"%s\": %s\n", d,
 	      strerror(errno));
 
-    return (0);
+    return;
   }
   else if (cupsArrayFind(Inodes, &dinfo))
   {
     fprintf(stderr, "ERROR: [cups-driverd] Skipping \"%s\": loop detected!\n",
             d);
-    return (1);
+    return;
   }
 
  /*
   * Nope, add it to the Inodes array and continue...
   */
 
-  dinfoptr = (struct stat *)malloc(sizeof(struct stat));
+  if ((dinfoptr = (struct stat *)malloc(sizeof(struct stat))) == NULL)
+  {
+    fputs("ERROR: [cups-driverd] Unable to allocate memory for directory info.\n",
+          stderr);
+    exit(1);
+  }
   memcpy(dinfoptr, &dinfo, sizeof(struct stat));
   cupsArrayAdd(Inodes, dinfoptr);
 
@@ -2413,7 +2399,7 @@ load_ppds(const char *d,		/* I - Actual directory */
 
   if (_cupsFileCheck(d, _CUPS_FILE_CHECK_DIRECTORY, !geteuid(),
 		     _cupsFileCheckFilter, NULL))
-    return (0);
+    return;
 
   if ((dir = cupsDirOpen(d)) == NULL)
   {
@@ -2422,7 +2408,7 @@ load_ppds(const char *d,		/* I - Actual directory */
 	      "ERROR: [cups-driverd] Unable to open PPD directory \"%s\": %s\n",
 	      d, strerror(errno));
 
-    return (0);
+    return;
   }
 
   fprintf(stderr, "DEBUG: [cups-driverd] Loading \"%s\"...\n", d);
@@ -2455,11 +2441,7 @@ load_ppds(const char *d,		/* I - Actual directory */
 
       if (descend)
       {
-	if (!load_ppds(filename, name, 1))
-	{
-	  cupsDirClose(dir);
-	  return (1);
-	}
+	load_ppds(filename, name, 1);
       }
       else if ((ptr = filename + strlen(filename) - 14) > filename &&
 	       !strcmp(ptr, ".printerDriver"))
@@ -2570,8 +2552,6 @@ load_ppds(const char *d,		/* I - Actual directory */
   }
 
   cupsDirClose(dir);
-
-  return (1);
 }
 
 
@@ -2625,11 +2605,10 @@ load_ppds_dat(char   *filename,		/* I - Filename buffer */
       {
 	if ((ppd = (ppd_info_t *)calloc(1, sizeof(ppd_info_t))) == NULL)
 	{
-	  if (verbose)
-	    fputs("ERROR: [cups-driverd] Unable to allocate memory for PPD!\n",
-		  stderr);
-	  exit(1);
-	}
+    fputs("ERROR: [cups-driverd] Unable to allocate memory for PPD!\n",
+          stderr);
+    exit(1);
+  }
 
 	if (cupsFileRead(fp, (char *)&(ppd->record), sizeof(ppd_rec_t)) > 0)
 	{

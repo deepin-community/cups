@@ -1,6 +1,7 @@
 /*
  * Destination localization support for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2012-2017 by Apple Inc.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
@@ -325,7 +326,7 @@ cupsLocalizeDestValue(
 static void
 cups_create_localizations(
     http_t       *http,			/* I - Connection to destination */
-    cups_dinfo_t *dinfo)		/* I - Destination informations */
+    cups_dinfo_t *dinfo)		/* I - Destination information */
 {
   http_t		*http2;		/* Connection for strings file */
   http_status_t		status;		/* Request status */

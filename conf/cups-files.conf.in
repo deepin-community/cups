@@ -6,6 +6,9 @@
 # List of events that are considered fatal errors for the scheduler...
 #FatalErrors @CUPS_FATAL_ERRORS@
 
+# Strip domain in local username?
+#StripUserDomain No
+
 # Do we call fsync() after writing configuration or status files?
 #SyncOnClose @CUPS_SYNC_ON_CLOSE@
 
@@ -18,6 +21,9 @@
 # This cannot contain the Group value for security reasons...
 SystemGroup @CUPS_SYSTEM_GROUPS@
 @CUPS_SYSTEM_AUTHKEY@
+
+# Are Unix domain socket peer credentials used for authorization?
+PeerCred @CUPS_PEER_CRED@
 
 # User that is substituted for unauthenticated (remote) root accesses...
 #RemoteRoot remroot

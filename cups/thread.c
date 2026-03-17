@@ -1,7 +1,7 @@
 /*
  * Threading primitives for CUPS.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2025 by OpenPrinting.
  * Copyright © 2009-2018 by Apple Inc.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
@@ -100,6 +100,17 @@ void
 _cupsMutexUnlock(_cups_mutex_t *mutex)	/* I - Mutex */
 {
   pthread_mutex_unlock(mutex);
+}
+
+
+/*
+ * '_cupsRWDestroy()' - Destroy a reader/writer lock.
+ */
+
+void
+_cupsRWDestroy(_cups_rwlock_t *rwlock)	/* I - Reader/writer lock */
+{
+  pthread_rwlock_destroy(rwlock);
 }
 
 
@@ -291,6 +302,17 @@ _cupsMutexUnlock(_cups_mutex_t *mutex)	/* I - Mutex */
 
 
 /*
+ * '_cupsRWDestroy()' - Destroy a reader/writer lock.
+ */
+
+void
+_cupsRWDestroy(_cups_rwlock_t *rwlock)	/* I - Reader/writer lock */
+{
+  (void)rwlock;
+}
+
+
+/*
  * '_cupsRWInit()' - Initialize a reader/writer lock.
  */
 
@@ -450,6 +472,17 @@ void
 _cupsMutexUnlock(_cups_mutex_t *mutex)	/* I - Mutex */
 {
   (void)mutex;
+}
+
+
+/*
+ * '_cupsRWDestroy()' - Destroy a reader/writer lock.
+ */
+
+void
+_cupsRWDestroy(_cups_rwlock_t *rwlock)	/* I - Reader/writer lock */
+{
+  (void)rwlock;
 }
 
 

@@ -1,6 +1,7 @@
 /*
  * Select abstraction functions for the CUPS scheduler.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright 2007-2016 by Apple Inc.
  * Copyright 2006-2007 by Easy Software Products.
  *
@@ -195,8 +196,7 @@ static int		cupsd_in_select = 0;
 #endif /* HAVE_EPOLL || HAVE_KQUEUE */
 
 #ifdef HAVE_KQUEUE
-static int		cupsd_kqueue_fd = -1,
-			cupsd_kqueue_changes = 0;
+static int		cupsd_kqueue_fd = -1;
 static struct kevent	*cupsd_kqueue_events = NULL;
 #elif defined(HAVE_POLL)
 static int		cupsd_alloc_pollfds = 0,
@@ -408,6 +408,9 @@ cupsdDoSelect(long timeout)		/* I - Timeout in seconds */
 
   cupsd_in_select = 1;
 
+  // Prevent 100% CPU by releasing control before the kevent call...
+  usleep(1);
+
   if (timeout >= 0 && timeout < 86400)
   {
     ktimeout.tv_sec  = timeout;
@@ -418,8 +421,6 @@ cupsdDoSelect(long timeout)		/* I - Timeout in seconds */
   }
   else
     nfds = kevent(cupsd_kqueue_fd, NULL, 0, cupsd_kqueue_events, MaxFDs, NULL);
-
-  cupsd_kqueue_changes = 0;
 
   for (i = nfds, event = cupsd_kqueue_events; i > 0; i --, event ++)
   {
@@ -453,6 +454,9 @@ cupsdDoSelect(long timeout)		/* I - Timeout in seconds */
     int			i;		/* Looping var */
     struct epoll_event	*event;		/* Current event */
 
+
+    // Prevent 100% CPU by releasing control before the epoll_wait call...
+    usleep(1);
 
     if (timeout >= 0 && timeout < 86400)
       nfds = epoll_wait(cupsd_epoll_fd, cupsd_epoll_events, MaxFDs,
@@ -546,6 +550,9 @@ cupsdDoSelect(long timeout)		/* I - Timeout in seconds */
     }
   }
 
+  // Prevent 100% CPU by releasing control before the poll call...
+  usleep(1);
+
   if (timeout >= 0 && timeout < 86400)
     nfds = poll(cupsd_pollfds, (nfds_t)count, timeout * 1000);
   else
@@ -598,6 +605,9 @@ cupsdDoSelect(long timeout)		/* I - Timeout in seconds */
 
   cupsd_current_input  = cupsd_global_input;
   cupsd_current_output = cupsd_global_output;
+
+  // Prevent 100% CPU by releasing control before the select call...
+  usleep(1);
 
   if (timeout >= 0 && timeout < 86400)
   {
@@ -805,7 +815,6 @@ cupsdStartSelect(void)
 
 #elif defined(HAVE_KQUEUE)
   cupsd_kqueue_fd      = kqueue();
-  cupsd_kqueue_changes = 0;
   cupsd_kqueue_events  = calloc((size_t)MaxFDs, sizeof(struct kevent));
 
 #elif defined(HAVE_POLL)
@@ -855,8 +864,6 @@ cupsdStopSelect(void)
     close(cupsd_kqueue_fd);
     cupsd_kqueue_fd = -1;
   }
-
-  cupsd_kqueue_changes = 0;
 
 #elif defined(HAVE_POLL)
 #  ifdef HAVE_EPOLL

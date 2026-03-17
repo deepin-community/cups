@@ -1,16 +1,12 @@
 /*
  * User-defined destination (and option) support for CUPS.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2025 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
  * information.
- */
-
-/*
- * Include necessary headers...
  */
 
 #include "cups-private.h"
@@ -58,7 +54,7 @@
 #endif /* __APPLE__ */
 
 #ifdef HAVE_DNSSD
-#  define _CUPS_DNSSD_GET_DESTS 250     /* Milliseconds for cupsGetDests */
+#  define _CUPS_DNSSD_GET_DESTS 1000     /* Milliseconds for cupsGetDests */
 #  define _CUPS_DNSSD_MAXTIME	50	/* Milliseconds for maximum quantum of time */
 #else
 #  define _CUPS_DNSSD_GET_DESTS 0       /* Milliseconds for cupsGetDests */
@@ -119,7 +115,7 @@ typedef struct _cups_dnssd_device_s	/* Enumerated device */
 typedef struct _cups_dnssd_resolve_s	/* Data for resolving URI */
 {
   int			*cancel;	/* Pointer to "cancel" variable */
-  struct timeval	end_time;	/* Ending time */
+  double		end_time;	/* Ending time */
 } _cups_dnssd_resolve_t;
 #endif /* HAVE_DNSSD */
 
@@ -222,7 +218,7 @@ static const char	*cups_dnssd_resolve(cups_dest_t *dest, const char *uri,
 static int		cups_dnssd_resolve_cb(void *context);
 static void		cups_dnssd_unquote(char *dst, const char *src,
 			                   size_t dstsize);
-static int		cups_elapsed(struct timeval *t);
+static int		cups_elapsed(double *t);
 #endif /* HAVE_DNSSD */
 static int              cups_enum_dests(http_t *http, unsigned flags, int msec, int *cancel, cups_ptype_t type, cups_ptype_t mask, cups_dest_cb_t cb, void *user_data);
 static int		cups_find_dest(const char *name, const char *instance,
@@ -293,7 +289,7 @@ cupsAddDest(const char  *name,		/* I  - Destination name */
       * Copy options from parent...
       */
 
-      dest->options = calloc(sizeof(cups_option_t), (size_t)parent->num_options);
+      dest->options = calloc((size_t)parent->num_options, sizeof(cups_option_t));
 
       if (dest->options)
       {
@@ -849,7 +845,7 @@ cupsCopyDest(cups_dest_t *dest,         /* I  - Destination to copy */
   {
     new_dest->is_default = dest->is_default;
 
-    if ((new_dest->options = calloc(sizeof(cups_option_t), (size_t)dest->num_options)) == NULL)
+    if ((new_dest->options = calloc((size_t)dest->num_options, sizeof(cups_option_t))) == NULL)
       return (cupsRemoveDest(dest->name, dest->instance, num_dests, dests));
 
     new_dest->num_options = dest->num_options;
@@ -1784,7 +1780,11 @@ cupsGetNamedDest(http_t     *http,	/* I - Connection to server or @code CUPS_HTT
       else
         instance = NULL;
     }
+#if _WIN32
     else if (cg->home)
+#else
+    else if (cg->home && getuid() != 0)
+#endif
     {
      /*
       * No default in the environment, try the user's lpoptions files...
@@ -1827,7 +1827,7 @@ cupsGetNamedDest(http_t     *http,	/* I - Connection to server or @code CUPS_HTT
       DEBUG_puts("1cupsGetNamedDest: Asking server for default printer...");
     }
     else
-      DEBUG_printf(("1cupsGetNamedDest: Using name=\"%s\"...", name));
+      DEBUG_printf(("1cupsGetNamedDest: Using dest_name=\"%s\"...", dest_name));
   }
 
  /*
@@ -1836,56 +1836,52 @@ cupsGetNamedDest(http_t     *http,	/* I - Connection to server or @code CUPS_HTT
 
   if (!_cupsGetDests(http, op, dest_name, &dest, 0, 0))
   {
-    if (name)
-    {
-      _cups_namedata_t  data;           /* Callback data */
+    _cups_namedata_t  data;           /* Callback data */
 
+    data.name = dest_name;
+    data.dest = NULL;
+
+    if (data.name)
+    {
       DEBUG_puts("1cupsGetNamedDest: No queue found for printer, looking on network...");
 
-      data.name = name;
-      data.dest = NULL;
-
       cupsEnumDests(0, 1000, NULL, 0, 0, (cups_dest_cb_t)cups_name_cb, &data);
-
-      if (!data.dest)
-      {
-        _cupsSetError(IPP_STATUS_ERROR_NOT_FOUND, _("The printer or class does not exist."), 1);
-        return (NULL);
-      }
-
-      dest = data.dest;
     }
-    else
+
+    if (!data.dest)
     {
       switch (set_as_default)
       {
-        default :
-            break;
+	default :
+	    _cupsSetError(IPP_STATUS_ERROR_NOT_FOUND, _("The printer or class does not exist."), 1);
+	    break;
 
-        case 1 : /* Set from env vars */
-            if (getenv("LPDEST"))
-              _cupsSetError(IPP_STATUS_ERROR_NOT_FOUND, _("LPDEST environment variable names default destination that does not exist."), 1);
+	case 1 : /* Set from env vars */
+	    if (getenv("LPDEST"))
+	      _cupsSetError(IPP_STATUS_ERROR_NOT_FOUND, _("LPDEST environment variable names default destination that does not exist."), 1);
 	    else if (getenv("PRINTER"))
-              _cupsSetError(IPP_STATUS_ERROR_NOT_FOUND, _("PRINTER environment variable names default destination that does not exist."), 1);
+	      _cupsSetError(IPP_STATUS_ERROR_NOT_FOUND, _("PRINTER environment variable names default destination that does not exist."), 1);
 	    else
-              _cupsSetError(IPP_STATUS_ERROR_NOT_FOUND, _("No default destination."), 1);
-            break;
+	      _cupsSetError(IPP_STATUS_ERROR_NOT_FOUND, _("No default destination."), 1);
+	    break;
 
-        case 2 : /* Set from ~/.cups/lpoptions */
+	case 2 : /* Set from ~/.cups/lpoptions */
 	    _cupsSetError(IPP_STATUS_ERROR_NOT_FOUND, _("~/.cups/lpoptions file names default destination that does not exist."), 1);
-            break;
+	    break;
 
-        case 3 : /* Set from /etc/cups/lpoptions */
+	case 3 : /* Set from /etc/cups/lpoptions */
 	    _cupsSetError(IPP_STATUS_ERROR_NOT_FOUND, _("/etc/cups/lpoptions file names default destination that does not exist."), 1);
-            break;
+	    break;
 
-        case 4 : /* Set from server */
+	case 4 : /* Set from server */
 	    _cupsSetError(IPP_STATUS_ERROR_NOT_FOUND, _("No default destination."), 1);
-            break;
+	    break;
       }
 
       return (NULL);
     }
+
+    dest = data.dest;
   }
 
   DEBUG_printf(("1cupsGetNamedDest: Got dest=%p", (void *)dest));
@@ -1903,7 +1899,11 @@ cupsGetNamedDest(http_t     *http,	/* I - Connection to server or @code CUPS_HTT
   snprintf(filename, sizeof(filename), "%s/lpoptions", cg->cups_serverroot);
   cups_get_dests(filename, dest_name, instance, 0, 1, 1, &dest);
 
+#if _WIN32
   if (cg->home)
+#else
+  if (cg->home && getuid() != 0)
+#endif // _WIN32
   {
 #if _WIN32
     snprintf(filename, sizeof(filename), "%s/AppData/Local/cups/lpoptions", cg->home);
@@ -2063,6 +2063,35 @@ cupsSetDests2(http_t      *http,	/* I - Connection to server or @code CUPS_HTTP_
     return (-1);
 
  /*
+  * See if the default destination has a printer URI associated with it...
+  */
+
+  if ((dest = cupsGetDest(/*name*/NULL, /*instance*/NULL, num_dests, dests)) != NULL && !cupsGetOption("printer-uri-supported", dest->num_options, dest->options))
+  {
+   /*
+    * No, try adding it...
+    */
+
+    const char	*uri;			/* Device/printer URI */
+
+    if ((uri = cupsGetOption("device-uri", dest->num_options, dest->options)) != NULL)
+    {
+      char	tempresource[1024];	/* Temporary resource path */
+
+#ifdef HAVE_DNSSD
+      if (strstr(uri, "._tcp"))
+        uri = cups_dnssd_resolve(dest, uri, /*msec*/30000, /*cancel*/NULL, /*cb*/NULL, /*user_data*/NULL);
+#endif /* HAVE_DNSSD */
+
+      if (uri)
+	uri = _cupsCreateDest(dest->name, cupsGetOption("printer-info", dest->num_options, dest->options), NULL, uri, tempresource, sizeof(tempresource));
+
+      if (uri)
+	dest->num_options = cupsAddOption("printer-uri-supported", uri, dest->num_options, &dest->options);
+    }
+  }
+
+ /*
   * Get the server destinations...
   */
 
@@ -2080,7 +2109,11 @@ cupsSetDests2(http_t      *http,	/* I - Connection to server or @code CUPS_HTTP_
 
   snprintf(filename, sizeof(filename), "%s/lpoptions", cg->cups_serverroot);
 
-  if (cg->home)
+  if (cg->home
+#ifndef _WIN32
+      && getuid() != 0
+#endif /* !_WIN32 */
+      )
   {
    /*
     * Create ~/.cups subdirectory...
@@ -2831,7 +2864,7 @@ cups_dnssd_get_device(
                   !strcmp(regtype, "_ipps._tcp") ? "IPPS" : "IPP",
                   replyDomain));
 
-    if ((device = calloc(sizeof(_cups_dnssd_device_t), 1)) == NULL)
+    if ((device = calloc(1, sizeof(_cups_dnssd_device_t))) == NULL)
       return (NULL);
 
     device->dest.name = _cupsStrAlloc(name);
@@ -3148,8 +3181,7 @@ cups_dnssd_query_cb(
       }
       else if (!saw_printer_type)
       {
-	if (!_cups_strcasecmp(key, "air") &&
-		 !_cups_strcasecmp(value, "t"))
+	if (!_cups_strcasecmp(key, "air") && _cups_strcasecmp(value, "none"))
 	  type |= CUPS_PRINTER_AUTHENTICATED;
 	else if (!_cups_strcasecmp(key, "bind") &&
 		 !_cups_strcasecmp(value, "t"))
@@ -3254,21 +3286,12 @@ cups_dnssd_resolve(
   * Resolve the URI...
   */
 
-  resolve.cancel = cancel;
-  gettimeofday(&resolve.end_time, NULL);
+  resolve.cancel   = cancel;
+  resolve.end_time = _cupsGetClock();
   if (msec > 0)
-  {
-    resolve.end_time.tv_sec  += msec / 1000;
-    resolve.end_time.tv_usec += (msec % 1000) * 1000;
-
-    while (resolve.end_time.tv_usec >= 1000000)
-    {
-      resolve.end_time.tv_sec ++;
-      resolve.end_time.tv_usec -= 1000000;
-    }
-  }
+    resolve.end_time += 0.001 * msec;
   else
-    resolve.end_time.tv_sec += 75;
+    resolve.end_time += 75.0;
 
   if (cb)
     (*cb)(user_data, CUPS_DEST_FLAGS_UNCONNECTED | CUPS_DEST_FLAGS_RESOLVING, dest);
@@ -3302,7 +3325,7 @@ cups_dnssd_resolve_cb(void *context)	/* I - Resolve data */
 {
   _cups_dnssd_resolve_t	*resolve = (_cups_dnssd_resolve_t *)context;
 					/* Resolve data */
-  struct timeval	curtime;	/* Current time */
+  double	curtime;		/* Current time */
 
 
  /*
@@ -3319,13 +3342,11 @@ cups_dnssd_resolve_cb(void *context)	/* I - Resolve data */
   * Otherwise check the end time...
   */
 
-  gettimeofday(&curtime, NULL);
+  curtime = _cupsGetClock();
 
-  DEBUG_printf(("4cups_dnssd_resolve_cb: curtime=%d.%06d, end_time=%d.%06d", (int)curtime.tv_sec, (int)curtime.tv_usec, (int)resolve->end_time.tv_sec, (int)resolve->end_time.tv_usec));
+  DEBUG_printf(("4cups_dnssd_resolve_cb: curtime=%.6f, end_time=%.6f", curtime, resolve->end_time));
 
-  return (curtime.tv_sec < resolve->end_time.tv_sec ||
-          (curtime.tv_sec == resolve->end_time.tv_sec &&
-           curtime.tv_usec < resolve->end_time.tv_usec));
+  return (curtime < resolve->end_time);
 }
 
 
@@ -3368,15 +3389,15 @@ cups_dnssd_unquote(char       *dst,	/* I - Destination buffer */
  */
 
 static int				/* O  - Elapsed time in milliseconds */
-cups_elapsed(struct timeval *t)		/* IO - Previous time */
+cups_elapsed(double *t)			/* IO - Previous time */
 {
-  int			msecs;		/* Milliseconds */
-  struct timeval	nt;		/* New time */
+  int		msecs;			/* Milliseconds */
+  double	nt;			/* New time */
 
 
-  gettimeofday(&nt, NULL);
+  nt = _cupsGetClock();
 
-  msecs = (int)(1000 * (nt.tv_sec - t->tv_sec) + (nt.tv_usec - t->tv_usec) / 1000);
+  msecs = (int)(1000.0 * (nt - *t));
 
   *t = nt;
 
@@ -3410,7 +3431,7 @@ cups_enum_dests(
   int           count,                  /* Number of queries started */
                 completed,              /* Number of completed queries */
                 remaining;              /* Remainder of timeout */
-  struct timeval curtime;               /* Current time */
+  double	curtime;		/* Current time */
   _cups_dnssd_data_t data;		/* Data for callback */
   _cups_dnssd_device_t *device;         /* Current device */
 #  ifdef HAVE_MDNSRESPONDER
@@ -3465,7 +3486,11 @@ cups_enum_dests(
   snprintf(filename, sizeof(filename), "%s/lpoptions", cg->cups_serverroot);
   data.num_dests = cups_get_dests(filename, NULL, NULL, 1, user_default != NULL, data.num_dests, &data.dests);
 
+#if _WIN32
   if (cg->home)
+#else
+  if (cg->home && getuid() != 0)
+#endif // _WIN32
   {
 #if _WIN32
     snprintf(filename, sizeof(filename), "%s/AppData/Local/cups/lpoptions", cg->home);
@@ -3632,7 +3657,7 @@ cups_enum_dests(
   * Get Bonjour-shared printers...
   */
 
-  gettimeofday(&curtime, NULL);
+  curtime = _cupsGetClock();
 
 #  ifdef HAVE_MDNSRESPONDER
   if (DNSServiceCreateConnection(&data.main_ref) != kDNSServiceErr_NoError)
@@ -3999,7 +4024,7 @@ cups_find_dest(const char  *name,	/* I - Destination name */
     else
     {
      /*
-      * Start wih previous on left side...
+      * Start with previous on left side...
       */
 
       left  = prev;

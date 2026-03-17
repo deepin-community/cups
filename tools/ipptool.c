@@ -1,7 +1,7 @@
 /*
  * ipptool command for CUPS.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2021-2024 by OpenPrinting.
  * Copyright © 2020 by The Printer Working Group.
  * Copyright © 2007-2021 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products.
@@ -3518,7 +3518,7 @@ print_fatal_error(
 
 
 /*
- * 'print_ippserver_attr()' - Print a attribute suitable for use by ippserver.
+ * 'print_ippserver_attr()' - Print an attribute suitable for use by ippserver.
  */
 
 static void
@@ -3864,6 +3864,7 @@ print_json_attr(
 
     default :
         /* Out-of-band value */
+	cupsFilePrintf(data->outfile, ": null");
 	break;
   }
 }

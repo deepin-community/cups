@@ -1,7 +1,7 @@
 /*
  * Printer definitions for the CUPS scheduler.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright @ 2007-2017 by Apple Inc.
  * Copyright @ 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -49,8 +49,6 @@ typedef AvahiStringList *cupsd_txt_t;	/* TXT record */
 /*
  * Printer/class information structure...
  */
-
-typedef struct cupsd_job_s cupsd_job_t;
 
 struct cupsd_printer_s
 {

@@ -1,7 +1,7 @@
 /*
  * "lpinfo" command for CUPS.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1997-2006 by Easy Software Products.
  *
@@ -500,7 +500,6 @@ usage(void)
   _cupsLangPuts(stdout, _("-h server[:port]        Connect to the named server and port"));
   _cupsLangPuts(stdout, _("-l                      Show verbose (long) output"));
   _cupsLangPuts(stdout, _("-m                      Show models"));
-  _cupsLangPuts(stdout, _("-U username             Specify the username to use for authentication"));
   _cupsLangPuts(stdout, _("-v                      Show devices"));
   _cupsLangPuts(stdout, _("--device-id device-id   Show models matching the given IEEE 1284 device ID"));
   _cupsLangPuts(stdout, _("--exclude-schemes scheme-list\n"

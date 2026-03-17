@@ -1,12 +1,10 @@
-OpenPrinting CUPS v2.4.2
-========================
+OpenPrinting CUPS v2.4.16
+=========================
 
 ![Version](https://img.shields.io/github/v/release/openprinting/cups?include_prereleases)
 ![Apache 2.0](https://img.shields.io/github/license/openprinting/cups)
 [![Build and Test](https://github.com/OpenPrinting/cups/workflows/Build%20and%20Test/badge.svg)](https://github.com/OpenPrinting/cups/actions/workflows/build.yml)
 [![Coverity Scan](https://img.shields.io/coverity/scan/23806)](https://scan.coverity.com/projects/openprinting-cups)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/4ea68dc02692436b82541b6f232eba66)](https://www.codacy.com/gh/OpenPrinting/cups/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=OpenPrinting/cups&amp;utm_campaign=Badge_Grade)
-[![LGTM Grade](https://img.shields.io/lgtm/grade/cpp/github/OpenPrinting/cups)](https://lgtm.com/projects/g/OpenPrinting/cups/?mode=list)
 
 
 Introduction
@@ -51,6 +49,7 @@ the CUPS sources:
 - `LICENSE`: The CUPS license agreement (Apache 2.0).
 - `NOTICE`: Copyright notices and exceptions to the CUPS license agreement.
 - `README.md`: This file.
+- `REPORTING_ISSUES.md`: Instructions what information to provide when reporting an issue.
 
 Once you have installed the software you can access the documentation (and a
 bunch of other stuff) online at <http://localhost:631/> and using the `man`
@@ -60,15 +59,6 @@ If you're having trouble getting that far, the documentation is located under
 the `doc/help` and `man` directories.
 
 *Please read the documentation before asking questions.*
-
-
-Getting Support and Other Resources
------------------------------------
-
-In addition to the OpenPrinting CUPS home page at
-<https://openprinting.github.io/cups>, we provide a mailing list for CUPS users
-and developers to ask questions and discuss issues at
-<https://linuxfoundation.groups.io/g/printing>.
 
 
 Setting Up Printers
@@ -163,7 +153,7 @@ This will prevent the filters from misinterpreting your print file.
 Legal Stuff
 -----------
 
-Copyright © 2020-2022 by OpenPrinting
+Copyright © 2020-2025 by OpenPrinting
 
 Copyright © 2007-2020 by Apple Inc.
 

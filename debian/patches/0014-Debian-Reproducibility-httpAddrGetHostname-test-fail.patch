@@ -9,7 +9,7 @@ Forwarded: not-needed
  1 file changed, 1 insertion(+), 2 deletions(-)
 
 diff --git a/cups/testhttp.c b/cups/testhttp.c
-index 2cda4f7..73f8e34 100644
+index 48e5fa8..275b957 100644
 --- a/cups/testhttp.c
 +++ b/cups/testhttp.c
 @@ -417,8 +417,7 @@ main(int  argc,				/* I - Number of command-line arguments */

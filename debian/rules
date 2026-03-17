@@ -1,7 +1,8 @@
 #!/usr/bin/make -f
 
 # temporarily deactivate tests
-export LOCAL_DEB_BUILD_OPTIONS = nocheck
+# ... and maybe we are back with testing again
+#export LOCAL_DEB_BUILD_OPTIONS = nocheck
 
 derives_from_ubuntu := $(shell (dpkg-vendor --derives-from Ubuntu && echo "yes") || echo "no")
 
@@ -9,6 +10,7 @@ derives_from_ubuntu := $(shell (dpkg-vendor --derives-from Ubuntu && echo "yes")
 # where necessary.
 # temporarily deactivate tests
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all,-pie
+arch = $(shell dpkg-architecture -qDEB_BUILD_ARCH)
 
 ifeq ($(shell dpkg-vendor --is Ubuntu && echo yes) $(DEB_HOST_ARCH), yes i386)
    skip_packages = -Ncups -Ncups-core-drivers
@@ -19,6 +21,7 @@ endif
 export DSOFLAGS = $(shell dpkg-buildflags --get LDFLAGS)
 
 include /usr/share/dpkg/architecture.mk
+include /usr/share/dpkg/pkg-info.mk
 
 %:
 	dh $@ --without autoreconf
@@ -63,7 +66,7 @@ override_dh_auto_configure:
 		--with-printcap=/run/cups/printcap \
 		--with-log-file-perm=0640 \
 		--with-local_protocols='dnssd' \
-		--with-systemd=/lib/systemd/system \
+		--with-systemd=/usr/lib/systemd/system \
 		--with-error-policy=retry-job \
 		--enable-sync-on-close \
 		--with-max-log-size=0 \
@@ -219,6 +222,9 @@ endif
 ifneq (,$(filter libcups2-dev,$(shell dh_listpackages)))
 	# debian/libcups2-dev.install entry cannot rename files on-the-fly
 	cp cups/language-private.h debian/libcups2-dev/usr/include/cups/i18n.h
+	# debian/libcups2-dev.install cannot interpolate before compat 13
+	sed -e 's/@DEB_VERSION_UPSTREAM@/${DEB_VERSION_UPSTREAM}/' < debian/cups.pc.in > debian/cups.pc
+	install -D -m 644 debian/cups.pc debian/libcups2-dev/usr/lib/${DEB_HOST_GNU_TYPE}/pkgconfig/cups.pc
 endif
 
 ifneq (,$(filter cups-daemon,$(shell dh_listpackages)))
@@ -245,7 +251,15 @@ override_dh_strip_nondeterminism: override_dh_fixperms
 
 override_dh_auto_test:
 ifeq (,$(findstring nocheck,$(LOCAL_DEB_BUILD_OPTIONS)))
-	CUPS_TESTBASE=$(shell mktemp -d /tmp/cups.XXXXXX) dh_auto_test
+	# enabling the tests on riscv64 again (-> #1107504)
+	# maybe there are future problems with other architectures, so keeping this code
+	echo ${arch}
+	if [ "${arch}" = "DUMMY" ]; then \
+	  echo "Do not make tests on this architecture" ;\
+	else \
+	  echo "Do make tests on this architecture" ;\
+	  CUPS_TESTBASE=$(shell mktemp -d /tmp/cups.XXXXXX) dh_auto_test ; \
+	fi
 	# Check that cups-config is not architecture-specific
 	[ -r cups-config ] && grep -vq $(shell dpkg-architecture -qDEB_HOST_MULTIARCH) cups-config
 endif
@@ -262,8 +276,8 @@ override_dh_auto_clean:
 	[ ! -f Makedefs ] || make distclean
 
 override_dh_installdocs:
-	dh_installdocs -plibcupsimage2-dev --link-doc=libcupsimage2
-	dh_installdocs -pcups-bsd --link-doc=libcups2
+	dh_installdocs -plibcupsimage2-dev --link-doc=libcupsimage2t64
+	dh_installdocs -pcups-bsd --link-doc=libcups2t64
 	dh_installdocs --remaining-packages
 
 	rm -f debian/libcups2-dev/usr/share/doc/libcups2-dev/examples/scripting/php/*.o

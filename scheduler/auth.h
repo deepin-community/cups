@@ -1,7 +1,7 @@
 /*
  * Authorization definitions for the CUPS scheduler.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright 2007-2014 by Apple Inc.
  * Copyright 1997-2006 by Easy Software Products, all rights reserved.
  *
@@ -49,6 +49,10 @@
 #define CUPSD_AUTH_LIMIT_TRACE	64	/* Limit TRACE requests */
 #define CUPSD_AUTH_LIMIT_ALL	127	/* Limit all requests */
 #define CUPSD_AUTH_LIMIT_IPP	128	/* Limit IPP requests */
+
+#define CUPSD_PEERCRED_OFF	0	/* Don't allow PeerCred authorization */
+#define CUPSD_PEERCRED_ON	1	/* Allow PeerCred authorization for all users */
+#define CUPSD_PEERCRED_ROOTONLY	2	/* Allow PeerCred authorization for root user */
 
 #define IPP_ANY_OPERATION	(ipp_op_t)0
 					/* Any IPP operation */
@@ -98,8 +102,6 @@ typedef struct
   http_encryption_t	encryption;	/* To encrypt or not to encrypt... */
 } cupsd_location_t;
 
-typedef struct cupsd_client_s cupsd_client_t;
-
 
 /*
  * Globals...
@@ -107,6 +109,9 @@ typedef struct cupsd_client_s cupsd_client_t;
 
 VAR cups_array_t	*Locations	VALUE(NULL);
 					/* Authorization locations */
+VAR int			PeerCred	VALUE(CUPSD_PEERCRED_ON);
+					/* Allow PeerCred authorization? */
+
 #ifdef HAVE_TLS
 VAR http_encryption_t	DefaultEncryption VALUE(HTTP_ENCRYPT_REQUIRED);
 					/* Default encryption for authentication */
