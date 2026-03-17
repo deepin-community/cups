@@ -1,6 +1,7 @@
 /*
  * Main header file for the CUPS scheduler.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -97,6 +98,15 @@ extern const char *cups_hstrerror(int);
 #  define VALUE(x)
 #  define VALUE2(x,y)
 #endif /* _MAIN_C */
+
+
+/*
+ * Base types...
+ */
+
+typedef struct cupsd_client_s cupsd_client_t;
+typedef struct cupsd_job_s cupsd_job_t;
+typedef struct cupsd_printer_s cupsd_printer_t;
 
 
 /*

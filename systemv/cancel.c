@@ -1,7 +1,7 @@
 /*
  * "cancel" command for CUPS.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1997-2006 by Easy Software Products.
  *
@@ -260,6 +260,7 @@ main(int  argc,				/* I - Number of command-line arguments */
       *    attributes-natural-language
       *    printer-uri + job-id *or* job-uri
       *    [requesting-user-name]
+      *    [purge-job] or [purge-jobs]
       */
 
       request = ippNewRequest(op);
@@ -294,7 +295,12 @@ main(int  argc,				/* I - Number of command-line arguments */
                      "requesting-user-name", NULL, cupsUser());
 
       if (purge)
-	ippAddBoolean(request, IPP_TAG_OPERATION, "purge-jobs", (char)purge);
+      {
+	if (op == IPP_CANCEL_JOB)
+	  ippAddBoolean(request, IPP_TAG_OPERATION, "purge-job", (char)purge);
+	else
+	  ippAddBoolean(request, IPP_TAG_OPERATION, "purge-jobs", (char)purge);
+      }
 
      /*
       * Do the request and get back a response...

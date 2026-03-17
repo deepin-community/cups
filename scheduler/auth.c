@@ -1,7 +1,7 @@
 /*
  * Authorization routines for the CUPS scheduler.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -105,7 +105,7 @@ cupsdAddIPMask(
   cupsd_authmask_t	temp;		/* New host/domain mask */
 
 
-  cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdAddIPMask(masks=%p(%p), address=%x:%x:%x:%x, netmask=%x:%x:%x:%x)", masks, *masks, address[0], address[1], address[2], address[3], netmask[0], netmask[1], netmask[2], netmask[3]);
+  cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdAddIPMask(masks=%p(%p), address=%x:%x:%x:%x, netmask=%x:%x:%x:%x)", (void *)masks, (void *)*masks, address[0], address[1], address[2], address[3], netmask[0], netmask[1], netmask[2], netmask[3]);
 
   temp.type = CUPSD_AUTH_IP;
   memcpy(temp.mask.ip.address, address, sizeof(temp.mask.ip.address));
@@ -158,7 +158,7 @@ void
 cupsdAddName(cupsd_location_t *loc,	/* I - Location to add to */
              char             *name)	/* I - Name to add */
 {
-  cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdAddName(loc=%p, name=\"%s\")", loc, name);
+  cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdAddName(loc=%p, name=\"%s\")", (void *)loc, name);
 
   if (!loc->names)
     loc->names = cupsArrayNew3(NULL, NULL, NULL, 0,
@@ -188,7 +188,7 @@ cupsdAddNameMask(cups_array_t **masks,	/* IO - Masks array (created as needed) *
 			*ifptr;		/* Pointer to end of name */
 
 
-  cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdAddNameMask(masks=%p(%p), name=\"%s\")", masks, *masks, name);
+  cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdAddNameMask(masks=%p(%p), name=\"%s\")", (void *)masks, (void *)*masks, name);
 
   if (!_cups_strcasecmp(name, "@LOCAL"))
   {
@@ -274,7 +274,7 @@ cupsdAuthorize(cupsd_client_t *con)	/* I - Client connection */
   con->best = cupsdFindBest(con->uri, httpGetState(con->http));
   con->type = CUPSD_AUTH_NONE;
 
-  cupsdLogClient(con, CUPSD_LOG_DEBUG2, "con->uri=\"%s\", con->best=%p(%s)", con->uri, con->best, con->best ? con->best->location : "");
+  cupsdLogClient(con, CUPSD_LOG_DEBUG2, "con->uri=\"%s\", con->best=%p(%s)", con->uri, (void *)con->best, con->best ? con->best->location : "");
 
   if (con->best && con->best->type != CUPSD_AUTH_NONE)
   {
@@ -398,7 +398,7 @@ cupsdAuthorize(cupsd_client_t *con)	/* I - Client connection */
   }
 #endif /* HAVE_AUTHORIZATION_H */
 #if defined(SO_PEERCRED) && defined(AF_LOCAL)
-  else if (!strncmp(authorization, "PeerCred ", 9) &&
+  else if (PeerCred != CUPSD_PEERCRED_OFF && !strncmp(authorization, "PeerCred ", 9) &&
            con->http->hostaddr->addr.sa_family == AF_LOCAL && con->best)
   {
    /*
@@ -440,6 +440,12 @@ cupsdAuthorize(cupsd_client_t *con)	/* I - Client connection */
       return;
     }
 #endif /* HAVE_AUTHORIZATION_H */
+
+    if ((PeerCred == CUPSD_PEERCRED_ROOTONLY || httpGetState(con->http) == HTTP_STATE_PUT_RECV) && strcmp(authorization + 9, "root"))
+    {
+      cupsdLogClient(con, CUPSD_LOG_INFO, "User \"%s\" is not allowed to use peer credentials.", authorization + 9);
+      return;
+    }
 
     if ((pwd = getpwnam(authorization + 9)) == NULL)
     {
@@ -513,6 +519,16 @@ cupsdAuthorize(cupsd_client_t *con)	/* I - Client connection */
     int	userlen;			/* Username:password length */
 
 
+   /*
+    * Only allow Basic if enabled...
+    */
+
+    if (type != CUPSD_AUTH_BASIC)
+    {
+      cupsdLogClient(con, CUPSD_LOG_ERROR, "Basic authentication is not enabled.");
+      return;
+    }
+
     authorization += 5;
     while (isspace(*authorization & 255))
       authorization ++;
@@ -558,166 +574,159 @@ cupsdAuthorize(cupsd_client_t *con)	/* I - Client connection */
     * Validate the username and password...
     */
 
-    switch (type)
     {
-      default :
-      case CUPSD_AUTH_BASIC :
-          {
 #if HAVE_LIBPAM
-	   /*
-	    * Only use PAM to do authentication.  This supports MD5
-	    * passwords, among other things...
-	    */
+     /*
+      * Only use PAM to do authentication.  This supports MD5
+      * passwords, among other things...
+      */
 
-	    pam_handle_t	*pamh;	/* PAM authentication handle */
-	    int			pamerr;	/* PAM error code */
-	    struct pam_conv	pamdata;/* PAM conversation data */
-	    cupsd_authdata_t	data;	/* Authentication data */
+      pam_handle_t	*pamh;		/* PAM authentication handle */
+      int		pamerr;		/* PAM error code */
+      struct pam_conv	pamdata;	/* PAM conversation data */
+      cupsd_authdata_t	data;		/* Authentication data */
 
 
-            strlcpy(data.username, username, sizeof(data.username));
-	    strlcpy(data.password, password, sizeof(data.password));
+      strlcpy(data.username, username, sizeof(data.username));
+      strlcpy(data.password, password, sizeof(data.password));
 
 #  ifdef __sun
-	    pamdata.conv        = (int (*)(int, struct pam_message **,
-	                                   struct pam_response **,
-					   void *))pam_func;
+      pamdata.conv        = (int (*)(int, struct pam_message **,
+				     struct pam_response **,
+				     void *))pam_func;
 #  else
-	    pamdata.conv        = pam_func;
+      pamdata.conv        = pam_func;
 #  endif /* __sun */
-	    pamdata.appdata_ptr = &data;
+      pamdata.appdata_ptr = &data;
 
-	    pamerr = pam_start("cups", username, &pamdata, &pamh);
-	    if (pamerr != PAM_SUCCESS)
-	    {
-	      cupsdLogClient(con, CUPSD_LOG_ERROR, "pam_start() returned %d (%s)", pamerr, pam_strerror(pamh, pamerr));
-	      return;
-	    }
+      pamerr = pam_start("cups", username, &pamdata, &pamh);
+      if (pamerr != PAM_SUCCESS)
+      {
+	cupsdLogClient(con, CUPSD_LOG_ERROR, "pam_start() returned %d (%s)", pamerr, pam_strerror(pamh, pamerr));
+	return;
+      }
 
 #  ifdef HAVE_PAM_SET_ITEM
 #    ifdef PAM_RHOST
-	    pamerr = pam_set_item(pamh, PAM_RHOST, con->http->hostname);
-	    if (pamerr != PAM_SUCCESS)
-	      cupsdLogClient(con, CUPSD_LOG_WARN, "pam_set_item(PAM_RHOST) returned %d (%s)", pamerr, pam_strerror(pamh, pamerr));
+      pamerr = pam_set_item(pamh, PAM_RHOST, con->http->hostname);
+      if (pamerr != PAM_SUCCESS)
+	cupsdLogClient(con, CUPSD_LOG_WARN, "pam_set_item(PAM_RHOST) returned %d (%s)", pamerr, pam_strerror(pamh, pamerr));
 #    endif /* PAM_RHOST */
 
 #    ifdef PAM_TTY
-	    pamerr = pam_set_item(pamh, PAM_TTY, "cups");
-	    if (pamerr != PAM_SUCCESS)
-	      cupsdLogClient(con, CUPSD_LOG_WARN, "pam_set_item(PAM_TTY) returned %d (%s)", pamerr, pam_strerror(pamh, pamerr));
+      pamerr = pam_set_item(pamh, PAM_TTY, "cups");
+      if (pamerr != PAM_SUCCESS)
+	cupsdLogClient(con, CUPSD_LOG_WARN, "pam_set_item(PAM_TTY) returned %d (%s)", pamerr, pam_strerror(pamh, pamerr));
 #    endif /* PAM_TTY */
 #  endif /* HAVE_PAM_SET_ITEM */
 
-	    pamerr = pam_authenticate(pamh, PAM_SILENT);
-	    if (pamerr != PAM_SUCCESS)
-	    {
-	      cupsdLogClient(con, CUPSD_LOG_ERROR, "pam_authenticate() returned %d (%s)", pamerr, pam_strerror(pamh, pamerr));
-	      pam_end(pamh, 0);
-	      return;
-	    }
+      pamerr = pam_authenticate(pamh, PAM_SILENT);
+      if (pamerr != PAM_SUCCESS)
+      {
+	cupsdLogClient(con, CUPSD_LOG_ERROR, "pam_authenticate() returned %d (%s)", pamerr, pam_strerror(pamh, pamerr));
+	pam_end(pamh, 0);
+	return;
+      }
 
 #  ifdef HAVE_PAM_SETCRED
-            pamerr = pam_setcred(pamh, PAM_ESTABLISH_CRED | PAM_SILENT);
-	    if (pamerr != PAM_SUCCESS)
-	      cupsdLogClient(con, CUPSD_LOG_WARN, "pam_setcred() returned %d (%s)", pamerr, pam_strerror(pamh, pamerr));
+      pamerr = pam_setcred(pamh, PAM_ESTABLISH_CRED | PAM_SILENT);
+      if (pamerr != PAM_SUCCESS)
+	cupsdLogClient(con, CUPSD_LOG_WARN, "pam_setcred() returned %d (%s)", pamerr, pam_strerror(pamh, pamerr));
 #  endif /* HAVE_PAM_SETCRED */
 
-	    pamerr = pam_acct_mgmt(pamh, PAM_SILENT);
-	    if (pamerr != PAM_SUCCESS)
-	    {
-	      cupsdLogClient(con, CUPSD_LOG_ERROR, "pam_acct_mgmt() returned %d (%s)", pamerr, pam_strerror(pamh, pamerr));
-	      pam_end(pamh, 0);
-	      return;
-	    }
+      pamerr = pam_acct_mgmt(pamh, PAM_SILENT);
+      if (pamerr != PAM_SUCCESS)
+      {
+	cupsdLogClient(con, CUPSD_LOG_ERROR, "pam_acct_mgmt() returned %d (%s)", pamerr, pam_strerror(pamh, pamerr));
+	pam_end(pamh, 0);
+	return;
+      }
 
-	    pam_end(pamh, PAM_SUCCESS);
+      pam_end(pamh, PAM_SUCCESS);
 
 #else
-           /*
-	    * Use normal UNIX password file-based authentication...
-	    */
+     /*
+      * Use normal UNIX password file-based authentication...
+      */
 
-            char		*pass;	/* Encrypted password */
-            struct passwd	*pw;	/* User password data */
+      char		*pass;		/* Encrypted password */
+      struct passwd	*pw;		/* User password data */
 #  ifdef HAVE_SHADOW_H
-            struct spwd		*spw;	/* Shadow password data */
+      struct spwd	*spw;		/* Shadow password data */
 #  endif /* HAVE_SHADOW_H */
 
 
-	    pw = getpwnam(username);	/* Get the current password */
-	    endpwent();			/* Close the password file */
+      pw = getpwnam(username);		/* Get the current password */
+      endpwent();			/* Close the password file */
 
-	    if (!pw)
-	    {
-	     /*
-	      * No such user...
-	      */
+      if (!pw)
+      {
+       /*
+	* No such user...
+	*/
 
-	      cupsdLogClient(con, CUPSD_LOG_ERROR, "Unknown username \"%s\".", username);
-	      return;
-	    }
+	cupsdLogClient(con, CUPSD_LOG_ERROR, "Unknown username \"%s\".", username);
+	return;
+      }
 
 #  ifdef HAVE_SHADOW_H
-	    spw = getspnam(username);
-	    endspent();
+      spw = getspnam(username);
+      endspent();
 
-	    if (!spw && !strcmp(pw->pw_passwd, "x"))
-	    {
-	     /*
-	      * Don't allow blank passwords!
-	      */
+      if (!spw && !strcmp(pw->pw_passwd, "x"))
+      {
+       /*
+	* Don't allow blank passwords!
+	*/
 
-	      cupsdLogClient(con, CUPSD_LOG_ERROR, "Username \"%s\" has no shadow password.", username);
-	      return;
-	    }
+	cupsdLogClient(con, CUPSD_LOG_ERROR, "Username \"%s\" has no shadow password.", username);
+	return;
+      }
 
-	    if (spw && !spw->sp_pwdp[0] && !pw->pw_passwd[0])
+      if (spw && !spw->sp_pwdp[0] && !pw->pw_passwd[0])
 #  else
-	    if (!pw->pw_passwd[0])
+      if (!pw->pw_passwd[0])
 #  endif /* HAVE_SHADOW_H */
-	    {
-	     /*
-	      * Don't allow blank passwords!
-	      */
+      {
+       /*
+	* Don't allow blank passwords!
+	*/
 
-	      cupsdLogClient(con, CUPSD_LOG_ERROR, "Username \"%s\" has no password.", username);
-	      return;
-	    }
+	cupsdLogClient(con, CUPSD_LOG_ERROR, "Username \"%s\" has no password.", username);
+	return;
+      }
 
-	   /*
-	    * OK, the password isn't blank, so compare with what came from the
-	    * client...
-	    */
+     /*
+      * OK, the password isn't blank, so compare with what came from the
+      * client...
+      */
 
-	    pass = crypt(password, pw->pw_passwd);
+      pass = crypt(password, pw->pw_passwd);
 
-	    if (!pass || strcmp(pw->pw_passwd, pass))
-	    {
+      if (!pass || strcmp(pw->pw_passwd, pass))
+      {
 #  ifdef HAVE_SHADOW_H
-	      if (spw)
-	      {
-		pass = crypt(password, spw->sp_pwdp);
+	if (spw)
+	{
+	  pass = crypt(password, spw->sp_pwdp);
 
-		if (pass == NULL || strcmp(spw->sp_pwdp, pass))
-		{
-	          cupsdLogClient(con, CUPSD_LOG_ERROR, "Authentication failed for user \"%s\".", username);
-		  return;
-        	}
-	      }
-	      else
+	  if (pass == NULL || strcmp(spw->sp_pwdp, pass))
+	  {
+	    cupsdLogClient(con, CUPSD_LOG_ERROR, "Authentication failed for user \"%s\".", username);
+	    return;
+	  }
+	}
+	else
 #  endif /* HAVE_SHADOW_H */
-	      {
-		cupsdLogClient(con, CUPSD_LOG_ERROR, "Authentication failed for user \"%s\".", username);
-		return;
-              }
-	    }
+	{
+	  cupsdLogClient(con, CUPSD_LOG_ERROR, "Authentication failed for user \"%s\".", username);
+	  return;
+	}
+      }
 #endif /* HAVE_LIBPAM */
-          }
-
-	  cupsdLogClient(con, CUPSD_LOG_DEBUG, "Authorized as \"%s\" using Basic.", username);
-          break;
     }
 
+    cupsdLogClient(con, CUPSD_LOG_DEBUG, "Authorized as \"%s\" using Basic.", username);
     con->type = type;
   }
 #ifdef HAVE_GSSAPI
@@ -732,6 +741,16 @@ cupsdAuthorize(cupsd_client_t *con)	/* I - Client connection */
 			output_token = GSS_C_EMPTY_BUFFER;
 					/* Output token for username */
     gss_name_t		client_name;	/* Client name */
+
+   /*
+    * Only allow Kerberos if enabled...
+    */
+
+    if (type != CUPSD_AUTH_NEGOTIATE)
+    {
+      cupsdLogClient(con, CUPSD_LOG_ERROR, "Kerberos authentication is not enabled.");
+      return;
+    }
 
 #  ifdef __APPLE__
    /*
@@ -1149,7 +1168,7 @@ cupsdCheckGroup(
 #endif /* HAVE_MBR_UID_TO_UUID */
 
 
-  cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdCheckGroup(username=\"%s\", user=%p, groupname=\"%s\")", username, user, groupname);
+  cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdCheckGroup(username=\"%s\", user=%p, groupname=\"%s\")", username, (void *)user, groupname);
 
  /*
   * Validate input...
@@ -1564,7 +1583,7 @@ cupsdIsAuthorized(cupsd_client_t *con,	/* I - Connection */
 		};
 
 
-  cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdIsAuthorized: con->uri=\"%s\", con->best=%p(%s)", con->uri, con->best, con->best ? con->best->location ? con->best->location : "(null)" : "");
+  cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdIsAuthorized: con->uri=\"%s\", con->best=%p(%s)", con->uri, (void *)con->best, con->best ? con->best->location ? con->best->location : "(null)" : "");
   if (owner)
     cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdIsAuthorized: owner=\"%s\"", owner);
 
@@ -1728,14 +1747,14 @@ cupsdIsAuthorized(cupsd_client_t *con,	/* I - Connection */
   * Strip any @domain or @KDC from the username and owner...
   */
 
-  if ((ptr = strchr(username, '@')) != NULL)
+  if (StripUserDomain && (ptr = strchr(username, '@')) != NULL)
     *ptr = '\0';
 
   if (owner)
   {
     strlcpy(ownername, owner, sizeof(ownername));
 
-    if ((ptr = strchr(ownername, '@')) != NULL)
+    if (StripUserDomain && (ptr = strchr(ownername, '@')) != NULL)
       *ptr = '\0';
   }
   else
@@ -2135,7 +2154,6 @@ check_admin_access(cupsd_client_t *con) // I - Client connection
 
   free(snap_name);
   g_clear_object(&snap);
-
 #  endif // CUPS_SNAP
 
   done:
@@ -2146,6 +2164,8 @@ check_admin_access(cupsd_client_t *con) // I - Client connection
   return (ret);
 
 #else
+  (void)con;
+
   // No AppArmor/snapd to deal with...
   return (1);
 #endif // HAVE_LIBAPPARMOR && HAVE_LIBSNAPDGLIB

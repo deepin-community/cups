@@ -1,7 +1,7 @@
 /*
  * Private definitions for CUPS.
  *
- * Copyright © 2021 by OpenPrinting.
+ * Copyright © 2020-2025 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -85,11 +85,6 @@ typedef struct _cups_globals_s		/**** CUPS global state data ****/
 			*cups_statedir,	/* CUPS_STATEDIR environment var */
 			*home,		/* HOME environment var */
 			*localedir;	/* LOCALDIR environment var */
-#ifndef _WIN32
-#define PW_BUF_SIZE 16384		/* As per glibc manual page */
-  char			pw_buf[PW_BUF_SIZE];
-					/* Big buffer for struct passwd buffers */
-#endif
 
   /* adminutil.c */
   time_t		cupsd_update;	/* Last time we got or set cupsd.conf */
@@ -199,6 +194,12 @@ typedef struct _cups_globals_s		/**** CUPS global state data ****/
   /* util.c */
   char			def_printer[256];
 					/* Default printer */
+
+#  ifndef _WIN32
+#    define PW_BUF_SIZE 16384		/* As per glibc manual page */
+  char			pw_buf[PW_BUF_SIZE];
+					/* Big buffer for struct passwd buffers */
+#  endif /* !_WIN32 */
 } _cups_globals_t;
 
 typedef struct _cups_media_db_s		/* Media database */
@@ -271,6 +272,7 @@ extern http_t		*_cupsConnect(void) _CUPS_PRIVATE;
 extern char		*_cupsCreateDest(const char *name, const char *info, const char *device_id, const char *device_uri, char *uri, size_t urisize) _CUPS_PRIVATE;
 extern ipp_attribute_t	*_cupsEncodeOption(ipp_t *ipp, ipp_tag_t group_tag, _ipp_option_t *map, const char *name, const char *value) _CUPS_PRIVATE;
 extern int		_cupsGet1284Values(const char *device_id, cups_option_t **values) _CUPS_PRIVATE;
+extern double		_cupsGetClock(void) _CUPS_PRIVATE;
 extern const char	*_cupsGetDestResource(cups_dest_t *dest, unsigned flags, char *resource, size_t resourcesize) _CUPS_PRIVATE;
 extern int		_cupsGetDests(http_t *http, ipp_op_t op, const char *name, cups_dest_t **dests, cups_ptype_t type, cups_ptype_t mask) _CUPS_PRIVATE;
 extern const char	*_cupsGetPassword(const char *prompt) _CUPS_PRIVATE;
@@ -283,7 +285,7 @@ extern const char	*_cupsGSSServiceName(void) _CUPS_PRIVATE;
 extern int		_cupsNextDelay(int current, int *previous) _CUPS_PRIVATE;
 extern void		_cupsSetDefaults(void) _CUPS_INTERNAL;
 extern void		_cupsSetError(ipp_status_t status, const char *message, int localize) _CUPS_PRIVATE;
-extern void		_cupsSetHTTPError(http_status_t status) _CUPS_INTERNAL;
+extern void		_cupsSetHTTPError(http_t *http, http_status_t status) _CUPS_INTERNAL;
 #  ifdef HAVE_GSSAPI
 extern int		_cupsSetNegotiateAuthString(http_t *http, const char *method, const char *resource) _CUPS_PRIVATE;
 #  endif /* HAVE_GSSAPI */

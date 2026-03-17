@@ -1,6 +1,7 @@
 /*
  * EPSON ESC/P and ESC/P2 filter for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright 2007-2018 by Apple Inc.
  * Copyright 1993-2007 by Easy Software Products.
  *
@@ -462,11 +463,10 @@ CompressData(const unsigned char *line,	/* I - Data to compress */
       *comp_ptr++ = temp;
 
      /*
-      * Check the last bit in the current byte and the first bit in the
-      * next byte...
+      * Check the last bit in the current byte...
       */
 
-      if ((temp & 0x01) && comp_ptr < line_end && *comp_ptr & 0x80)
+      if ((temp & 0x01) && comp_ptr < line_end)
         *comp_ptr &= 0x7f;
     }
   }
@@ -988,7 +988,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   * Check command-line...
   */
 
-  if (argc < 6 || argc > 7)
+  if (argc != 6 && argc != 7)
   {
    /*
     * We don't have the correct number of arguments; write an error message

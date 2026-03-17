@@ -1,6 +1,7 @@
 /*
  * IPP data file parsing functions.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products.
  *
@@ -692,11 +693,11 @@ parse_value(_ipp_file_t      *f,	/* I  - IPP data file */
 		yres;		/* Y resolution */
 	  char	*ptr;		/* Pointer into value */
 
-	  xres = yres = (int)strtol(value, (char **)&ptr, 10);
+	  xres = yres = (int)strtol(value, &ptr, 10);
 	  if (ptr > value && xres > 0)
 	  {
 	    if (*ptr == 'x')
-	      yres = (int)strtol(ptr + 1, (char **)&ptr, 10);
+	      yres = (int)strtol(ptr + 1, &ptr, 10);
 	  }
 
 	  if (ptr <= value || xres <= 0 || yres <= 0 || !ptr || (_cups_strcasecmp(ptr, "dpi") && _cups_strcasecmp(ptr, "dpc") && _cups_strcasecmp(ptr, "dpcm") && _cups_strcasecmp(ptr, "other")))

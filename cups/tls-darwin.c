@@ -1,7 +1,7 @@
 /*
  * TLS support code for CUPS on macOS.
  *
- * Copyright © 2021-2022 by OpenPrinting
+ * Copyright © 2021-2023 by OpenPrinting
  * Copyright © 2007-2021 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -109,7 +109,7 @@ cupsMakeServerCredentials(
   */
 
   if (!cupsFileFind("certtool", getenv("PATH"), 1, command, sizeof(command)))
-    return (-1);
+    return (0);
 
  /*
   * Create a file with the certificate information fields...
@@ -119,7 +119,7 @@ cupsMakeServerCredentials(
   */
 
  if ((fp = cupsTempFile2(infofile, sizeof(infofile))) == NULL)
-    return (-1);
+    return (0);
 
   cupsFilePrintf(fp,
 		 "CUPS Self-Signed Certificate\n"
@@ -166,7 +166,7 @@ cupsMakeServerCredentials(
   if (posix_spawn(&pid, command, &actions, NULL, argv, envp))
   {
     unlink(infofile);
-    return (-1);
+    return (0);
   }
 
   posix_spawn_file_actions_destroy(&actions);
@@ -176,8 +176,7 @@ cupsMakeServerCredentials(
   while (waitpid(pid, &status, 0) < 0)
     if (errno != EINTR)
     {
-      status = -1;
-      break;
+      return (0);
     }
 
   return (!status);
@@ -253,7 +252,7 @@ cupsMakeServerCredentials(
   CFNumberRef	usage = CFNumberCreate(kCFAllocatorDefault, kCFNumberCFIndexType, &usageInt);
   CFIndex	lenInt = 0;
   CFNumberRef	len = CFNumberCreate(kCFAllocatorDefault, kCFNumberCFIndexType, &lenInt);
-  CFTypeRef certKeys[] = { kSecCSRBasicContraintsPathLen, kSecSubjectAltName, kSecCertificateKeyUsage };
+  CFTypeRef certKeys[] = { kSecCSRBasicConstraintsPathLen, kSecSubjectAltName, kSecCertificateKeyUsage };
   CFTypeRef certValues[] = { len, cfcommon_name, usage };
   CFDictionaryRef certParams = CFDictionaryCreate(kCFAllocatorDefault, certKeys, certValues, sizeof(certKeys) / sizeof(certKeys[0]), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
   CFRelease(usage);
@@ -432,7 +431,7 @@ httpCopyCredentials(
   CFIndex		count;		/* Number of credentials */
   SecCertificateRef	secCert;	/* Certificate reference */
   CFDataRef		data;		/* Certificate data */
-  int			i;		/* Looping var */
+  CFIndex		i;		/* Looping var */
 
 
   DEBUG_printf(("httpCopyCredentials(http=%p, credentials=%p)", (void *)http, (void *)credentials));
@@ -445,7 +444,7 @@ httpCopyCredentials(
 
   if (!(error = SSLCopyPeerTrust(http->tls, &peerTrust)) && peerTrust)
   {
-    DEBUG_printf(("2httpCopyCredentials: Peer provided %d certificates.", (int)SecTrustGetCertificateCount(peerTrust)));
+    DEBUG_printf(("2httpCopyCredentials: Peer provided %ld certificates.", (long)SecTrustGetCertificateCount(peerTrust)));
 
     if ((*credentials = cupsArrayNew(NULL, NULL)) != NULL)
     {
@@ -463,12 +462,12 @@ httpCopyCredentials(
 	else
 	  strlcpy(name, "unknown", sizeof(name));
 
-	DEBUG_printf(("2httpCopyCredentials: Certificate %d name is \"%s\".", i, name));
+	DEBUG_printf(("2httpCopyCredentials: Certificate %ld name is \"%s\".", (long)i, name));
 #endif /* DEBUG */
 
 	if ((data = SecCertificateCopyData(secCert)) != NULL)
 	{
-	  DEBUG_printf(("2httpCopyCredentials: Adding %d byte certificate blob.", (int)CFDataGetLength(data)));
+	  DEBUG_printf(("2httpCopyCredentials: Adding %ld byte certificate blob.", (long)CFDataGetLength(data)));
 
 	  httpAddCredential(*credentials, CFDataGetBytePtr(data), (size_t)CFDataGetLength(data));
 	  CFRelease(data);
@@ -794,7 +793,7 @@ httpCredentialsString(
   if (!buffer)
     return (0);
 
-  if (buffer && bufsize > 0)
+  if (bufsize > 0)
     *buffer = '\0';
 
   if ((first = (http_credential_t *)cupsArrayFirst(credentials)) != NULL &&
@@ -901,10 +900,8 @@ void
 _httpFreeCredentials(
     http_tls_credentials_t credentials)	/* I - Internal credentials */
 {
-  if (!credentials)
-    return;
-
-  CFRelease(credentials);
+  if (credentials)
+    CFRelease(credentials);
 }
 
 
@@ -1037,7 +1034,7 @@ httpSaveCredentials(
     cups_array_t *credentials,		/* I - Credentials */
     const char   *common_name)		/* I - Common name for credentials */
 {
-  int			ret = -1;	/* Return value */
+  int			ret = 0;	/* Return value */
   OSStatus		err;		/* Error info */
 #if TARGET_OS_OSX
   char			filename[1024];	/* Filename for keychain */
@@ -1050,7 +1047,10 @@ httpSaveCredentials(
 
   DEBUG_printf(("httpSaveCredentials(path=\"%s\", credentials=%p, common_name=\"%s\")", path, (void *)credentials, common_name));
   if (!credentials)
-    goto cleanup;
+  {
+    DEBUG_puts("1httpSaveCredentials: No credentials, returning -1.");
+    return (-1);
+  }
 
   if (!httpCredentialsAreValidForName(credentials, common_name))
   {
@@ -1068,11 +1068,17 @@ httpSaveCredentials(
   keychain = http_cdsa_open_keychain(path, filename, sizeof(filename));
 
   if (!keychain)
-    goto cleanup;
+  {
+    DEBUG_puts("1httpSaveCredentials: No keychain, returning -1.");
+    return (-1);
+  }
 
 #else
   if (path)
+  {
+    DEBUG_puts("1httpSaveCredentials: No path, returning -1.");
     return (-1);
+  }
 #endif /* TARGET_OS_OSX */
 
   if ((attrs = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks)) == NULL)
@@ -1088,6 +1094,7 @@ httpSaveCredentials(
   if ((list = CFArrayCreate(kCFAllocatorDefault, (const void **)&keychain, 1, &kCFTypeArrayCallBacks)) == NULL)
   {
     DEBUG_puts("1httpSaveCredentials: Unable to create list of keychains.");
+    ret = -1;
     goto cleanup;
   }
   CFDictionaryAddValue(attrs, kSecMatchSearchList, list);
@@ -1095,17 +1102,18 @@ httpSaveCredentials(
 #endif /* TARGET_OS_OSX */
 
   /* Note: SecItemAdd consumes "attrs"... */
-  err = SecItemAdd(attrs, NULL);
-  DEBUG_printf(("1httpSaveCredentials: SecItemAdd returned %d.", (int)err));
+  if((err = SecItemAdd(attrs, NULL)) != 0)
+  {
+    DEBUG_printf(("1httpSaveCredentials: SecItemAdd failed, returned %d.", (int)err));
+    ret = -1;
+  }
 
   cleanup :
 
 #if TARGET_OS_OSX
-  if (keychain)
-    CFRelease(keychain);
+  CFRelease(keychain);
 #endif /* TARGET_OS_OSX */
-  if (cert)
-    CFRelease(cert);
+  CFRelease(cert);
 
   DEBUG_printf(("1httpSaveCredentials: Returning %d.", ret));
 
@@ -1522,6 +1530,8 @@ _httpTLSStart(http_t *http)		/* I - HTTP connection */
     if (isdigit(hostname[0] & 255) || hostname[0] == '[')
       hostname[0] = '\0';		/* Don't allow numeric addresses */
 
+    _cupsMutexLock(&tls_mutex);
+
     if (hostname[0])
       http->tls_credentials = http_cdsa_copy_server(hostname);
     else if (tls_common_name)
@@ -1537,12 +1547,15 @@ _httpTLSStart(http_t *http)		/* I - HTTP connection */
 	http->error  = errno = EINVAL;
 	http->status = HTTP_STATUS_ERROR;
 	_cupsSetError(IPP_STATUS_ERROR_INTERNAL, _("Unable to create server credentials."), 1);
+	_cupsMutexUnlock(&tls_mutex);
 
 	return (-1);
       }
 
       http->tls_credentials = http_cdsa_copy_server(hostname[0] ? hostname : tls_common_name);
     }
+
+    _cupsMutexUnlock(&tls_mutex);
 
     if (!http->tls_credentials)
     {
@@ -1657,9 +1670,10 @@ _httpTLSStart(http_t *http)		/* I - HTTP connection */
 	    if (cg->client_cert_cb)
 	    {
 	      names = NULL;
-	      if (!(error = SSLCopyDistinguishedNames(http->tls, &dn_array)) &&
-		  dn_array)
-	      {
+        error = SSLCopyDistinguishedNames(http->tls, &dn_array);
+        if (dn_array)
+        {
+          if (!error) {
 		if ((names = cupsArrayNew(NULL, NULL)) != NULL)
 		{
 		  for (i = 0, count = CFArrayGetCount(dn_array); i < count; i++)
@@ -1680,9 +1694,9 @@ _httpTLSStart(http_t *http)		/* I - HTTP connection */
 		    }
 		  }
 		}
-
-		CFRelease(dn_array);
 	      }
+		CFRelease(dn_array);
+        }
 
 	      if (!error)
 	      {
@@ -1778,12 +1792,13 @@ _httpTLSStop(http_t *http)		/* I - HTTP connection */
     usleep(1000);
 
   CFRelease(http->tls);
+  http->tls = NULL;
 
   if (http->tls_credentials)
+  {
     CFRelease(http->tls_credentials);
-
-  http->tls             = NULL;
-  http->tls_credentials = NULL;
+    http->tls_credentials = NULL;
+  }
 }
 
 

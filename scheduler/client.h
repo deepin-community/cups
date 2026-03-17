@@ -1,7 +1,7 @@
 /*
  * Client definitions for the CUPS scheduler.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -42,6 +42,8 @@ struct cupsd_client_s
 			*query_string;	/* QUERY_STRING environment variable */
   int			file;		/* Input/output file */
   int			file_ready;	/* Input ready on file/pipe? */
+  int			bg_pending;	/* Background response pending? */
+  cupsd_printer_t	*bg_printer;	/* Background printer */
   int			pipe_pid;	/* Pipe process ID (or 0 if not a pipe) */
   http_status_t		pipe_status;	/* HTTP status from pipe process */
   int			sent_header,	/* Non-zero if sent HTTP header */
@@ -51,6 +53,9 @@ struct cupsd_client_s
   cups_lang_t		*language;	/* Language to use */
 #ifdef HAVE_TLS
   int			auto_ssl;	/* Automatic test for SSL/TLS */
+  time_t		tls_start;	/* Do TLS negotiation? */
+  int			tls_upgrade;	/* Doing TLS upgrade via OPTIONS? */
+  http_encryption_t	encryption;	/* Type of TLS negotiation */
 #endif /* HAVE_TLS */
   http_addr_t		clientaddr;	/* Client's server address */
   char			clientname[256];/* Client's server name for connection */

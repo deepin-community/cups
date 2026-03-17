@@ -1,6 +1,7 @@
 /*
  * Online help index routines for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products.
  *
@@ -851,7 +852,7 @@ help_load_file(
   off_t		offset;			/* File offset */
   char		quote;			/* Quote character */
   help_word_t	*word;			/* Current word */
-  int		wordlen;		/* Length of word */
+  size_t		wordlen;		/* Length of word */
 
 
   if ((fp = cupsFileOpen(filename, "r")) == NULL)
@@ -1136,9 +1137,9 @@ help_load_file(
 
 	for (text = ptr, ptr ++; *ptr && isalnum(*ptr & 255); ptr ++);
 
-	wordlen = (int)(ptr - text);
+	wordlen = (size_t)(ptr - text);
 
-        memcpy(temp, text, (size_t)wordlen);
+        memcpy(temp, text, wordlen);
 	temp[wordlen] = '\0';
 
         ptr --;

@@ -1,7 +1,7 @@
 /*
  * Log file routines for the CUPS scheduler.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -22,6 +22,9 @@
 #  include <systemd/sd-journal.h>
 #endif /* HAVE_ASL_H */
 #include <syslog.h>
+#ifndef va_copy
+#  define va_copy(__list1, __list2) ((void)(__list1 = __list2))
+#endif
 
 
 /*
@@ -150,11 +153,12 @@ cupsdCheckLogFile(cups_file_t **lf,	/* IO - Log file */
       strlcat(filename, "/", sizeof(filename));
     }
     else
+    {
       filename[0] = '\0';
+    }
 
-    for (logptr = logname, ptr = filename + strlen(filename);
-         *logptr && ptr < (filename + sizeof(filename) - 1);
-	 logptr ++)
+    for (logptr = logname, ptr = filename + strlen(filename); *logptr && ptr < (filename + sizeof(filename) - 1); logptr ++)
+    {
       if (*logptr == '%')
       {
        /*
@@ -168,7 +172,7 @@ cupsdCheckLogFile(cups_file_t **lf,	/* IO - Log file */
 	  * Insert the server name...
 	  */
 
-	  strlcpy(ptr, ServerName, sizeof(filename) - (size_t)(ptr - filename));
+	  strlcpy(ptr, ServerName ? ServerName : "localhost", sizeof(filename) - (size_t)(ptr - filename));
 	  ptr += strlen(ptr);
 	}
         else
@@ -181,7 +185,10 @@ cupsdCheckLogFile(cups_file_t **lf,	/* IO - Log file */
 	}
       }
       else
+      {
 	*ptr++ = *logptr;
+      }
+    }
 
     *ptr = '\0';
   }

@@ -1,7 +1,8 @@
 /*
  * PWG media name API implementation for CUPS.
  *
- * Copyright 2009-2019 by Apple Inc.
+ * Copyright © 2020-2024 by OpenPrinting.
+ * Copyright © 2009-2019 by Apple Inc.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
  * information.
@@ -94,6 +95,8 @@ static pwg_media_t const cups_pwg_media[] =
   _PWG_MEDIA_IN("na_arch-c_18x24in", "arch-c", "ARCHC", 18, 24),
   _PWG_MEDIA_IN("na_d_22x34in", "d", "AnsiD", 22, 34),
   _PWG_MEDIA_IN("na_arch-d_24x36in", "arch-d", "ARCHD", 24, 36),
+  _PWG_MEDIA_IN("na_arch-e2_26x38in", NULL, "26x38", 26, 38),
+  _PWG_MEDIA_IN("na_arch-e3_27x39in", NULL, "27x39", 27, 39),
   _PWG_MEDIA_IN("asme_f_28x40in", "f", "28x40", 28, 40),
   _PWG_MEDIA_IN("na_wide-format_30x42in", NULL, "30x42", 30, 42),
   _PWG_MEDIA_IN("na_e_34x44in", "e", "AnsiE", 34, 44),
@@ -139,6 +142,7 @@ static pwg_media_t const cups_pwg_media[] =
   _PWG_MEDIA_MM("iso_b9_44x62mm", "iso-b9", "ISOB9", 44, 62),
   _PWG_MEDIA_MM("iso_b8_62x88mm", "iso-b8", "ISOB8", 62, 88),
   _PWG_MEDIA_MM("iso_b7_88x125mm", "iso-b7", "ISOB7", 88, 125),
+  /* iso_id-3 is iso_b7_88x125mm. */
   _PWG_MEDIA_MM("iso_b6_125x176mm", "iso-b6", "ISOB6", 125, 176),
   _PWG_MEDIA_MM("iso_b6c4_125x324mm", NULL, "125x324mm", 125, 324),
   _PWG_MEDIA_MM("iso_b5_176x250mm", "iso-b5", "ISOB5", 176, 250),
@@ -208,8 +212,11 @@ static pwg_media_t const cups_pwg_media[] =
   _PWG_MEDIA_MM("prc_1_102x165mm", NULL, "EnvPRC1", 102, 165),
   _PWG_MEDIA_MM("prc_2_102x176mm", NULL, "EnvPRC2", 102, 176),
   _PWG_MEDIA_MM("prc_4_110x208mm", NULL, "EnvPRC4", 110, 208),
+  /* prc_5 is iso_dl_110x220mm. */
   _PWG_MEDIA_MM("prc_8_120x309mm", NULL, "EnvPRC8", 120, 309),
   _PWG_MEDIA_MM("prc_6_120x320mm", NULL, NULL, 120, 320),
+  /* prc_3 is iso_b6_125x176mm. */
+  /* prc_10 is iso_c3_324x458mm. */
   _PWG_MEDIA_MM("prc_16k_146x215mm", NULL, "PRC16K", 146, 215),
   _PWG_MEDIA_MM("prc_7_160x230mm", NULL, "EnvPRC7", 160, 230),
   _PWG_MEDIA_MM("om_juuro-ku-kai_198x275mm", NULL, "198x275mm", 198, 275),
@@ -221,16 +228,51 @@ static pwg_media_t const cups_pwg_media[] =
   _PWG_MEDIA_IN("roc_8k_10.75x15.5in", NULL, "roc8k", 10.75, 15.5),
 
   /* Other English Standard Sheet Media Sizes */
+  _PWG_MEDIA_IN("oe_business-card_2x3.5in", NULL, "2x3.5", 2, 3.5),
   _PWG_MEDIA_IN("oe_photo-l_3.5x5in", NULL, "3.5x5", 3.5, 5),
+  _PWG_MEDIA_IN("oe_square-photo_4x4in", NULL, "4x4", 4, 4),
+  _PWG_MEDIA_IN("oe_square-photo_5x5in", NULL, "5x5", 5, 5),
+  _PWG_MEDIA_IN("oe_photo-s8r_8x12in", NULL, "8x12", 8, 12),
+  _PWG_MEDIA_IN("oe_photo-10r_10x12in", NULL, "10x12", 10, 12),
+  /* oe_photo-s10r is na_10x15_10x15in. */
+  _PWG_MEDIA_IN("oe_photo-12r_12x15in", NULL, "12x15", 12, 15),
+  _PWG_MEDIA_IN("oe_12x16_12x16in", NULL, "12x16", 12, 16),
+  _PWG_MEDIA_IN("oe_14x17_14x17in", NULL, "14x17", 14, 17),
+  _PWG_MEDIA_IN("oe_photo-14x18_14x18in", NULL, "14x18", 14, 18),
+  _PWG_MEDIA_IN("oe_photo-16r_16x20in", NULL, "16x20", 16, 20),
+  _PWG_MEDIA_IN("oe_a2plus_17x24in", NULL, "17x24", 17, 24),
+  _PWG_MEDIA_IN("oe_18x22_18x22in", NULL, "18x22", 18, 22),
+  _PWG_MEDIA_IN("oe_photo-20r_20x24in", NULL, "20x24", 20, 24),
+  _PWG_MEDIA_IN("oe_photo-22x28_22x28in", NULL, "22x28", 22, 28),
+  _PWG_MEDIA_IN("oe_photo-22r_22x29.5in", NULL, "22x29.5", 22, 29.5),
+  _PWG_MEDIA_IN("oe_photo-24x30_24x30in", NULL, "24x30", 24, 30),
+  _PWG_MEDIA_IN("oe_photo-24r_24x31.5in", NULL, "24x31.5", 24, 31.5),
+  _PWG_MEDIA_IN("oe_photo-30r_30x40in", NULL, "30x40", 30, 40),
 
   /* Other Metric Standard Sheet Media Sizes */
+  _PWG_MEDIA_MM("om_business-card_55x85mm", NULL, "55x85mm", 55, 85),
+  _PWG_MEDIA_MM("om_business-card_55x91mm", NULL, "55x91mm", 55, 91),
+  _PWG_MEDIA_MM("om_card_54x86mm", NULL, "54x86mm", 54, 86),
+  _PWG_MEDIA_MM("om_square-photo_89x89mm", NULL, "89x89mm", 89, 89),
+  _PWG_MEDIA_MM("om_dsc-photo_89x119mm", NULL, "89x119mm", 89, 119),
   _PWG_MEDIA_MM("om_small-photo_100x150mm", NULL, "100x150mm", 100, 150),
+  _PWG_MEDIA_MM("om_wide-photo_100x200mm", NULL, "100x200mm", 100, 200),
   _PWG_MEDIA_MM("om_italian_110x230mm", NULL, "EnvItalian", 110, 230),
-  _PWG_MEDIA_MM("om_large-photo_200x300", NULL, "200x300mm", 200, 300),
+  /* om_postfix is iso_c6c5_114x229mm. */
+  _PWG_MEDIA_MM("om_medium-photo_130x180mm", NULL, "130x180mm", 130, 180),
+  _PWG_MEDIA_MM("om_16k_184x260mm", NULL, "184x260mm", 184, 260),
+  _PWG_MEDIA_MM("om_16k_195x270mm", NULL, "195x270mm", 195, 270),
+  _PWG_MEDIA_MM("om_large-photo_200x300mm", NULL, "200x300mm", 200, 300),
   _PWG_MEDIA_MM("om_folio_210x330mm", "folio", "Folio", 210, 330),
   _PWG_MEDIA_MM("om_folio-sp_215x315mm", NULL, "FolioSP", 215, 315),
   _PWG_MEDIA_MM("om_invite_220x220mm", NULL, "EnvInvite", 220, 220),
-  _PWG_MEDIA_MM("om_small-photo_100x200mm", NULL, "100x200mm", 100, 200),
+  _PWG_MEDIA_MM("om_photo-30x40_300x400mm", NULL, "300x400mm", 300, 400),
+  _PWG_MEDIA_MM("om_photo-30x45_300x450mm", NULL, "300x450mm", 300, 450),
+  _PWG_MEDIA_MM("om_photo-35x46_350x460mm", NULL, "350x460mm", 350, 460),
+  _PWG_MEDIA_MM("om_photo-40x60_400x600mm", NULL, "400x600mm", 400, 600),
+  _PWG_MEDIA_MM("om_photo-50x75_500x750mm", NULL, "500x750mm", 500, 750),
+  _PWG_MEDIA_MM("om_photo-50x76_500x760mm", NULL, "500x760mm", 500, 760),
+  _PWG_MEDIA_MM("om_photo-60x90_600x900mm", NULL, "600x900mm", 600, 900),
 
   /* Disc Sizes */
   _PWG_MEDIA_MM("disc_standard_40x118mm", NULL, "Disc", 118, 118)
@@ -911,13 +953,16 @@ pwg_media_t *				/* O - PWG media name */
 pwgMediaForSize(int width,		/* I - Width in hundredths of millimeters */
 		int length)		/* I - Length in hundredths of millimeters */
 {
+  _cups_globals_t *cg = _cupsGlobals();	/* Global data */
+
+
  /*
   * Adobe uses a size matching algorithm with an epsilon of 5 points, which
   * is just about 176/2540ths...  But a lot of international media sizes are
   * very close so use 0.5mm (50/2540ths) as the maximum delta.
   */
 
-  return (_pwgMediaNearSize(width, length, _PWG_EPSILON));
+  return (_pwgMediaNearSize(&cg->pwg_media, cg->pwg_name, sizeof(cg->pwg_name), cg->ppd_name, sizeof(cg->ppd_name), width, length, _PWG_EPSILON));
 }
 
 
@@ -925,10 +970,15 @@ pwgMediaForSize(int width,		/* I - Width in hundredths of millimeters */
  * '_pwgMediaNearSize()' - Get the PWG media size within the given tolerance.
  */
 
-pwg_media_t *				/* O - PWG media name */
-_pwgMediaNearSize(int width,	        /* I - Width in hundredths of millimeters */
-		  int length,		/* I - Length in hundredths of millimeters */
-		  int epsilon)		/* I - Match within this tolernace. PWG units */
+pwg_media_t *				/* O - PWG media */
+_pwgMediaNearSize(pwg_media_t *pwg,	/* I - Media buffer */
+                  char        *keyword,	/* I - Media keyword buffer */
+                  size_t      keysize,	/* I - Size of media keyword buffer */
+                  char        *ppdname,	/* I - PPD name buffer */
+                  size_t      ppdsize,	/* I - Size of PPD name buffer */
+                  int         width,	/* I - Width in hundredths of millimeters */
+		  int         length,	/* I - Length in hundredths of millimeters */
+		  int         epsilon)	/* I - Match within this tolernace. PWG units */
 {
   int		i;			/* Looping var */
   pwg_media_t	*media,			/* Current media */
@@ -937,7 +987,6 @@ _pwgMediaNearSize(int width,	        /* I - Width in hundredths of millimeters *
 		best_dw = 999,		/* Best difference in width and length */
 		best_dl = 999;
   char		wstr[32], lstr[32];	/* Width and length as strings */
-  _cups_globals_t *cg = _cupsGlobals();	/* Global data */
 
 
  /*
@@ -951,17 +1000,15 @@ _pwgMediaNearSize(int width,	        /* I - Width in hundredths of millimeters *
   * Look for a standard size...
   */
 
-  for (i = (int)(sizeof(cups_pwg_media) / sizeof(cups_pwg_media[0])),
-	   media = (pwg_media_t *)cups_pwg_media;
-       i > 0;
-       i --, media ++)
+  for (i = (int)(sizeof(cups_pwg_media) / sizeof(cups_pwg_media[0])), media = (pwg_media_t *)cups_pwg_media; i > 0; i --, media ++)
   {
-
     dw = abs(media->width - width);
     dl = abs(media->length - length);
 
     if (!dw && !dl)
+    {
       return (media);
+    }
     else if (dw <= epsilon && dl <= epsilon)
     {
       if (dw <= best_dw && dl <= best_dl)
@@ -982,20 +1029,23 @@ _pwgMediaNearSize(int width,	        /* I - Width in hundredths of millimeters *
   *     custom_WIDTHxHEIGHTuu_WIDTHxHEIGHTuu
   */
 
-  pwgFormatSizeName(cg->pwg_name, sizeof(cg->pwg_name), "custom", NULL, width,
-                    length, NULL);
+  if (keyword)
+    pwgFormatSizeName(keyword, keysize, "custom", NULL, width, length, NULL);
 
-  cg->pwg_media.pwg    = cg->pwg_name;
-  cg->pwg_media.width  = width;
-  cg->pwg_media.length = length;
+  if (ppdname)
+  {
+    if ((width % 635) == 0 && (length % 635) == 0)
+      snprintf(ppdname, ppdsize, "%sx%s", pwg_format_inches(wstr, sizeof(wstr), width), pwg_format_inches(lstr, sizeof(lstr), length));
+    else
+      snprintf(ppdname, ppdsize, "%sx%smm", pwg_format_millimeters(wstr, sizeof(wstr), width), pwg_format_millimeters(lstr, sizeof(lstr), length));
+  }
 
-  if ((width % 635) == 0 && (length % 635) == 0)
-    snprintf(cg->ppd_name, sizeof(cg->ppd_name), "%sx%s", pwg_format_inches(wstr, sizeof(wstr), width), pwg_format_inches(lstr, sizeof(lstr), length));
-  else
-    snprintf(cg->ppd_name, sizeof(cg->ppd_name), "%sx%smm", pwg_format_millimeters(wstr, sizeof(wstr), width), pwg_format_millimeters(lstr, sizeof(lstr), length));
-  cg->pwg_media.ppd = cg->ppd_name;
+  pwg->pwg    = keyword;
+  pwg->ppd    = ppdname;
+  pwg->width  = width;
+  pwg->length = length;
 
-  return (&(cg->pwg_media));
+  return (pwg);
 }
 
 
@@ -1057,8 +1107,7 @@ pwg_format_inches(char   *buf,		/* I - Buffer */
                   size_t bufsize,	/* I - Size of buffer */
                   int    val)		/* I - Value in hundredths of millimeters */
 {
-  int	thousandths,			/* Thousandths of inches */
-	integer,			/* Integer portion */
+  int	integer,			/* Integer portion */
 	fraction;			/* Fractional portion */
 
 
@@ -1067,9 +1116,13 @@ pwg_format_inches(char   *buf,		/* I - Buffer */
   * the nearest thousandth.
   */
 
-  thousandths = (val * 1000 + 1270) / 2540;
-  integer     = thousandths / 1000;
-  fraction    = thousandths % 1000;
+  integer  = val / 2540;
+  fraction = ((val % 2540) * 1000 + 1270) / 2540;
+  if (fraction >= 1000)
+  {
+    integer ++;
+    fraction -= 1000;
+  }
 
  /*
   * Format as a pair of integers (avoids locale stuff), avoiding trailing

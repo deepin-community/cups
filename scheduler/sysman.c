@@ -1,7 +1,7 @@
 /*
  * System management functions for the CUPS scheduler.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright @ 2007-2018 by Apple Inc.
  * Copyright @ 2006 by Easy Software Products.
  *
@@ -260,9 +260,9 @@ static CFStringRef	ComputerNameKey = NULL,
 			HostNamesKey = NULL,
 					/* Host name key */
 			NetworkInterfaceKeyIPv4 = NULL,
-					/* Netowrk interface key */
+					/* Network interface key */
 			NetworkInterfaceKeyIPv6 = NULL;
-					/* Netowrk interface key */
+					/* Network interface key */
 static cupsd_sysevent_t	LastSysEvent;	/* Last system event (for delayed sleep) */
 static int		NameChanged = 0;/* Did we get a 'name changed' event during sleep? */
 static int		PSToken = 0;	/* Power source notifications */
@@ -538,7 +538,7 @@ sysEventThreadEntry(void)
   * this later.
   */
 
-  bzero(&timerContext, sizeof(timerContext));
+  memset(&timerContext, 0, sizeof(timerContext));
   timerContext.info = &threadData;
 
   threadData.timerRef =
@@ -821,7 +821,7 @@ sysUpdate(void)
   * Drain the event pipe...
   */
 
-  while (read((int)SysEventPipes[0], &sysevent, sizeof(sysevent))
+  while (read(SysEventPipes[0], &sysevent, sizeof(sysevent))
              == sizeof(sysevent))
   {
     if (sysevent.event & SYSEVENT_CANSLEEP)

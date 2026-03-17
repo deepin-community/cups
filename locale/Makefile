@@ -1,7 +1,7 @@
 #
 # Locale file makefile for CUPS.
 #
-# Copyright © 2021-2022 by OpenPrinting.
+# Copyright © 2020-2025 by OpenPrinting.
 # Copyright © 2007-2019 by Apple Inc.
 # Copyright © 1993-2007 by Easy Software Products.
 #
@@ -12,8 +12,8 @@
 include ../Makedefs
 
 
-OBJS	=	checkpo.o po2strings.o strings2po.o
-TARGETS	=	checkpo po2strings strings2po
+OBJS	=	checkpo.o po2strings.o
+TARGETS	=	checkpo po2strings
 
 
 #
@@ -64,9 +64,7 @@ install:	all install-data install-headers install-libs install-exec
 # Install data files...
 #
 
-install-data: $(INSTALL_LANGUAGES)
-
-install-languages:
+install-data:
 	$(INSTALL_DIR) -m 755 $(LOCALEDIR)
 	for loc in en $(LANGUAGES) ; do \
 		if test -f cups_$$loc.po; then \
@@ -74,11 +72,6 @@ install-languages:
 			$(INSTALL_DATA) cups_$$loc.po $(LOCALEDIR)/$$loc/cups_$$loc.po ; \
 		fi ; \
 	done
-
-install-langbundle:
-	$(INSTALL_DIR) -m 755 "$(BUILDROOT)$(RESOURCEDIR)"
-	$(INSTALL_DATA) cups.strings "$(BUILDROOT)$(RESOURCEDIR)"
-
 
 #
 # Install programs...
@@ -105,15 +98,10 @@ install-libs:
 # Uninstall files...
 #
 
-uninstall: $(UNINSTALL_LANGUAGES)
-
-uninstall-languages:
+uninstall:
 	-for loc in en $(LANGUAGES) ; do \
 		$(RM) $(LOCALEDIR)/$$loc/cups_$$loc.po ; \
 	done
-
-uninstall-langbundle:
-	$(RM) "$(BUILDROOT)$(RESOURCEDIR)/cups.strings"
 
 
 #
@@ -179,19 +167,6 @@ po2strings:	po2strings.o ../cups/$(LIBCUPSSTATIC)
 	echo Linking $@...
 	$(LD_CC) $(ARCHFLAGS) $(ALL_LDFLAGS) -o po2strings po2strings.o \
 		$(LINKCUPSSTATIC)
-	$(CODE_SIGN) -s "$(CODE_SIGN_IDENTITY)" $@
-
-
-#
-# strings2po - A simple utility which uses iconv to convert macOS .strings files
-#              to GNU gettext message catalogs.
-#
-# strings2po filename.strings filename.po
-#
-
-strings2po:	strings2po.o
-	echo Linking $@...
-	$(LD_CC) $(ARCHFLAGS) $(ALL_LDFLAGS) -o strings2po strings2po.o
 	$(CODE_SIGN) -s "$(CODE_SIGN_IDENTITY)" $@
 
 

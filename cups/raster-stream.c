@@ -1,6 +1,7 @@
 /*
  * Raster file routines for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright 2007-2019 by Apple Inc.
  * Copyright 1997-2006 by Easy Software Products.
  *
@@ -448,7 +449,7 @@ _cupsRasterNew(
 
   _cupsRasterClearError();
 
-  if ((r = calloc(sizeof(cups_raster_t), 1)) == NULL)
+  if ((r = calloc(1, sizeof(cups_raster_t))) == NULL)
   {
     _cupsRasterAddError("Unable to allocate memory for raster stream: %s\n",
                         strerror(errno));
@@ -685,16 +686,15 @@ _cupsRasterReadHeader(
           r->header.cupsColorSpace   = appleheader[1] >= (sizeof(rawcspace) / sizeof(rawcspace[0])) ? CUPS_CSPACE_DEVICE1 : rawcspace[appleheader[1]];
           r->header.cupsNumColors    = appleheader[1] >= (sizeof(rawnumcolors) / sizeof(rawnumcolors[0])) ? 1 : rawnumcolors[appleheader[1]];
           r->header.cupsBitsPerColor = r->header.cupsBitsPerPixel / r->header.cupsNumColors;
-          r->header.cupsWidth        = ((((((unsigned)appleheader[12] << 8) | (unsigned)appleheader[13]) << 8) | (unsigned)appleheader[14]) << 8) | (unsigned)appleheader[15];
-          r->header.cupsHeight       = ((((((unsigned)appleheader[16] << 8) | (unsigned)appleheader[17]) << 8) | (unsigned)appleheader[18]) << 8) | (unsigned)appleheader[19];
+          r->header.cupsWidth        = ((unsigned)appleheader[12] << 24) | ((unsigned)appleheader[13] << 16) | ((unsigned)appleheader[14] << 8) | (unsigned)appleheader[15];
+          r->header.cupsHeight       = ((unsigned)appleheader[16] << 24) | ((unsigned)appleheader[17] << 16) | ((unsigned)appleheader[18] << 8) | (unsigned)appleheader[19];
           r->header.cupsBytesPerLine = r->header.cupsWidth * r->header.cupsBitsPerPixel / 8;
           r->header.cupsColorOrder   = CUPS_ORDER_CHUNKED;
-          r->header.HWResolution[0]  = r->header.HWResolution[1] = ((((((unsigned)appleheader[20] << 8) | (unsigned)appleheader[21]) << 8) | (unsigned)appleheader[22]) << 8) | (unsigned)appleheader[23];
-
+          r->header.HWResolution[0]  = r->header.HWResolution[1] = ((unsigned)appleheader[20] << 24) | ((unsigned)appleheader[21] << 16) | ((unsigned)appleheader[22] << 8) | (unsigned)appleheader[23];
           if (r->header.HWResolution[0] > 0)
           {
-	    r->header.PageSize[0]     = (unsigned)(r->header.cupsWidth * 72 / r->header.HWResolution[0]);
-	    r->header.PageSize[1]     = (unsigned)(r->header.cupsHeight * 72 / r->header.HWResolution[1]);
+	    r->header.PageSize[0]     = (r->header.cupsWidth * 72 / r->header.HWResolution[0]);
+	    r->header.PageSize[1]     = (r->header.cupsHeight * 72 / r->header.HWResolution[1]);
 	    r->header.cupsPageSize[0] = (float)(r->header.cupsWidth * 72.0 / r->header.HWResolution[0]);
 	    r->header.cupsPageSize[1] = (float)(r->header.cupsHeight * 72.0 / r->header.HWResolution[1]);
           }
@@ -1410,7 +1410,7 @@ cups_raster_read(cups_raster_t *r,	/* I - Raster stream */
 		total;			/* Total bytes read */
 
 
-  DEBUG_printf(("4cups_raster_read(r=%p, buf=%p, bytes=" CUPS_LLFMT "), offset=" CUPS_LLFMT, (void *)r, (void *)buf, CUPS_LLCAST bytes, CUPS_LLCAST (r->iostart + r->bufptr - r->buffer)));
+  DEBUG_printf(("4cups_raster_read(r=%p, buf=%p, bytes=" CUPS_LLFMT "), offset=" CUPS_LLFMT, (void *)r, (void *)buf, CUPS_LLCAST bytes, CUPS_LLCAST (r->iostart + (ssize_t)(r->bufptr - r->buffer))));
 
   if (!r->compressed)
     return (cups_raster_io(r, buf, bytes));

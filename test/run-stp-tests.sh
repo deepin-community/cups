@@ -3,7 +3,7 @@
 # Perform the complete set of IPP compliance tests specified in the
 # CUPS Software Test Plan.
 #
-# Copyright © 2020-2022 by OpenPrinting
+# Copyright © 2020-2023 by OpenPrinting
 # Copyright © 2007-2021 by Apple Inc.
 # Copyright © 1997-2007 by Easy Software Products, all rights reserved.
 #
@@ -262,14 +262,14 @@ case "$usedebugprintfs" in
 		echo "Enabling debug printfs (level 5); log files can be found in $BASE/log..."
 		CUPS_DEBUG_LOG="$BASE/log/debug_printfs.%d"; export CUPS_DEBUG_LOG
 		CUPS_DEBUG_LEVEL=5; export CUPS_DEBUG_LEVEL
-		CUPS_DEBUG_FILTER='^(http|_http|ipp|_ipp|cups.*Request|cupsGetResponse|cupsSend).*$'; export CUPS_DEBUG_FILTER
+		CUPS_DEBUG_FILTER='^(http|_http|ipp|_ipp|cups.*Request|cupsGetResponse|cupsMake|cupsSend).*$'; export CUPS_DEBUG_FILTER
 		;;
 
 	0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9)
 		echo "Enabling debug printfs (level $usedebugprintfs); log files can be found in $BASE/log..."
 		CUPS_DEBUG_LOG="$BASE/log/debug_printfs.%d"; export CUPS_DEBUG_LOG
 		CUPS_DEBUG_LEVEL="$usedebugprintfs"; export CUPS_DEBUG_LEVEL
-		CUPS_DEBUG_FILTER='^(http|_http|ipp|_ipp|cups.*Request|cupsGetResponse|cupsSend).*$'; export CUPS_DEBUG_FILTER
+		CUPS_DEBUG_FILTER='^(http|_http|ipp|_ipp|cups.*Request|cupsGetResponse|cupsMake|cupsSend).*$'; export CUPS_DEBUG_FILTER
 		;;
 
 	*)
@@ -512,7 +512,7 @@ fi
 
 cat >$BASE/cups-files.conf <<EOF
 FileDevice yes
-Printcap
+Printcap $BASE/printcap
 User $user
 ServerRoot $BASE
 StateDir $BASE
@@ -535,10 +535,6 @@ PassEnv ASAN_OPTIONS
 
 Sandboxing Off
 EOF
-
-if test $ssltype != 0 -a `uname` = Darwin; then
-	echo "ServerKeychain $HOME/Library/Keychains/login.keychain" >> $BASE/cups-files.conf
-fi
 
 #
 # Setup lots of test queues with PPD files...

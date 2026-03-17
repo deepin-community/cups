@@ -1,7 +1,7 @@
 /*
  * PPD file routines for CUPS.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -3380,7 +3380,7 @@ ppd_read(cups_file_t    *fp,		/* I - File to read from */
     if (*lineptr == ':')
     {
      /*
-      * Get string after triming leading and trailing whitespace...
+      * Get string after trimming leading and trailing whitespace...
       */
 
       lineptr ++;

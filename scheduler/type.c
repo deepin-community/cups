@@ -1,7 +1,7 @@
 /*
  * MIME typing routines for CUPS.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2006 by Easy Software Products, all rights reserved.
  *
@@ -221,7 +221,7 @@ mimeAddTypeRule(mime_type_t *mt,	/* I - Type to add to */
     else if (*rule == '+' && current != NULL)
     {
       if (logic != MIME_MAGIC_AND &&
-          current != NULL && current->prev != NULL)
+          current->prev != NULL)
       {
        /*
         * OK, we have more than 1 rule in the current tree level...  Make a
@@ -1140,7 +1140,7 @@ mime_check_rules(
 	  else
 	  {
 	    bufptr = fb->buffer + rules->offset - fb->offset;
-	    intv   = (unsigned)((((((bufptr[0] << 8) | bufptr[1]) << 8) | bufptr[2]) << 8) | bufptr[3]);
+	    intv   = (unsigned)((bufptr[0] << 24) | (bufptr[1] << 16) | (bufptr[2] << 8) | bufptr[3]);
 	    result = (intv == rules->value.intv);
 	  }
 	  break;
@@ -1184,21 +1184,21 @@ mime_check_rules(
 	  * short then don't compare - it can't match...
 	  */
 
-	  if ((rules->offset + rules->length) > (fb->offset + fb->length))
-	  {
-	    result = 0;
-	  }
-	  else
+	  result = 0;
+	  if ((rules->offset + rules->length) <= (fb->offset + fb->length))
 	  {
 	    if (fb->length > rules->region)
 	      region = rules->region - rules->length;
 	    else
 	      region = fb->length - rules->length;
 
-	    for (n = 0; n < region; n ++)
-	      if ((result = (memcmp(fb->buffer + rules->offset - fb->offset + n, rules->value.stringv, (size_t)rules->length) == 0)) != 0)
-		break;
-          }
+		  for (n = 0; n < region; n ++)
+	      if (!memcmp(fb->buffer + rules->offset - fb->offset + n, rules->value.stringv, (size_t)rules->length))
+		    {
+		      result = 1;
+		      break;
+		    }
+	  }
 	  break;
 
       default :
@@ -1217,9 +1217,9 @@ mime_check_rules(
       result = !result;
 
    /*
-    * OK, now if the current logic is OR and this result is true, the this
+    * OK, now if the current logic is OR and this result is true, this
     * rule set is true.  If the current logic is AND and this result is false,
-    * the the rule set is false...
+    * the rule set is false...
     */
 
     DEBUG_printf(("5mime_check_rules: result of test %p (MIME_MAGIC_%s) is %d",

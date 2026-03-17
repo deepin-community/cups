@@ -1,7 +1,7 @@
 #
 # Scheduler Makefile for CUPS.
 #
-# Copyright © 2020-2022 by OpenPrinting
+# Copyright © 2020-2023 by OpenPrinting
 # Copyright © 2007-2019 by Apple Inc.
 # Copyright © 1997-2007 by Easy Software Products, all rights reserved.
 #
@@ -195,6 +195,7 @@ install-data:
 	if test "x$(SYSTEMD_DIR)" != x; then \
 		echo Installing systemd configuration files...; \
 		$(INSTALL_DIR) $(BUILDROOT)$(SYSTEMD_DIR); \
+		$(INSTALL_DATA) system-cups.slice $(BUILDROOT)$(SYSTEMD_DIR); \
 		$(INSTALL_DATA) cups.path $(BUILDROOT)$(SYSTEMD_DIR); \
 		$(INSTALL_DATA) cups.service $(BUILDROOT)$(SYSTEMD_DIR); \
 		$(INSTALL_DATA) cups.socket $(BUILDROOT)$(SYSTEMD_DIR); \

@@ -1,7 +1,7 @@
 /*
  * HTTP support routines for CUPS.
  *
- * Copyright © 2020-2022 by OpenPrinting
+ * Copyright © 2020-2023 by OpenPrinting
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -729,7 +729,7 @@ httpEncode64_2(char       *out,		/* I - String to write to */
       if (inlen > 1)
         *outptr ++ = base64[(((in[0] & 255) << 4) | ((in[1] & 255) >> 4)) & 63];
       else
-        *outptr ++ = base64[((in[0] & 255) << 4) & 63];
+        *outptr ++ = base64[(in[0] << 4) & 63];
     }
 
     in ++;
@@ -748,7 +748,7 @@ httpEncode64_2(char       *out,		/* I - String to write to */
       if (inlen > 1)
         *outptr ++ = base64[(((in[0] & 255) << 2) | ((in[1] & 255) >> 6)) & 63];
       else
-        *outptr ++ = base64[((in[0] & 255) << 2) & 63];
+        *outptr ++ = base64[(in[0] << 2) & 63];
     }
 
     in ++;
@@ -2538,6 +2538,18 @@ http_resolve_cb(
     avahi_service_resolver_free(resolver);
     avahi_simple_poll_quit(uribuf->poll);
     return;
+  }
+
+  // Map the addresses "127.0.0.1" (IPv4) and "::1" (IPv6) to "localhost" to work around a well-known Avahi registration bug for local-only services (Issue #970)
+  if (address->proto == AVAHI_PROTO_INET && address->data.ipv4.address == htonl(0x7f000001))
+  {
+    DEBUG_puts("5http_resolve_cb: Mapping 127.0.0.1 to localhost.");
+    hostTarget = "localhost";
+  }
+  else if (address->proto == AVAHI_PROTO_INET6 && address->data.ipv6.address[0] == 0 && address->data.ipv6.address[1] == 0 && address->data.ipv6.address[2] == 0 && address->data.ipv6.address[3] == 0 && address->data.ipv6.address[4] == 0 && address->data.ipv6.address[5] == 0 && address->data.ipv6.address[6] == 0 && address->data.ipv6.address[7] == 0 && address->data.ipv6.address[8] == 0 && address->data.ipv6.address[9] == 0 && address->data.ipv6.address[10] == 0 && address->data.ipv6.address[11] == 0 && address->data.ipv6.address[12] == 0 && address->data.ipv6.address[13] == 0 && address->data.ipv6.address[14] == 0 && address->data.ipv6.address[15] == 1)
+  {
+    DEBUG_puts("5http_resolve_cb: Mapping ::1 to localhost.");
+    hostTarget = "localhost";
   }
 
  /*

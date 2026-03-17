@@ -1,6 +1,7 @@
 /*
  * PostScript command filter for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright 2008-2014 by Apple Inc.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more information.
@@ -46,7 +47,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   * Check for valid arguments...
   */
 
-  if (argc < 6 || argc > 7)
+  if (argc != 6 && argc != 7)
   {
    /*
     * We don't have the correct number of arguments; write an error message

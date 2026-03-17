@@ -1,6 +1,7 @@
 /*
  * MIME type/conversion database definitions for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright 2007-2013 by Apple Inc.
  * Copyright 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -13,6 +14,7 @@
 #  include <cups/array.h>
 #  include <cups/ipp.h>
 #  include <cups/file.h>
+#  include <cups/thread-private.h>
 #  include <regex.h>
 
 
@@ -32,7 +34,7 @@ extern "C" {
 #  define MIME_MAX_SUPER	16		/* Maximum size of supertype name */
 #  define MIME_MAX_TYPE		IPP_MAX_NAME	/* Maximum size of type name */
 #  define MIME_MAX_FILTER	256		/* Maximum size of filter pathname */
-#  define MIME_MAX_BUFFER	4096		/* Maximum size of file buffer */
+#  define MIME_MAX_BUFFER	8192		/* Maximum size of file buffer */
 
 
 /*
@@ -106,6 +108,7 @@ typedef struct _mime_s			/**** MIME Database ****/
   cups_array_t		*srcs;		/* Filters sorted by source type */
   mime_error_cb_t	error_cb;	/* Error message callback */
   void			*error_ctx;	/* Pointer for callback */
+  _cups_rwlock_t	lock;	/* Read/write lock for guarding data for background updates */
 } mime_t;
 
 

@@ -1,7 +1,7 @@
 /*
  * Simulated client test program for CUPS.
  *
- * Copyright © 2020-2022 by OpenPrinting
+ * Copyright © 2020-2023 by OpenPrinting
  * Copyright © 2017-2019 by Apple Inc.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
@@ -392,7 +392,7 @@ make_raster_file(ipp_t      *response,  /* I - Printer attributes */
   }
 
  /*
-  * Figure out the the media, resolution, and color mode...
+  * Figure out the media, resolution, and color mode...
   */
 
   if ((attr = ippFindAttribute(response, "media-ready", IPP_TAG_KEYWORD)) != NULL)

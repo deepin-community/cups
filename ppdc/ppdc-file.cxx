@@ -1,6 +1,7 @@
 //
 // File class for the CUPS PPD Compiler.
 //
+// Copyright © 2020-2024 by OpenPrinting.
 // Copyright 2007-2010 by Apple Inc.
 // Copyright 2002-2005 by Easy Software Products.
 //
@@ -83,7 +84,7 @@ ppdcFile::get()
 int					// O - Next character in file
 ppdcFile::peek()
 {
-  // Return immediaely if there is no open file...
+  // Return immediately if there is no open file...
   if (!fp)
     return (EOF);
 

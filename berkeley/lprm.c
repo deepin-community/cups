@@ -1,7 +1,7 @@
 /*
  * "lprm" command for CUPS.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1997-2006 by Easy Software Products.
  *
@@ -82,6 +82,13 @@ main(int  argc,			/* I - Number of command-line arguments */
 	      else
 	      {
 		i ++;
+
+		if (i >= argc)
+		{
+		  _cupsLangPrintf(stderr, _("%s: Error - expected destination after \"-P\" option."), argv[0]);
+		  usage();
+		}
+
 		name = argv[i];
 	      }
 

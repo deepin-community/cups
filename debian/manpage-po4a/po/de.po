@@ -1,5 +1,5 @@
 # Translation of cups man pages to German
-# Copyright (C) Helge Kreutzmann <debian@helgefjell.de>, 2008-2022
+# Copyright (C) Helge Kreutzmann <debian@helgefjell.de>, 2008-2024
 # Chris Leick <c.leick@vollbio.de>, 2009.
 # This file is distributed under the same license as the cups package.
 #
@@ -10,9 +10,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: cups man pages 2.4.2-1\n"
-"POT-Creation-Date: 2022-05-27 16:10+0200\n"
-"PO-Revision-Date: 2023-06-02 16:35+0200\n"
+"Project-Id-Version: cups man pages 2.4.10-1\n"
+"POT-Creation-Date: 2024-06-23 06:18+0200\n"
+"PO-Revision-Date: 2024-06-23 07:05+0200\n"
 "Last-Translator: Helge Kreutzmann <debian@helgefjell.de>\n"
 "Language-Team: de <debian-l10n-german@lists.debian.org>\n"
 "Language: de\n"
@@ -617,7 +617,7 @@ msgstr "Die mit dem Drucker verbundene Geräte-URI."
 #. type: SH
 #: backend.7:183 cups.1:115 cupsd.8:72 cupsd-helper.8:57 cupsfilter.8:111
 #: cups-lpd.8:55 cups-snmp.8:41 ipptool.1:203 lpoptions.1:106 mime.convs.5:38
-#: mime.types.5:88
+#: mime.types.5:91
 #, no-wrap
 msgid "FILES"
 msgstr "DATEIEN"
@@ -694,9 +694,9 @@ msgstr ""
 #: cupsd-helper.8:82 cupsd-logs.5:217 cupsenable.8:89 cups-files.conf.5:270
 #: cupsfilter.8:132 cups-lpd.8:108 cups-snmp.8:50 cups-snmp.conf.5:63
 #: cupstestppd.1:143 filter.7:213 ippevepcl.7:46 ippeveprinter.1:269
-#: ippfind.1:256 ipptool.1:255 ipptoolfile.5:714 lp.1:221 lpadmin.8:225
+#: ippfind.1:256 ipptool.1:255 ipptoolfile.5:715 lp.1:221 lpadmin.8:225
 #: lpc.8:48 lpinfo.8:123 lpmove.8:68 lpoptions.1:112 lpq.1:58 lpr.1:173
-#: lprm.1:75 lpstat.1:142 mailto.conf.5:41 mime.convs.5:55 mime.types.5:101
+#: lprm.1:75 lpstat.1:142 mailto.conf.5:41 mime.convs.5:55 mime.types.5:104
 #: notifier.7:32 ppdc.1:95 ppdcfile.5:154 ppdhtml.1:40 ppdi.1:47 ppdmerge.1:43
 #: ppdpo.1:47 printers.conf.5:19 subscriptions.conf.5:22
 #, no-wrap
@@ -723,9 +723,9 @@ msgstr "CUPS-Online-Hilfe (http://localhost:631/help)"
 #: cupsd-helper.8:90 cupsd-logs.5:222 cupsenable.8:97 cups-files.conf.5:280
 #: cupsfilter.8:139 cups-lpd.8:116 cups-snmp.8:56 cups-snmp.conf.5:66
 #: cupstestppd.1:147 filter.7:221 ippevepcl.7:48 ippeveprinter.1:273
-#: ippfind.1:258 ipptool.1:260 ipptoolfile.5:719 lp.1:230 lpadmin.8:231
+#: ippfind.1:258 ipptool.1:260 ipptoolfile.5:720 lp.1:230 lpadmin.8:231
 #: lpc.8:58 lpinfo.8:126 lpmove.8:75 lpoptions.1:119 lpq.1:65 lpr.1:182
-#: lprm.1:82 lpstat.1:149 mailto.conf.5:44 mime.convs.5:62 mime.types.5:108
+#: lprm.1:82 lpstat.1:149 mailto.conf.5:44 mime.convs.5:62 mime.types.5:111
 #: notifier.7:36 ppdc.1:102 ppdcfile.5:161 ppdhtml.1:47 ppdi.1:54 ppdmerge.1:50
 #: ppdpo.1:54 printers.conf.5:28 subscriptions.conf.5:31
 #, no-wrap
@@ -734,17 +734,17 @@ msgstr "COPYRIGHT"
 
 #. type: Plain text
 #: backend.7:221 cancel.1:93 classes.conf.5:31 client.conf.5:144 cups.1:144
-#: cupsaccept.8:87 cups-config.1:116 cupsctl.8:100 cupsd.8:127
-#: cupsd-helper.8:91 cupsd-logs.5:223 cupsenable.8:98 cupsfilter.8:140
-#: cups-snmp.8:57 cups-snmp.conf.5:67 cupstestppd.1:148 filter.7:222
-#: ippevepcl.7:49 ippeveprinter.1:274 ippfind.1:259 ipptool.1:261
-#: ipptoolfile.5:720 lp.1:231 lpadmin.8:232 lpc.8:59 lpinfo.8:127 lpmove.8:76
-#: lpoptions.1:120 lpq.1:66 lpr.1:183 lprm.1:83 lpstat.1:150 mailto.conf.5:45
-#: mime.convs.5:63 mime.types.5:109 notifier.7:37 ppdc.1:103 ppdcfile.5:162
-#: ppdhtml.1:48 ppdi.1:55 ppdmerge.1:51 ppdpo.1:55 printers.conf.5:29
-#: subscriptions.conf.5:32
-msgid "Copyright \\[co] 2021-2022 by OpenPrinting."
-msgstr "Copyright \\[co] 2021-2022 by OpenPrinting."
+#: cupsaccept.8:87 cups-config.1:116 cupsctl.8:100 cupsd.8:127 cupsd.conf.5:921
+#: cupsd-helper.8:91 cupsd-logs.5:223 cupsenable.8:98 cups-files.conf.5:281
+#: cupsfilter.8:140 cups-lpd.8:117 cups-snmp.8:57 cups-snmp.conf.5:67
+#: cupstestppd.1:148 filter.7:222 ippevepcl.7:49 ippeveprinter.1:274
+#: ippfind.1:259 ipptool.1:261 ipptoolfile.5:721 lp.1:231 lpadmin.8:232
+#: lpc.8:59 lpinfo.8:127 lpmove.8:76 lpoptions.1:120 lpq.1:66 lpr.1:183
+#: lprm.1:83 lpstat.1:150 mailto.conf.5:45 mime.convs.5:63 mime.types.5:112
+#: notifier.7:37 ppdc.1:103 ppdcfile.5:162 ppdhtml.1:48 ppdi.1:55 ppdmerge.1:51
+#: ppdpo.1:55 printers.conf.5:29 subscriptions.conf.5:32
+msgid "Copyright \\[co] 2020-2024 by OpenPrinting."
+msgstr "Copyright \\[co] 2020-2024 by OpenPrinting."
 
 #. type: TH
 #: cancel.1:11
@@ -771,9 +771,9 @@ msgid ""
 "a> ] [ B<-u> I<username> ] [ B<-x> ] [ I<id> ] [ I<destination> ] "
 "[ I<destination-id> ]"
 msgstr ""
-"B<cancel> [ B<-h> I<Rechnername[:Port]> ] [ B<-E> ] [ B<-U> I<Benutzername> ] [ B<-"
-"a> ] [ B<-u> I<Benutzername> ] [ B<-x> ] [ I<Id> ] [ I<Ziel> ] "
-"[ I<Ziel-Id> ]"
+"B<cancel> [ B<-h> I<Rechnername[:Port]> ] [ B<-E> ] [ B<-U> "
+"I<Benutzername> ] [ B<-a> ] [ B<-u> I<Benutzername> ] [ B<-x> ] [ I<Id> ] "
+"[ I<Ziel> ] [ I<Ziel-Id> ]"
 
 #. type: Plain text
 #: cancel.1:41
@@ -904,7 +904,7 @@ msgstr ""
 #. type: SH
 #: cancel.1:65 cups-config.1:93 cupsctl.8:68 cupsd.8:85 cupsd.conf.5:891
 #: cupstestppd.1:126 ippeveprinter.1:253 ippfind.1:243 ipptool.1:242 lp.1:203
-#: lpinfo.8:101 lpmove.8:52 lpr.1:155 lprm.1:57 mime.convs.5:44 mime.types.5:90
+#: lpinfo.8:101 lpmove.8:52 lpr.1:155 lprm.1:57 mime.convs.5:44 mime.types.5:93
 #, no-wrap
 msgid "EXAMPLES"
 msgstr "BEISPIELE"
@@ -1606,17 +1606,17 @@ msgstr "WIE ERHALTE ICH HILFE?"
 #. type: Plain text
 #: cups.1:61
 msgid ""
-"The B<OpenPrinting CUPS> web site (https://openprinting.github.io/cups) "
+"The B<OpenPrinting CUPS> website (https://openprinting.github.io/cups) "
 "provides access to the I<cups> and I<cups-devel> mailing lists, additional "
 "documentation and resources, and a bug report database. Most vendors also "
 "provide online discussion forums to ask printing questions for your "
 "operating system of choice."
 msgstr ""
-"Die Website von B<OpenPrinting CUPS> (https://openprinting.github.io/cups) bietet Zugriff auf die "
-"Mailinglisten I<cups> und I<cups-devel>, zusätzliche Dokumentation und "
-"zusätzliche Ressourcen und eine Fehlerdatenbank. Die meisten Anbieter "
-"stellen auch Online-Diskussionsforen bereit, bei denen Sie Druck-bezogene "
-"Fragen für Ihr ausgewähltes Betriebssystem stellen können."
+"Die Website von B<OpenPrinting CUPS> (https://openprinting.github.io/cups) "
+"bietet Zugriff auf die Mailinglisten I<cups> und I<cups-devel>, zusätzliche "
+"Dokumentation und zusätzliche Ressourcen und eine Fehlerdatenbank. Die "
+"meisten Anbieter stellen auch Online-Diskussionsforen bereit, bei denen Sie "
+"Druck-bezogene Fragen für Ihr ausgewähltes Betriebssystem stellen können."
 
 #. type: Plain text
 #: cups.1:64
@@ -1871,9 +1871,9 @@ msgid ""
 msgstr ""
 "B<cancel>(1), B<client.conf>(5), B<cupsctl>(8), B<cupsd>(8), B<lp>(1), "
 "B<lpadmin>(8), B<lpinfo>(8), B<lpoptions>(1), B<lpr>(1), B<lprm>(1), "
-"B<lpq>(1), B<lpstat>(1), CUPS-Online-Hilfe (http://localhost:631/help), OpenPrinting CUPS-"
-"Website (https://openprinting.github.io/cups), PWG Internet Printing Protocol Workgroup "
-"(http://www.pwg.org/ipp)"
+"B<lpq>(1), B<lpstat>(1), CUPS-Online-Hilfe (http://localhost:631/help), "
+"OpenPrinting CUPS-Website (https://openprinting.github.io/cups), PWG "
+"Internet Printing Protocol Workgroup (http://www.pwg.org/ipp)"
 
 #. type: TH
 #: cupsaccept.8:11
@@ -3669,9 +3669,8 @@ msgid ""
 "\"10800\" (3 hours)."
 msgstr ""
 "legt die maximale Zeit, die ein Auftrag zum Drucken verbrauchen darf, bevor "
-"er abgebrochen wird, fest. Falls auf 0 gesetzt, werden keine "
-"»hängenden« (stuck) Aufträge abgebrochen. Die Vorgabe ist 10800 Sekunden (3 "
-"Stunden)."
+"er abgebrochen wird, fest. Falls auf 0 gesetzt, werden keine »hängenden« "
+"(stuck) Aufträge abgebrochen. Die Vorgabe ist 10800 Sekunden (3 Stunden)."
 
 #. type: TP
 #: cupsd.conf.5:323
@@ -3704,9 +3703,9 @@ msgid ""
 "allowed.  Set to \"0\" to allow an unlimited number of subscriptions.  The "
 "default is \"100\"."
 msgstr ""
-"Legt die maximale Anzahl an Ereignisabonnementen, die gleichzeitig erlaubt sind, "
-"fest. Setzen Sie dies auf »0«, um eine unbegrenzte Anzahl an Abonnements zu "
-"erlauben. Die Vorgabe ist »100«."
+"Legt die maximale Anzahl an Ereignisabonnementen, die gleichzeitig erlaubt "
+"sind, fest. Setzen Sie dies auf »0«, um eine unbegrenzte Anzahl an "
+"Abonnements zu erlauben. Die Vorgabe ist »100«."
 
 #. type: TP
 #: cupsd.conf.5:335
@@ -3722,9 +3721,9 @@ msgid ""
 "allowed per job.  The default is \"0\" which allows up to MaxSubscriptions "
 "subscriptions per job."
 msgstr ""
-"Legt die maximale Anzahl an Ereignisabonnementen, die gleichzeitig pro Auftrag erlaubt "
-"sind, fest. Die Vorgabe ist »0«, womit bis zu MaxSubscriptions Abonnements pro Auftrag "
-"erlaubt sind."
+"Legt die maximale Anzahl an Ereignisabonnementen, die gleichzeitig pro "
+"Auftrag erlaubt sind, fest. Die Vorgabe ist »0«, womit bis zu "
+"MaxSubscriptions Abonnements pro Auftrag erlaubt sind."
 
 #. type: TP
 #: cupsd.conf.5:340
@@ -3740,9 +3739,9 @@ msgid ""
 "allowed per printer.  The default is \"0\" which allows up to "
 "MaxSubscriptions subscriptions per printer."
 msgstr ""
-"Legt die maximale Anzahl an Ereignisabonnementen, die gleichzeitig pro Drucker erlaubt "
-"sind, fest. Die Vorgabe ist »0«, womit bis zu MaxSubscriptions Abonnements pro Drucker "
-"erlaubt sind."
+"Legt die maximale Anzahl an Ereignisabonnementen, die gleichzeitig pro "
+"Drucker erlaubt sind, fest. Die Vorgabe ist »0«, womit bis zu "
+"MaxSubscriptions Abonnements pro Drucker erlaubt sind."
 
 #. type: TP
 #: cupsd.conf.5:345
@@ -3758,9 +3757,9 @@ msgid ""
 "allowed per user.  The default is \"0\" which allows up to MaxSubscriptions "
 "subscriptions per user."
 msgstr ""
-"Legt die maximale Anzahl an Ereignisabonnementen, die gleichzeitig pro Benutzer erlaubt "
-"sind, fest. Die Vorgabe ist »0«, womit bis zu MaxSubscriptions Abonnements pro Benutzer "
-"erlaubt sind."
+"Legt die maximale Anzahl an Ereignisabonnementen, die gleichzeitig pro "
+"Benutzer erlaubt sind, fest. Die Vorgabe ist »0«, womit bis zu "
+"MaxSubscriptions Abonnements pro Benutzer erlaubt sind."
 
 #. type: TP
 #: cupsd.conf.5:350
@@ -3826,8 +3825,8 @@ msgstr "B<PreserveJobFiles >I<Sekunden>"
 msgid ""
 "Specifies whether job files (documents) are preserved after a job is "
 "printed.  If a numeric value is specified, job files are preserved for the "
-"indicated number of seconds after printing.  The default is "
-"\"86400\" (preserve 1 day)."
+"indicated number of seconds after printing.  The default is \"86400\" "
+"(preserve 1 day)."
 msgstr ""
 "Legt fest, ob Auftragsdateien (Dokumente) erhalten bleiben, nachdem ein "
 "Auftrag gedruckt wurde. Falls ein numerischer Wert angegeben wird, werden "
@@ -3877,11 +3876,11 @@ msgstr "B<ReadyPaperSizes >I<Größenname[,…]>"
 #. type: Plain text
 #: cupsd.conf.5:391
 msgid ""
-"Specifies a list of potential paper sizes that are reported as "
-"\"ready\" (loaded).  The actual list will only contain sizes that each "
-"printer supports.  The default is \"Letter,Legal,Tabloid,4x6,Env10\" when "
-"the default paper size is \"Letter\" and \"A3,A4,A5,A6,EnvDL\" otherwise.  "
-"Note: Paper sizes must use the size names from the PPD file and not PWG self-"
+"Specifies a list of potential paper sizes that are reported as \"ready\" "
+"(loaded).  The actual list will only contain sizes that each printer "
+"supports.  The default is \"Letter,Legal,Tabloid,4x6,Env10\" when the "
+"default paper size is \"Letter\" and \"A3,A4,A5,A6,EnvDL\" otherwise.  Note: "
+"Paper sizes must use the size names from the PPD file and not PWG self-"
 "describing media size names."
 msgstr ""
 "Legt eine Liste möglicher Papiergrößen fest, die als »bereit« (geladen) "
@@ -5430,7 +5429,8 @@ msgstr "B<DefaultAuthType Negotiate>"
 #. type: Plain text
 #: cupsd.conf.5:849
 msgid "Specifies that Kerberos authentication is required by default."
-msgstr "Legt fest, dass standardmäßig Kerberos-Authentifizierung benötigt wird."
+msgstr ""
+"Legt fest, dass standardmäßig Kerberos-Authentifizierung benötigt wird."
 
 #. #PageLogFormat
 #. type: Plain text
@@ -5597,11 +5597,6 @@ msgstr ""
 "B<classes.conf>(5), B<cups-files.conf>(5), B<cupsd>(8), B<mime.convs>(5), "
 "B<mime.types>(5), B<printers.conf>(5), B<subscriptions.conf>(5), CUPS-Online-"
 "Hilfe (http://localhost:631/help)"
-
-#. type: Plain text
-#: cupsd.conf.5:921 cups-files.conf.5:281 cups-lpd.8:117
-msgid "Copyright \\[co] 2020-2022 by OpenPrinting."
-msgstr "Copyright \\[co] 2020-2022 by OpenPrinting."
 
 #. type: TH
 #: cupsd-helper.8:11
@@ -6568,7 +6563,7 @@ msgstr ""
 msgid ""
 "The System V versions of these commands are B<disable> and B<enable>, "
 "respectively.  They have been renamed to avoid conflicts with the "
-"B<bash>(1)  build-in commands of the same names."
+"B<bash>(1)  built-in commands of the same names."
 msgstr ""
 "Die System-V-Versionen dieser Befehle sind B<disable> und B<enable>. Sie "
 "wurden umbenannt, um Konflikte mit den eingebauten Befehlen gleichen Namens "
@@ -10913,9 +10908,9 @@ msgstr ""
 "include-error> ] [ B<--version> ] [ B<-4> ] [ B<-6> ] [ B<-C> ] [ B<-E> ] "
 "[ B<-I> ] [ B<-L> ] [ B<-P> I<Dateiname.plist> ] [ B<-S> ] [ B<-T> "
 "I<Sekunden> ] [ B<-V> I<Version> ] [ B<-X> ] [ B<-c> ] [ B<-d> "
-"I<Name=Wert> ] [ B<-f> I<Dateiname> ] [ B<-h> ] [ B<-i> I<Sekunden> ] [ B<-j> ] [ B<-"
-"n> I<Wiederholungszähler> ] [ B<-q> ] [ B<-t> ] [ B<-v ]> I<Drucker-URI> "
-"I<Testdatei> [ …  I<Testdatei> ]"
+"I<Name=Wert> ] [ B<-f> I<Dateiname> ] [ B<-h> ] [ B<-i> I<Sekunden> ] [ B<-"
+"j> ] [ B<-n> I<Wiederholungszähler> ] [ B<-q> ] [ B<-t> ] [ B<-v ]> "
+"I<Drucker-URI> I<Testdatei> [ …  I<Testdatei> ]"
 
 #. type: Plain text
 #: ipptool.1:91
@@ -11366,8 +11361,8 @@ msgid ""
 "org/ipp)  RFC 8011 (https://datatracker.ietf.org/doc/html/rfc8011),"
 msgstr ""
 "B<ipptoolfile>(5), IANA IPP Registry (https://www.iana.org/assignments/ipp-"
-"registrations), PWG Internet Printing Protocol Workgroup (https://www.pwg.org/"
-"ipp), RFC 8011 (https://datatracker.ietf.org/doc/html/rfc8011),"
+"registrations), PWG Internet Printing Protocol Workgroup (https://www.pwg."
+"org/ipp), RFC 8011 (https://datatracker.ietf.org/doc/html/rfc8011),"
 
 #. type: TH
 #: ipptoolfile.5:10
@@ -11623,13 +11618,13 @@ msgid "Specifies an identifier string for the current file."
 msgstr "Legt einen Bezeichner als Zeichenkette für die aktuelle Datei fest."
 
 #. type: TP
-#: ipptoolfile.5:100 ipptoolfile.5:210
+#: ipptoolfile.5:100 ipptoolfile.5:211
 #, no-wrap
 msgid "B<IGNORE-ERRORS yes>"
 msgstr "B<IGNORE-ERRORS yes>"
 
 #. type: TP
-#: ipptoolfile.5:102 ipptoolfile.5:212
+#: ipptoolfile.5:102 ipptoolfile.5:213
 #, no-wrap
 msgid "B<IGNORE-ERRORS no>"
 msgstr "B<IGNORE-ERRORS no>"
@@ -11715,13 +11710,13 @@ msgstr ""
 "Einbindeverzeichnis einbindet."
 
 #. type: TP
-#: ipptoolfile.5:128 ipptoolfile.5:245
+#: ipptoolfile.5:128 ipptoolfile.5:246
 #, no-wrap
 msgid "B<SKIP-IF-DEFINED >I<variable-name>"
 msgstr "B<SKIP-IF-DEFINED >I<Variablenname>"
 
 #. type: TP
-#: ipptoolfile.5:130 ipptoolfile.5:247
+#: ipptoolfile.5:130 ipptoolfile.5:248
 #, no-wrap
 msgid "B<SKIP-IF-NOT-DEFINED >I<variable-name>"
 msgstr "B<SKIP-IF-NOT-DEFINED >I<Variablenname>"
@@ -11756,7 +11751,7 @@ msgstr ""
 "angehalten werden oder nicht."
 
 #. type: TP
-#: ipptoolfile.5:138 ipptoolfile.5:263
+#: ipptoolfile.5:138 ipptoolfile.5:264
 #, no-wrap
 msgid "B<TRANSFER auto>"
 msgstr "B<TRANSFER auto>"
@@ -11773,7 +11768,7 @@ msgstr ""
 "angehängte Dateien verwenden wird."
 
 #. type: TP
-#: ipptoolfile.5:141 ipptoolfile.5:266
+#: ipptoolfile.5:141 ipptoolfile.5:267
 #, no-wrap
 msgid "B<TRANSFER chunked>"
 msgstr "B<TRANSFER chunked>"
@@ -11793,7 +11788,7 @@ msgstr ""
 "benötigt."
 
 #. type: TP
-#: ipptoolfile.5:146 ipptoolfile.5:269
+#: ipptoolfile.5:146 ipptoolfile.5:270
 #, no-wrap
 msgid "B<TRANSFER length>"
 msgstr "B<TRANSFER length>"
@@ -11812,31 +11807,31 @@ msgstr ""
 "Abfragen wird für die Konformität mit allen Versionen von IPP benötigt."
 
 #. type: TP
-#: ipptoolfile.5:151 ipptoolfile.5:272
+#: ipptoolfile.5:151 ipptoolfile.5:273
 #, no-wrap
 msgid "B<VERSION 1.0>"
 msgstr "B<VERSION 1.0>"
 
 #. type: TP
-#: ipptoolfile.5:153 ipptoolfile.5:274
+#: ipptoolfile.5:153 ipptoolfile.5:275
 #, no-wrap
 msgid "B<VERSION 1.1>"
 msgstr "B<VERSION 1.1>"
 
 #. type: TP
-#: ipptoolfile.5:155 ipptoolfile.5:276
+#: ipptoolfile.5:155 ipptoolfile.5:277
 #, no-wrap
 msgid "B<VERSION 2.0>"
 msgstr "B<VERSION 2.0>"
 
 #. type: TP
-#: ipptoolfile.5:157 ipptoolfile.5:278
+#: ipptoolfile.5:157 ipptoolfile.5:279
 #, no-wrap
 msgid "B<VERSION 2.1>"
 msgstr "B<VERSION 2.1>"
 
 #. type: TP
-#: ipptoolfile.5:159 ipptoolfile.5:280
+#: ipptoolfile.5:159 ipptoolfile.5:281
 #, no-wrap
 msgid "B<VERSION 2.2>"
 msgstr "B<VERSION 2.2>"
@@ -11942,23 +11937,26 @@ msgid "B<DELAY >I<seconds>[I<,repeat-seconds>]"
 msgstr "B<DELAY >I<Sekunden>[I<,Wiederholungssekunden>]"
 
 #. type: Plain text
-#: ipptoolfile.5:188
+#: ipptoolfile.5:189
 msgid ""
 "Specifies a delay in seconds before this test will be run.  If two values "
-"are specified, the second value is used as the delay between repeated tests."
+"are specified, the second value is used as the delay between repeated "
+"tests.  A default repeat interval of 5 seconds is used if this directive is "
+"not provided."
 msgstr ""
 "Legt eine Verzögerung in Sekunden fest, bevor dieser Test ausgeführt wird. "
 "Falls zwei Werte festgelegt werden, wird der zweite als Verzögerung zwischen "
-"wiederholten Tests verwandt."
+"wiederholten Tests verwandt. Standardmäßig wird ein Wiederholungsinterval "
+"von 5 Sekunden verwandt, falls diese Direktive nicht bereitgestellt wird."
 
 #. type: TP
-#: ipptoolfile.5:188
+#: ipptoolfile.5:189
 #, no-wrap
 msgid "B<DISPLAY >I<attribute-name>"
 msgstr "B<DISPLAY >I<Attributname>"
 
 #. type: Plain text
-#: ipptoolfile.5:192
+#: ipptoolfile.5:193
 msgid ""
 "Specifies that value of the named attribute should be output as part of the "
 "test report."
@@ -11967,25 +11965,25 @@ msgstr ""
 "ausgegeben werden soll."
 
 #. type: TP
-#: ipptoolfile.5:192
+#: ipptoolfile.5:193
 #, no-wrap
 msgid "B<EXPECT >I<attribute-name >[ I<predicate(s) >]"
 msgstr "B<EXPECT >I<Attributname >[ I<Eigenschaft(en) >]"
 
 #. type: TP
-#: ipptoolfile.5:194
+#: ipptoolfile.5:195
 #, no-wrap
 msgid "B<EXPECT ?>I<attribute-name predicate(s)>"
 msgstr "B<EXPECT ?>I<Attributname Eigenschaft(en)>"
 
 #. type: TP
-#: ipptoolfile.5:196
+#: ipptoolfile.5:197
 #, no-wrap
 msgid "B<EXPECT !>I<attribute-name>"
 msgstr "B<EXPECT !>I<Attributname>"
 
 #. type: Plain text
-#: ipptoolfile.5:199
+#: ipptoolfile.5:200
 msgid ""
 "Specifies that the response must/may/must not include the named attribute. "
 "Additional requirements can be added as predicates - see the \"EXPECT "
@@ -12001,19 +11999,19 @@ msgstr ""
 "getrennt werden. Beispiel: »media-col/media-size/x-dimension«."
 
 #. type: TP
-#: ipptoolfile.5:199
+#: ipptoolfile.5:200
 #, no-wrap
 msgid "B<EXPECT-ALL >I<attribute-name >[ I<predicate(s) >]"
 msgstr "B<EXPECT-ALL >I<Attributname >[ I<Eigenschaft(en) >]"
 
 #. type: TP
-#: ipptoolfile.5:201
+#: ipptoolfile.5:202
 #, no-wrap
 msgid "B<EXPECT-ALL ?>I<attribute-name predicate(s)>"
 msgstr "B<EXPECT-ALL ?>I<Attributname Eigenschaft(en)>"
 
 #. type: Plain text
-#: ipptoolfile.5:204
+#: ipptoolfile.5:205
 msgid ""
 "Specifies that the response must/may include the named attribute and that "
 "all occurrences of that attribute must match the given predicates."
@@ -12023,13 +12021,13 @@ msgstr ""
 "passen müssen."
 
 #. type: TP
-#: ipptoolfile.5:204
+#: ipptoolfile.5:205
 #, no-wrap
 msgid "B<FILE filename>"
 msgstr "B<FILE Dateiname>"
 
 #. type: Plain text
-#: ipptoolfile.5:207
+#: ipptoolfile.5:208
 msgid ""
 "Specifies a file to include at the end of the request. This is typically "
 "used when sending a test print file."
@@ -12038,19 +12036,19 @@ msgstr ""
 "wird typischerweise verwandt, wenn eine Testausdrucksdatei gesandt wird."
 
 #. type: TP
-#: ipptoolfile.5:207
+#: ipptoolfile.5:208
 #, no-wrap
 msgid "B<GROUP tag>"
 msgstr "B<GROUP Markierung>"
 
 #. type: Plain text
-#: ipptoolfile.5:210
+#: ipptoolfile.5:211
 msgid "Specifies the group tag for subsequent attributes in the request."
 msgstr ""
 "Legt die Gruppenmarkierung für nachfolgende Attribute in der Anfrage fest."
 
 #. type: Plain text
-#: ipptoolfile.5:217
+#: ipptoolfile.5:218
 msgid ""
 "Specifies whether B<ipptool>(8)  will ignore errors and continue with "
 "subsequent tests."
@@ -12059,13 +12057,13 @@ msgstr ""
 "fortfahren soll."
 
 #. type: TP
-#: ipptoolfile.5:217
+#: ipptoolfile.5:218
 #, no-wrap
 msgid "B<MONITOR-PRINTER-STATE >[ I<printer-uri >] B<{ EXPECT >I<attribute-name >[ I<predicate(s) >] B<}>"
 msgstr "B<MONITOR-PRINTER-STATE >[ I<Drucker-URI >] B<{ EXPECT >I<Attributname>[ I<Eigenschaft(en) >] B<}>"
 
 #. type: Plain text
-#: ipptoolfile.5:221
+#: ipptoolfile.5:222
 msgid ""
 "Specifies printer state monitoring tests to run in parallel with the test "
 "operation.  The monitoring tests will run until all of the B<EXPECT> "
@@ -12078,56 +12076,56 @@ msgstr ""
 "Testaktion abgeschlossen wurde; es zählt das erste der Ereignisse."
 
 #. type: TP
-#: ipptoolfile.5:221
+#: ipptoolfile.5:222
 #, no-wrap
 msgid "B<NAME \">I<literal string>B<\">"
 msgstr "B<NAME \">I< Zeichenkette>B<\">"
 
 #. type: Plain text
-#: ipptoolfile.5:224
+#: ipptoolfile.5:225
 msgid "Specifies the human-readable name of the test."
 msgstr "Legt den menschenlesbaren Namen des Tests fest."
 
 #. type: TP
-#: ipptoolfile.5:224
+#: ipptoolfile.5:225
 #, no-wrap
 msgid "B<OPERATION >I<operation-code>"
 msgstr "B<OPERATION >I<Vorgangscode>"
 
 #. type: Plain text
-#: ipptoolfile.5:227
+#: ipptoolfile.5:228
 msgid "Specifies the operation to be performed."
 msgstr "Legt den auszuführenden Vorgang fest."
 
 #. type: TP
-#: ipptoolfile.5:227
+#: ipptoolfile.5:228
 #, no-wrap
 msgid "B<PASS-IF-DEFINED >I<variable-name>"
 msgstr "B<PASS-IF-DEFINED >I<Variablenname>"
 
 #. type: TP
-#: ipptoolfile.5:229
+#: ipptoolfile.5:230
 #, no-wrap
 msgid "B<PASS-IF-NOT-DEFINED >I<variable-name>"
 msgstr "B<PASS-IF-NOT-DEFINED >I<Variablenname>"
 
 #. type: Plain text
-#: ipptoolfile.5:232
+#: ipptoolfile.5:233
 msgid ""
 "Specifies that the current test should be passed automatically when the "
 "variable is or is not defined."
 msgstr ""
-"Legt fest, dass der aktuelle Test automatisch bestanden werden soll, wenn die "
-"Variable (nicht) definiert ist."
+"Legt fest, dass der aktuelle Test automatisch bestanden werden soll, wenn "
+"die Variable (nicht) definiert ist."
 
 #. type: TP
-#: ipptoolfile.5:232
+#: ipptoolfile.5:233
 #, no-wrap
 msgid "B<PAUSE \">I<message>B<\">"
 msgstr "B<PAUSE \">I<Nachricht>B<\">"
 
 #. type: Plain text
-#: ipptoolfile.5:235
+#: ipptoolfile.5:236
 msgid ""
 "Displays the provided message and waits for the user to press a key to "
 "continue."
@@ -12136,19 +12134,19 @@ msgstr ""
 "eine Taste zum Fortfahren drückt."
 
 #. type: TP
-#: ipptoolfile.5:235
+#: ipptoolfile.5:236
 #, no-wrap
 msgid "B<REQUEST-ID >I<number>"
 msgstr "B<REQUEST-ID >I<Nummer>"
 
 #. type: TP
-#: ipptoolfile.5:237
+#: ipptoolfile.5:238
 #, no-wrap
 msgid "B<REQUEST-ID random>"
 msgstr "B<REQUEST-ID random>"
 
 #. type: Plain text
-#: ipptoolfile.5:240
+#: ipptoolfile.5:241
 msgid ""
 "Specifies the request-id value to use in the request, either an integer or "
 "the word \"random\" to use a randomly generated value (the default)."
@@ -12158,13 +12156,13 @@ msgstr ""
 "(Vorgabe), fest."
 
 #. type: TP
-#: ipptoolfile.5:240
+#: ipptoolfile.5:241
 #, no-wrap
 msgid "B<RESOURCE >I<path>"
 msgstr "B<RESOURCE >I<Pfad>"
 
 #. type: Plain text
-#: ipptoolfile.5:245
+#: ipptoolfile.5:246
 msgid ""
 "Specifies an alternate resource path that is used for the HTTP POST request. "
 "The default is the resource from the URI provided to the B<ipptool>(8)  "
@@ -12175,7 +12173,7 @@ msgstr ""
 "B<ipptool>(8) übergebenen URI entstammt."
 
 #. type: Plain text
-#: ipptoolfile.5:250
+#: ipptoolfile.5:251
 msgid ""
 "Specifies that the current test should be skipped when the variable is or is "
 "not defined."
@@ -12184,19 +12182,19 @@ msgstr ""
 "Variable (nicht) definiert ist."
 
 #. type: TP
-#: ipptoolfile.5:250
+#: ipptoolfile.5:251
 #, no-wrap
 msgid "B<SKIP-PREVIOUS-ERROR yes>"
 msgstr "B<SKIP-PREVIOUS-ERROR yes>"
 
 #. type: TP
-#: ipptoolfile.5:252
+#: ipptoolfile.5:253
 #, no-wrap
 msgid "B<SKIP-PREVIOUS-ERROR no>"
 msgstr "B<SKIP-PREVIOUS-ERROR no>"
 
 #. type: Plain text
-#: ipptoolfile.5:257
+#: ipptoolfile.5:258
 msgid ""
 "Specifies whether B<ipptool>(8)  will skip the current test if the previous "
 "test resulted in an error/failure."
@@ -12205,13 +12203,13 @@ msgstr ""
 "vorhergehende Test zu einem Fehler/Fehlschlag führte."
 
 #. type: TP
-#: ipptoolfile.5:257
+#: ipptoolfile.5:258
 #, no-wrap
 msgid "B<STATUS >I<status-code >[ I<predicate> ]"
 msgstr "B<STATUS >I<Status-Code >[ I<Eigenschaft> ]"
 
 #. type: Plain text
-#: ipptoolfile.5:260
+#: ipptoolfile.5:261
 msgid ""
 "Specifies an expected response status-code value. Additional requirements "
 "can be added as predicates - see the \"STATUS PREDICATES\" section for more "
@@ -12223,18 +12221,18 @@ msgstr ""
 "Eigenschaften."
 
 #. type: TP
-#: ipptoolfile.5:260
+#: ipptoolfile.5:261
 #, no-wrap
 msgid "B<TEST-ID \">I<identifier>\""
 msgstr "B<TEST-ID \">I<Bezeichner>\""
 
 #. type: Plain text
-#: ipptoolfile.5:263
+#: ipptoolfile.5:264
 msgid "Specifies an identifier string for the current test."
 msgstr "Legt einen Bezeichner als Zeichenkette für den aktuellen Test fest."
 
 #. type: Plain text
-#: ipptoolfile.5:266
+#: ipptoolfile.5:267
 msgid ""
 "Specifies that this test will use \"Transfer-Encoding: chunked\" if it has "
 "an attached file or \"Content-Length:\" otherwise."
@@ -12243,7 +12241,7 @@ msgstr ""
 "eine angehängt Datei hat und »Content-Length:« andernfalls."
 
 #. type: Plain text
-#: ipptoolfile.5:269
+#: ipptoolfile.5:270
 msgid ""
 "Specifies that this test will use the HTTP/1.1 \"Transfer-Encoding: "
 "chunked\" header."
@@ -12252,7 +12250,7 @@ msgstr ""
 "chunked« verwenden wird."
 
 #. type: Plain text
-#: ipptoolfile.5:272
+#: ipptoolfile.5:273
 msgid ""
 "Specifies that this test will use the HTTP/1.0 \"Content-Length:\" header."
 msgstr ""
@@ -12260,18 +12258,18 @@ msgstr ""
 "verwenden wird."
 
 #. type: Plain text
-#: ipptoolfile.5:283
+#: ipptoolfile.5:284
 msgid "Specifies the IPP version number to use for this test."
 msgstr "Legt die für diesen Test zu verwendende IPP-Versionsnummer fest."
 
 #. type: SS
-#: ipptoolfile.5:283
+#: ipptoolfile.5:284
 #, no-wrap
 msgid "EXPECT PREDICATES"
 msgstr "EXPECT-EIGENSCHAFTEN"
 
 #. type: Plain text
-#: ipptoolfile.5:285
+#: ipptoolfile.5:286
 msgid ""
 "The following predicates are understood following the B<EXPECT> test "
 "directive:"
@@ -12280,13 +12278,13 @@ msgstr ""
 "Test-Direktiven verstanden:"
 
 #. type: TP
-#: ipptoolfile.5:285
+#: ipptoolfile.5:286
 #, no-wrap
 msgid "B<COUNT >I<number>"
 msgstr "B<COUNT >I<Anzahl>"
 
 #. type: Plain text
-#: ipptoolfile.5:288
+#: ipptoolfile.5:289
 msgid ""
 "Requires the B<EXPECT> attribute to have the specified number of values."
 msgstr ""
@@ -12294,13 +12292,13 @@ msgstr ""
 "hat."
 
 #. type: TP
-#: ipptoolfile.5:288 ipptoolfile.5:410
+#: ipptoolfile.5:289 ipptoolfile.5:411
 #, no-wrap
 msgid "B<DEFINE-MATCH >I<variable-name>"
 msgstr "B<DEFINE-MATCH >I<Variablenname>"
 
 #. type: Plain text
-#: ipptoolfile.5:292
+#: ipptoolfile.5:293
 msgid ""
 "Defines the variable to \"1\" when the B<EXPECT> condition matches.  A side-"
 "effect of this predicate is that this B<EXPECT> will never fail a test."
@@ -12310,13 +12308,13 @@ msgstr ""
 "Test fehlschlägt."
 
 #. type: TP
-#: ipptoolfile.5:292 ipptoolfile.5:413
+#: ipptoolfile.5:293 ipptoolfile.5:414
 #, no-wrap
 msgid "B<DEFINE-NO-MATCH >I<variable-name>"
 msgstr "B<DEFINE-NO-MATCH >I<Variablenname>"
 
 #. type: Plain text
-#: ipptoolfile.5:296
+#: ipptoolfile.5:297
 msgid ""
 "Defines the variable to \"1\" when the B<EXPECT> condition does not match.  "
 "A side-effect of this predicate is that this B<EXPECT> will never fail a "
@@ -12327,13 +12325,13 @@ msgstr ""
 "Test fehlschlägt."
 
 #. type: TP
-#: ipptoolfile.5:296
+#: ipptoolfile.5:297
 #, no-wrap
 msgid "B<DEFINE-VALUE >I<variable-name>"
 msgstr "B<DEFINE-VALUE >I<Variablenname>"
 
 #. type: Plain text
-#: ipptoolfile.5:300
+#: ipptoolfile.5:301
 msgid ""
 "Defines the variable to the value of the attribute when the B<EXPECT> "
 "condition matches.  A side-effect of this predicate is that this B<EXPECT> "
@@ -12344,24 +12342,24 @@ msgstr ""
 "niemals bei einem Test fehlschlägt."
 
 #. type: TP
-#: ipptoolfile.5:300
+#: ipptoolfile.5:301
 #, no-wrap
 msgid "B<DISPLAY-MATCH >I<\"message\">"
 msgstr "B<DISPLAY-MATCH >I<\"Nachricht\">"
 
 #. type: Plain text
-#: ipptoolfile.5:303
+#: ipptoolfile.5:304
 msgid "Displays the specified message when the B<EXPECT> condition matches."
 msgstr "Zeigt die festgelegte Nachricht, wenn die B<EXPECT>-Bedingung passt."
 
 #. type: TP
-#: ipptoolfile.5:303 ipptoolfile.5:416
+#: ipptoolfile.5:304 ipptoolfile.5:417
 #, no-wrap
 msgid "B<IF-DEFINED >I<variable-name>"
 msgstr "B<IF-DEFINED >I<Variablenname>"
 
 #. type: Plain text
-#: ipptoolfile.5:306
+#: ipptoolfile.5:307
 msgid ""
 "Makes the B<EXPECT> conditions apply only if the specified variable is "
 "defined."
@@ -12370,13 +12368,13 @@ msgstr ""
 "definiert ist."
 
 #. type: TP
-#: ipptoolfile.5:306 ipptoolfile.5:419
+#: ipptoolfile.5:307 ipptoolfile.5:420
 #, no-wrap
 msgid "B<IF-NOT-DEFINED >I<variable-name>"
 msgstr "B<IF-NOT-DEFINED >I<Variablenname>"
 
 #. type: Plain text
-#: ipptoolfile.5:309
+#: ipptoolfile.5:310
 msgid ""
 "Makes the B<EXPECT> conditions apply only if the specified variable is not "
 "defined."
@@ -12385,26 +12383,26 @@ msgstr ""
 "nicht definiert ist."
 
 #. type: TP
-#: ipptoolfile.5:309
+#: ipptoolfile.5:310
 #, no-wrap
 msgid "B<IN-GROUP >I<tag>"
 msgstr "B<IN-GROUP >I<Markierung>"
 
 #. type: Plain text
-#: ipptoolfile.5:312
+#: ipptoolfile.5:313
 msgid "Requires the B<EXPECT> attribute to be in the specified group tag."
 msgstr ""
 "Verlangt, dass das B<EXPECT>-Attribut in der angegebenen Gruppenmarkierung "
 "ist."
 
 #. type: TP
-#: ipptoolfile.5:312
+#: ipptoolfile.5:313
 #, no-wrap
 msgid "B<OF-TYPE >I<tag[(limits)|tag|...]>"
 msgstr "B<OF-TYPE >I<Markierung[(Begrenzungen)|Markierung|…]>"
 
 #. type: Plain text
-#: ipptoolfile.5:316
+#: ipptoolfile.5:317
 msgid ""
 "Requires the B<EXPECT> attribute to use one of the specified value tag(s).  "
 "Most value tags also support the specification of limits in parenthesis, for "
@@ -12416,19 +12414,19 @@ msgstr ""
 "Verlangt, dass das B<EXPECT>-Attribut eines der festgelegten Attribut(e) "
 "verwendet. Die meisten Wertemarkierungen unterstützen auch die Angabe von "
 "Beschränkungen in Klammern, beispielsweise würde »name(42)« nameWith/"
-"WithoutLanguage-Zeichenketten bis zu einer Länge von 42 Oktetten, "
-"»name(4:MAX)« würde nameWith/WithoutLanguage-Zeichenketten zwischen 4 und "
-"255 Oktetten erlauben und »integer(-273:MAX)« würde Ganzzahlen zwischen -273 "
-"und 2147483647 erlauben."
+"WithoutLanguage-Zeichenketten bis zu einer Länge von 42 Oktetten, »name(4:"
+"MAX)« würde nameWith/WithoutLanguage-Zeichenketten zwischen 4 und 255 "
+"Oktetten erlauben und »integer(-273:MAX)« würde Ganzzahlen zwischen -273 und "
+"2147483647 erlauben."
 
 #. type: TP
-#: ipptoolfile.5:316 ipptoolfile.5:422
+#: ipptoolfile.5:317 ipptoolfile.5:423
 #, no-wrap
 msgid "B<REPEAT-LIMIT >I<number>"
 msgstr "B<REPEAT-LIMIT >I<Anzahl>"
 
 #. type: Plain text
-#: ipptoolfile.5:320
+#: ipptoolfile.5:321
 msgid ""
 "Specifies the maximum number of times to repeat if the B<REPEAT-MATCH> or "
 "B<REPEAT-NO-MATCH> predicate is specified. The default value is 1000."
@@ -12437,19 +12435,19 @@ msgstr ""
 "MATCH> oder B<REPEAT-NO-MATCH> festgelegt ist, fest. Die Vorgabe ist 1000."
 
 #. type: TP
-#: ipptoolfile.5:320 ipptoolfile.5:426
+#: ipptoolfile.5:321 ipptoolfile.5:427
 #, no-wrap
 msgid "B<REPEAT-MATCH>"
 msgstr "B<REPEAT-MATCH>"
 
 #. type: TP
-#: ipptoolfile.5:322 ipptoolfile.5:428
+#: ipptoolfile.5:323 ipptoolfile.5:429
 #, no-wrap
 msgid "B<REPEAT-NO-MATCH>"
 msgstr "B<REPEAT-NO-MATCH>"
 
 #. type: Plain text
-#: ipptoolfile.5:325
+#: ipptoolfile.5:326
 msgid ""
 "Specifies that the current test should be repeated when the B<EXPECT> "
 "condition matches or does not match."
@@ -12458,13 +12456,13 @@ msgstr ""
 "Bedingung (nicht) passt."
 
 #. type: TP
-#: ipptoolfile.5:325
+#: ipptoolfile.5:326
 #, no-wrap
 msgid "B<SAME-COUNT-AS >I<attribute-name>"
 msgstr "B<SAME-COUNT-AS >I<Attributname>"
 
 #. type: Plain text
-#: ipptoolfile.5:328
+#: ipptoolfile.5:329
 msgid ""
 "Requires the B<EXPECT> attribute to have the same number of values as the "
 "specified parallel attribute."
@@ -12473,36 +12471,36 @@ msgstr ""
 "festgelegte parallele Attribut hat."
 
 #. type: TP
-#: ipptoolfile.5:328
+#: ipptoolfile.5:329
 #, no-wrap
 msgid "B<WITH-ALL-HOSTNAMES \">I<literal string>B<\">"
 msgstr "B<WITH-ALL-HOSTNAMES \">I<Zeichenkette>B<\">"
 
 #. type: TP
-#: ipptoolfile.5:330
+#: ipptoolfile.5:331
 #, no-wrap
 msgid "B<WITH-ALL-HOSTNAMES \"/>I<regular expression>B</\">"
 msgstr "B<WITH-ALL-HOSTNAMES \"/>I<regulärer Ausdruck>B</\">"
 
 #. type: Plain text
-#: ipptoolfile.5:333
+#: ipptoolfile.5:334
 msgid "Requires that all URI values contain a matching hostname."
 msgstr "Verlangt, dass alle URI-Werte einen passenden Rechnernamen enthalten."
 
 #. type: TP
-#: ipptoolfile.5:333
+#: ipptoolfile.5:334
 #, no-wrap
 msgid "B<WITH-ALL-RESOURCES \">I<literal string>B<\">"
 msgstr "B<WITH-ALL-RESOURCES \">I<Zeichenkette>B<\">"
 
 #. type: TP
-#: ipptoolfile.5:335
+#: ipptoolfile.5:336
 #, no-wrap
 msgid "B<WITH-ALL-RESOURCES \"/>I<regular expression>B</\">"
 msgstr "B<WITH-ALL-RESOURCES \"/>I<regulärer Ausdruck>B</\">"
 
 #. type: Plain text
-#: ipptoolfile.5:338
+#: ipptoolfile.5:339
 msgid ""
 "Requires that all URI values contain a matching resource (including "
 "leading /)."
@@ -12511,30 +12509,30 @@ msgstr ""
 "führenden /) enthalten."
 
 #. type: TP
-#: ipptoolfile.5:338
+#: ipptoolfile.5:339
 #, no-wrap
 msgid "B<WITH-ALL-SCHEMES \">I<literal string>B<\">"
 msgstr "B<WITH-ALL-SCHEMES \">I<Zeichenkette>B<\">"
 
 #. type: TP
-#: ipptoolfile.5:340
+#: ipptoolfile.5:341
 #, no-wrap
 msgid "B<WITH-ALL-SCHEMES \"/>I<regular expression>B</\">"
 msgstr "B<WITH-ALL-SCHEMES \"/>I<regulärer Ausdruck>B</\">"
 
 #. type: Plain text
-#: ipptoolfile.5:343
+#: ipptoolfile.5:344
 msgid "Requires that all URI values contain a matching scheme."
 msgstr "Verlangt, dass alle URI-Werte ein passendes Schema enthalten."
 
 #. type: TP
-#: ipptoolfile.5:343
+#: ipptoolfile.5:344
 #, no-wrap
 msgid "B<WITH-ALL-VALUES \">I<literal string>B<\">"
 msgstr "B<WITH-ALL-VALUES \">I<Zeichenkette>B<\">"
 
 #. type: Plain text
-#: ipptoolfile.5:346
+#: ipptoolfile.5:347
 msgid ""
 "Requires that all values of the B<EXPECT> attribute match the literal "
 "string. Comparisons are case-sensitive."
@@ -12543,31 +12541,31 @@ msgstr ""
 "passen. Vergleiche berücksichtigen die Groß- und Kleinschreibung."
 
 #. type: TP
-#: ipptoolfile.5:346
+#: ipptoolfile.5:347
 #, no-wrap
 msgid "B<WITH-ALL-VALUES E<lt>>I<number>"
 msgstr "B<WITH-ALL-VALUES E<lt>>I<Zahl>"
 
 #. type: TP
-#: ipptoolfile.5:348
+#: ipptoolfile.5:349
 #, no-wrap
 msgid "B<WITH-ALL-VALUES =>I<number>"
 msgstr "B<WITH-ALL-VALUES =>I<Zahl>"
 
 #. type: TP
-#: ipptoolfile.5:350
+#: ipptoolfile.5:351
 #, no-wrap
 msgid "B<WITH-ALL-VALUES E<gt>>I<number>"
 msgstr "B<WITH-ALL-VALUES E<gt>>I<Zahl>"
 
 #. type: TP
-#: ipptoolfile.5:352
+#: ipptoolfile.5:353
 #, no-wrap
 msgid "B<WITH-ALL-VALUES >I<number>[I<,...,number>]"
 msgstr "B<WITH-ALL-VALUES >I<Zahl>[I<,…,Zahl>]"
 
 #. type: Plain text
-#: ipptoolfile.5:355
+#: ipptoolfile.5:356
 msgid ""
 "Requires that all values of the B<EXPECT> attribute match the number(s) or "
 "numeric comparison. When comparing rangeOfInteger values, the \"E<lt>\" and "
@@ -12579,19 +12577,19 @@ msgstr ""
 "Bereiche."
 
 #. type: TP
-#: ipptoolfile.5:355
+#: ipptoolfile.5:356
 #, no-wrap
 msgid "B<WITH-ALL-VALUES \"false\">"
 msgstr "B<WITH-ALL-VALUES \"false\">"
 
 #. type: TP
-#: ipptoolfile.5:357
+#: ipptoolfile.5:358
 #, no-wrap
 msgid "B<WITH-ALL-VALUES \"true\">"
 msgstr "B<WITH-ALL-VALUES \"true\">"
 
 #. type: Plain text
-#: ipptoolfile.5:360
+#: ipptoolfile.5:361
 msgid ""
 "Requires that all values of the B<EXPECT> attribute match the boolean value "
 "given."
@@ -12600,13 +12598,13 @@ msgstr ""
 "logischen Wert passen."
 
 #. type: TP
-#: ipptoolfile.5:360
+#: ipptoolfile.5:361
 #, no-wrap
 msgid "B<WITH-ALL-VALUES \"/>I<regular expression>B</\">"
 msgstr "B<WITH-ALL-VALUES \"/>I<regulärer Ausdruck>B</\">"
 
 #. type: Plain text
-#: ipptoolfile.5:364
+#: ipptoolfile.5:365
 msgid ""
 "Requires that all values of the B<EXPECT> attribute match the regular "
 "expression, which must conform to the POSIX regular expression syntax.  "
@@ -12617,13 +12615,13 @@ msgstr ""
 "Vergleiche berücksichtigen Groß- und Kleinschreibung."
 
 #. type: TP
-#: ipptoolfile.5:364
+#: ipptoolfile.5:365
 #, no-wrap
 msgid "B<WITH-DISTINCT-VALUES>"
 msgstr "B<WITH-DISTINCT-VALUES>"
 
 #. type: Plain text
-#: ipptoolfile.5:369
+#: ipptoolfile.5:370
 msgid ""
 "Requires that all values of the B<EXPECT> attribute are unique.  Comparisons "
 "are case-sensitive.  Only charset, collection, enum, integer, keyword, "
@@ -12636,37 +12634,37 @@ msgstr ""
 "rangeOfInteger, resolution, uriScheme unterstützen diese Eigenschaft."
 
 #. type: TP
-#: ipptoolfile.5:369
+#: ipptoolfile.5:370
 #, no-wrap
 msgid "B<WITH-HOSTNAME \">I<literal string>B<\">"
 msgstr "B<WITH-HOSTNAME \">I<Zeichenkette>B<\">"
 
 #. type: TP
-#: ipptoolfile.5:371
+#: ipptoolfile.5:372
 #, no-wrap
 msgid "B<WITH-HOSTNAME \"/>I<regular expression>B</\">"
 msgstr "B<WITH-HOSTNAME \"/>I<regulärer Ausdruck>B</\">"
 
 #. type: Plain text
-#: ipptoolfile.5:374
+#: ipptoolfile.5:375
 msgid "Requires that at least one URI value contains a matching hostname."
 msgstr ""
 "Verlangt, dass mindestens ein URI-Wert einen passenden Rechnernamen enthält."
 
 #. type: TP
-#: ipptoolfile.5:374
+#: ipptoolfile.5:375
 #, no-wrap
 msgid "B<WITH-RESOURCE \">I<literal string>B<\">"
 msgstr "B<WITH-RESOURCE \">I<Zeichenkette>B<\">"
 
 #. type: TP
-#: ipptoolfile.5:376
+#: ipptoolfile.5:377
 #, no-wrap
 msgid "B<WITH-RESOURCE \"/>I<regular expression>B</\">"
 msgstr "B<WITH-RESOURCE \"/>I<regulärer Ausdruck>B</\">"
 
 #. type: Plain text
-#: ipptoolfile.5:379
+#: ipptoolfile.5:380
 msgid ""
 "Requires that at least one URI value contains a matching resource (including "
 "leading /)."
@@ -12675,30 +12673,30 @@ msgstr ""
 "(einschließlich des führenden /) enthält."
 
 #. type: TP
-#: ipptoolfile.5:379
+#: ipptoolfile.5:380
 #, no-wrap
 msgid "B<WITH-SCHEME \">I<literal string>B<\">"
 msgstr "B<WITH-SCHEME \">I<Zeichenkette>B<\">"
 
 #. type: TP
-#: ipptoolfile.5:381
+#: ipptoolfile.5:382
 #, no-wrap
 msgid "B<WITH-SCHEME \"/>I<regular expression>B</\">"
 msgstr "B<WITH-SCHEME \"/>I<regulärer Ausdruck>B</\">"
 
 #. type: Plain text
-#: ipptoolfile.5:384
+#: ipptoolfile.5:385
 msgid "Requires that at least one URI value contains a matching scheme."
 msgstr "Verlangt, dass mindestens ein URI-Wert ein passendes Schema enthält."
 
 #. type: TP
-#: ipptoolfile.5:384
+#: ipptoolfile.5:385
 #, no-wrap
 msgid "B<WITH-VALUE \">I<literal string>B<\">"
 msgstr "B<WITH-VALUE \">I<Zeichenkette>B<\">"
 
 #. type: Plain text
-#: ipptoolfile.5:387
+#: ipptoolfile.5:388
 msgid ""
 "Requires that at least one value of the B<EXPECT> attribute matches the "
 "literal string. Comparisons are case-sensitive."
@@ -12707,31 +12705,31 @@ msgstr ""
 "Zeichenkette passt. Vergleiche berücksichtigen Groß- und Kleinschreibung."
 
 #. type: TP
-#: ipptoolfile.5:387
+#: ipptoolfile.5:388
 #, no-wrap
 msgid "B<WITH-VALUE E<lt>>I<number>"
 msgstr "B<WITH-VALUE E<lt>>I<Zahl>"
 
 #. type: TP
-#: ipptoolfile.5:389
+#: ipptoolfile.5:390
 #, no-wrap
 msgid "B<WITH-VALUE =>I<number>"
 msgstr "B<WITH-VALUE =>I<Zahl>"
 
 #. type: TP
-#: ipptoolfile.5:391
+#: ipptoolfile.5:392
 #, no-wrap
 msgid "B<WITH-VALUE E<gt>>I<number>"
 msgstr "B<WITH-VALUE E<gt>>I<Zahl>"
 
 #. type: TP
-#: ipptoolfile.5:393
+#: ipptoolfile.5:394
 #, no-wrap
 msgid "B<WITH-VALUE >I<number>[I<,...,number>]"
 msgstr "B<WITH-VALUE >I<Zahl>[I<,…,Zahl>]"
 
 #. type: Plain text
-#: ipptoolfile.5:396
+#: ipptoolfile.5:397
 msgid ""
 "Requires that at least one value of the B<EXPECT> attribute matches the "
 "number(s) or numeric comparison. When comparing rangeOfInteger values, the "
@@ -12743,19 +12741,19 @@ msgstr ""
 "obere Grenze der Bereiche."
 
 #. type: TP
-#: ipptoolfile.5:396
+#: ipptoolfile.5:397
 #, no-wrap
 msgid "B<WITH-VALUE \"false\">"
 msgstr "B<WITH-VALUE \"false\">"
 
 #. type: TP
-#: ipptoolfile.5:398
+#: ipptoolfile.5:399
 #, no-wrap
 msgid "B<WITH-VALUE \"true\">"
 msgstr "B<WITH-VALUE \"true\">"
 
 #. type: Plain text
-#: ipptoolfile.5:401
+#: ipptoolfile.5:402
 msgid ""
 "Requires that at least one value of the B<EXPECT> attribute matches the "
 "boolean value given."
@@ -12764,13 +12762,13 @@ msgstr ""
 "übergebenen logischen Wert passt."
 
 #. type: TP
-#: ipptoolfile.5:401
+#: ipptoolfile.5:402
 #, no-wrap
 msgid "B<WITH-VALUE \"/>I<regular expression>B</\">"
 msgstr "B<WITH-VALUE \"/>I<regulärer Ausdruck>B</\">"
 
 #. type: Plain text
-#: ipptoolfile.5:404
+#: ipptoolfile.5:405
 msgid ""
 "Requires that at least one value of the B<EXPECT> attribute matches the "
 "regular expression, which must conform to the POSIX regular expression "
@@ -12781,13 +12779,13 @@ msgstr ""
 "erfüllen. Vergleiche berücksichtigen Groß- und Kleinschreibung."
 
 #. type: TP
-#: ipptoolfile.5:404
+#: ipptoolfile.5:405
 #, no-wrap
 msgid "B<WITH-VALUE-FROM >I<attribute-name>"
 msgstr "B<WITH-VALUE-FROM >I<Attributname>"
 
 #. type: Plain text
-#: ipptoolfile.5:408
+#: ipptoolfile.5:409
 msgid ""
 "Requires that the value(s) of the B<EXPECT> attribute matches the value(s) "
 "in the specified attribute.  For example, \"EXPECT job-sheets WITH-VALUE-"
@@ -12800,13 +12798,13 @@ msgstr ""
 "sheets« als Wert im Attribut »job-sheets-supported« aufgeführt ist."
 
 #. type: SS
-#: ipptoolfile.5:408
+#: ipptoolfile.5:409
 #, no-wrap
 msgid "STATUS PREDICATES"
 msgstr "STATUS-EIGENSCHAFTEN"
 
 #. type: Plain text
-#: ipptoolfile.5:410
+#: ipptoolfile.5:411
 msgid ""
 "The following predicates are understood following the B<STATUS> test "
 "directive:"
@@ -12815,7 +12813,7 @@ msgstr ""
 "verstanden:"
 
 #. type: Plain text
-#: ipptoolfile.5:413
+#: ipptoolfile.5:414
 msgid ""
 "Defines the variable to \"1\" when the B<STATUS> matches. A side-effect of "
 "this predicate is that this B<STATUS> will never fail a test."
@@ -12824,7 +12822,7 @@ msgstr ""
 "Eigenschaft ist, dass dieser B<STATUS> niemals bei einem Test fehlschlägt."
 
 #. type: Plain text
-#: ipptoolfile.5:416
+#: ipptoolfile.5:417
 msgid ""
 "Defines the variable to \"1\" when the B<STATUS> does not match. A side-"
 "effect of this predicate is that this B<STATUS> will never fail a test."
@@ -12834,14 +12832,14 @@ msgstr ""
 "fehlschlägt."
 
 #. type: Plain text
-#: ipptoolfile.5:419
+#: ipptoolfile.5:420
 msgid "Makes the B<STATUS> apply only if the specified variable is defined."
 msgstr ""
 "Führt dazu, dass der B<STATUS> nur angewandt wird, falls die angegebene "
 "Variable definiert ist."
 
 #. type: Plain text
-#: ipptoolfile.5:422
+#: ipptoolfile.5:423
 msgid ""
 "Makes the B<STATUS> apply only if the specified variable is not defined."
 msgstr ""
@@ -12849,13 +12847,13 @@ msgstr ""
 "Variable nicht definiert ist."
 
 #. type: Plain text
-#: ipptoolfile.5:426
+#: ipptoolfile.5:427
 msgid ""
 "Specifies the maximum number of times to repeat. The default value is 1000."
 msgstr "Legt die maximale Anzahl an Wiederholungen fest. Die Vorgabe ist 1000."
 
 #. type: Plain text
-#: ipptoolfile.5:431
+#: ipptoolfile.5:432
 msgid ""
 "Specifies that the current test should be repeated when the response status-"
 "code matches or does not match the value specified by the STATUS directive."
@@ -12865,13 +12863,13 @@ msgstr ""
 "Wert passt."
 
 #. type: SS
-#: ipptoolfile.5:431
+#: ipptoolfile.5:432
 #, no-wrap
 msgid "OPERATION CODES"
 msgstr "VORGANGSCODES"
 
 #. type: Plain text
-#: ipptoolfile.5:434
+#: ipptoolfile.5:435
 msgid ""
 "Operation codes correspond to the hexadecimal numbers (0xHHHH) and names "
 "from RFC 8011 and other IPP extension specifications. Here is a complete "
@@ -12882,7 +12880,7 @@ msgstr ""
 "Liste der von B<ipptool>(8) unterstützten Namen:"
 
 #. type: Plain text
-#: ipptoolfile.5:544
+#: ipptoolfile.5:545
 #, no-wrap
 msgid ""
 "    Acknowledge-Document\n"
@@ -13104,13 +13102,13 @@ msgstr ""
 "    Validate-Job\n"
 
 #. type: SS
-#: ipptoolfile.5:545
+#: ipptoolfile.5:546
 #, no-wrap
 msgid "STATUS CODES"
 msgstr "STATUS-CODES"
 
 #. type: Plain text
-#: ipptoolfile.5:548
+#: ipptoolfile.5:549
 msgid ""
 "Status codes correspond to the hexadecimal numbers (0xHHHH) and names from "
 "RFC 8011 and other IPP extension specifications. Here is a complete list of "
@@ -13121,7 +13119,7 @@ msgstr ""
 "Liste der von B<ipptool>(8) unterstützten Namen:"
 
 #. type: Plain text
-#: ipptoolfile.5:608
+#: ipptoolfile.5:609
 #, no-wrap
 msgid ""
 "    client-error-account-authorization-failed\n"
@@ -13243,13 +13241,13 @@ msgstr ""
 "    successful-ok-too-many-events\n"
 
 #. type: SS
-#: ipptoolfile.5:609
+#: ipptoolfile.5:610
 #, no-wrap
 msgid "TAGS"
 msgstr "MARKIERUNGEN"
 
 #. type: Plain text
-#: ipptoolfile.5:611
+#: ipptoolfile.5:612
 msgid ""
 "Value and group tags correspond to the names from RFC 8011 and other IPP "
 "extension specifications. Here are the group tags:"
@@ -13258,7 +13256,7 @@ msgstr ""
 "anderen IPP-Erweiterungsspezifikationen. Hier sind die Gruppenmarkierungen:"
 
 #. type: Plain text
-#: ipptoolfile.5:622
+#: ipptoolfile.5:623
 #, no-wrap
 msgid ""
 "    document-attributes-tag\n"
@@ -13282,12 +13280,12 @@ msgstr ""
 "    unsupported-attributes-tag\n"
 
 #. type: Plain text
-#: ipptoolfile.5:625
+#: ipptoolfile.5:626
 msgid "Here are the value tags:"
 msgstr "Hier sind die Wertemarkierungen:"
 
 #. type: Plain text
-#: ipptoolfile.5:650
+#: ipptoolfile.5:651
 #, no-wrap
 msgid ""
 "    admin-define\n"
@@ -13339,13 +13337,13 @@ msgstr ""
 "    uriScheme\n"
 
 #. type: SS
-#: ipptoolfile.5:651
+#: ipptoolfile.5:652
 #, no-wrap
 msgid "VARIABLES"
 msgstr "VARIABLEN"
 
 #. type: Plain text
-#: ipptoolfile.5:655
+#: ipptoolfile.5:656
 msgid ""
 "The B<ipptool>(8)  program maintains a list of variables that can be used in "
 "any literal string or attribute value by specifying \"I<$variable-name>\". "
@@ -13359,24 +13357,24 @@ msgstr ""
 "verfügbar:"
 
 #. type: TP
-#: ipptoolfile.5:655
+#: ipptoolfile.5:656
 #, no-wrap
 msgid "B<$$>"
 msgstr "B<$$>"
 
 #. type: Plain text
-#: ipptoolfile.5:658
+#: ipptoolfile.5:659
 msgid "Inserts a single \"$\" character."
 msgstr "Fügt ein einzelnes »$«-Zeichen ein."
 
 #. type: TP
-#: ipptoolfile.5:658
+#: ipptoolfile.5:659
 #, no-wrap
 msgid "B<$ENV[>I<name>B<]>"
 msgstr "B<$ENV[>I<Name>B<]>"
 
 #. type: Plain text
-#: ipptoolfile.5:661
+#: ipptoolfile.5:662
 msgid ""
 "Inserts the value of the named environment variable, or an empty string if "
 "the environment variable is not defined."
@@ -13385,13 +13383,13 @@ msgstr ""
 "falls die Umgebungsvariable nicht definiert ist, ein."
 
 #. type: TP
-#: ipptoolfile.5:661
+#: ipptoolfile.5:662
 #, no-wrap
 msgid "B<$date-current>"
 msgstr "B<$date-current>"
 
 #. type: Plain text
-#: ipptoolfile.5:664
+#: ipptoolfile.5:665
 msgid ""
 "Inserts the current date and time using the ISO-8601 format (\"yyyy-mm-ddThh:"
 "mm:ssZ\")."
@@ -13400,13 +13398,13 @@ msgstr ""
 "ddThh:mm:ssZ«) ein."
 
 #. type: TP
-#: ipptoolfile.5:664
+#: ipptoolfile.5:665
 #, no-wrap
 msgid "B<$date-start>"
 msgstr "B<$date-start>"
 
 #. type: Plain text
-#: ipptoolfile.5:667
+#: ipptoolfile.5:668
 msgid ""
 "Inserts the starting date and time using the ISO-8601 format (\"yyyy-mm-"
 "ddThh:mm:ssZ\")."
@@ -13415,26 +13413,26 @@ msgstr ""
 "ssZ«) ein."
 
 #. type: TP
-#: ipptoolfile.5:667
+#: ipptoolfile.5:668
 #, no-wrap
 msgid "B<$filename>"
 msgstr "B<$filename>"
 
 #. type: Plain text
-#: ipptoolfile.5:672
+#: ipptoolfile.5:673
 msgid "Inserts the filename provided to B<ipptool>(8)  with the I<-f> option."
 msgstr ""
 "Fügt den mit der Option I<-f> an B<ipptool>(8) bereitgestellten Dateinamen "
 "ein."
 
 #. type: TP
-#: ipptoolfile.5:672
+#: ipptoolfile.5:673
 #, no-wrap
 msgid "B<$filetype>"
 msgstr "B<$filetype>"
 
 #. type: Plain text
-#: ipptoolfile.5:677
+#: ipptoolfile.5:678
 msgid ""
 "Inserts the MIME media type for the filename provided to B<ipptool>(8)  with "
 "the I<-f> option."
@@ -13443,24 +13441,24 @@ msgstr ""
 "bereitgestellten Dateinamen ein."
 
 #. type: TP
-#: ipptoolfile.5:677
+#: ipptoolfile.5:678
 #, no-wrap
 msgid "B<$hostname>"
 msgstr "B<$hostname>"
 
 #. type: Plain text
-#: ipptoolfile.5:681
+#: ipptoolfile.5:682
 msgid "Inserts the hostname from the URI provided to B<ipptool>(8)."
 msgstr "Fügt den Rechnernamen aus der B<ipptool>(8) bereitgestellten URI ein."
 
 #. type: TP
-#: ipptoolfile.5:681
+#: ipptoolfile.5:682
 #, no-wrap
 msgid "B<$job-id>"
 msgstr "B<$job-id>"
 
 #. type: Plain text
-#: ipptoolfile.5:684
+#: ipptoolfile.5:685
 msgid ""
 "Inserts the last \"job-id\" attribute value returned in a test response or 0 "
 "if no \"job-id\" attribute has been seen."
@@ -13469,13 +13467,13 @@ msgstr ""
 "Attributwert oder 0, falls kein Attribut »job-id« gesehen wurde, ein."
 
 #. type: TP
-#: ipptoolfile.5:684
+#: ipptoolfile.5:685
 #, no-wrap
 msgid "B<$job-uri>"
 msgstr "B<$job-uri>"
 
 #. type: Plain text
-#: ipptoolfile.5:687
+#: ipptoolfile.5:688
 msgid ""
 "Inserts the last \"job-uri\" attribute value returned in a test response or "
 "an empty string if no \"job-uri\" attribute has been seen."
@@ -13485,13 +13483,13 @@ msgstr ""
 "gesehen wurde, ein."
 
 #. type: TP
-#: ipptoolfile.5:687
+#: ipptoolfile.5:688
 #, no-wrap
 msgid "B<$notify-subscription-id>"
 msgstr "B<$notify-subscription-id>"
 
 #. type: Plain text
-#: ipptoolfile.5:690
+#: ipptoolfile.5:691
 msgid ""
 "Inserts the last \"notify-subscription-id\" attribute value returned in a "
 "test response or 0 if no \"notify-subscription-id\" attribute has been seen."
@@ -13501,83 +13499,83 @@ msgstr ""
 "gesehen wurde, ein."
 
 #. type: TP
-#: ipptoolfile.5:690
+#: ipptoolfile.5:691
 #, no-wrap
 msgid "B<$port>"
 msgstr "B<$port>"
 
 #. type: Plain text
-#: ipptoolfile.5:694
+#: ipptoolfile.5:695
 msgid "Inserts the port number from the URI provided to B<ipptool>(8)."
 msgstr "Fügt die Portnummer aus der an B<ipptool>(8) übergebenen URI ein."
 
 #. type: TP
-#: ipptoolfile.5:694
+#: ipptoolfile.5:695
 #, no-wrap
 msgid "B<$resource>"
 msgstr "B<$resource>"
 
 #. type: Plain text
-#: ipptoolfile.5:698
+#: ipptoolfile.5:699
 msgid "Inserts the resource path from the URI provided to B<ipptool>(8)."
 msgstr "Fügt den Ressourcenpfad aus der an B<ipptool>(8) übergebenen URI ein."
 
 #. type: TP
-#: ipptoolfile.5:698
+#: ipptoolfile.5:699
 #, no-wrap
 msgid "B<$scheme>"
 msgstr "B<$scheme>"
 
 #. type: Plain text
-#: ipptoolfile.5:702
+#: ipptoolfile.5:703
 msgid "Inserts the scheme from the URI provided to B<ipptool>(8)."
 msgstr "Fügt das Schema aus der B<ipptool>(8) übergebenen URI ein."
 
 #. type: TP
-#: ipptoolfile.5:702
+#: ipptoolfile.5:703
 #, no-wrap
 msgid "B<$uri>"
 msgstr "B<$uri>"
 
 #. type: Plain text
-#: ipptoolfile.5:706
+#: ipptoolfile.5:707
 msgid "Inserts the URI provided to B<ipptool>(8)."
 msgstr "Fügt die an B<ipptool>(8) übergebene URI ein."
 
 #. type: TP
-#: ipptoolfile.5:706
+#: ipptoolfile.5:707
 #, no-wrap
 msgid "B<$uriuser>"
 msgstr "B<$uriuser>"
 
 #. type: Plain text
-#: ipptoolfile.5:711
+#: ipptoolfile.5:712
 msgid "Inserts the username from the URI provided to B<ipptool>(8), if any."
 msgstr ""
 "Fügt den Benutzernamen aus der B<ipptool>(8) übergebenen URI ein, falls "
 "vorhanden."
 
 #. type: TP
-#: ipptoolfile.5:711
+#: ipptoolfile.5:712
 #, no-wrap
 msgid "B<$user>"
 msgstr "B<$user>"
 
 #. type: Plain text
-#: ipptoolfile.5:714
+#: ipptoolfile.5:715
 msgid "Inserts the current user's login name."
 msgstr "Fügt den Anmeldenamen des aktuellen Benutzers ein."
 
 #. type: Plain text
-#: ipptoolfile.5:719
+#: ipptoolfile.5:720
 msgid ""
 "B<ipptool>(1), IANA IPP Registry (https://www.iana.org/assignments/ipp-"
 "registrations), PWG Internet Printing Protocol Workgroup (https://www.pwg."
 "org/ipp), RFC 8011 (https://datatracker.ietf.org/doc/html/rfc8011)"
 msgstr ""
 "B<ipptool>(1), IANA IPP Registry (https://www.iana.org/assignments/ipp-"
-"registrations), PWG Internet Printing Protocol Workgroup (https://www.pwg.org/"
-"ipp), RFC 8011 (https://datatracker.ietf.org/doc/html/rfc8011)"
+"registrations), PWG Internet Printing Protocol Workgroup (https://www.pwg."
+"org/ipp), RFC 8011 (https://datatracker.ietf.org/doc/html/rfc8011)"
 
 #. type: TH
 #: lp.1:11
@@ -13599,11 +13597,11 @@ msgid ""
 "[ B<-t> I<title> ] [ B<-H> I<handling> ] [ B<-P> I<page-list> ] [ B<--> ] "
 "[ I<file(s)> ]"
 msgstr ""
-"B<lp> [ B<-h >I<Rechnername>[B<:>I<Port>] ] [ B<-E> ] [ B<-U> I<Benutzername> ] [ B<-c> ] [ B<-d >I<Ziel>[B</"
-">I<Instanz>] ] [ B<-m> ] [ B<-n> I<Anz-"
-"Kopien> ] [ B<-o >I<Option>[B<=>I<Wert>] ] [ B<-q> I<Priorität> ] [ B<-s> ] "
-"[ B<-t> I<Titel> ] [ B<-H> I<Handhabung> ] [ B<-P> I<Seitenliste> ] [ B<--"
-"> ] [ I<Datei(en)> ]"
+"B<lp> [ B<-h >I<Rechnername>[B<:>I<Port>] ] [ B<-E> ] [ B<-U> "
+"I<Benutzername> ] [ B<-c> ] [ B<-d >I<Ziel>[B</>I<Instanz>] ] [ B<-m> ] [ B<-"
+"n> I<Anz-Kopien> ] [ B<-o >I<Option>[B<=>I<Wert>] ] [ B<-q> I<Priorität> ] "
+"[ B<-s> ] [ B<-t> I<Titel> ] [ B<-H> I<Handhabung> ] [ B<-P> "
+"I<Seitenliste> ] [ B<--> ] [ I<Datei(en)> ]"
 
 #. type: Plain text
 #: lp.1:85
@@ -13613,10 +13611,10 @@ msgid ""
 ">I<option>[B<=>I<value>] ] [ B<-q> I<priority> ] [ B<-t> I<title> ] [ B<-H> "
 "I<handling> ] [ B<-P> I<page-list> ]"
 msgstr ""
-"B<lp> [ B<-h >I<Rechnername>[B<:>I<Port>] ] [ B<-E> ] [ B<-U> I<Benutzername> ] [ B<-c> ] "
-"[ B<-i> I<Auftrags-ID> ] [ B<-n> I<Anz-"
-"Kopien> ] [ B<-o >I<Option>[B<=>I<Wert>] ] [ B<-q> I<Priorität> ] [ B<-t> "
-"I<Titel> ] [ B<-H> I<Handhabung> ] [ B<-P> I<Seitenliste> ]"
+"B<lp> [ B<-h >I<Rechnername>[B<:>I<Port>] ] [ B<-E> ] [ B<-U> "
+"I<Benutzername> ] [ B<-c> ] [ B<-i> I<Auftrags-ID> ] [ B<-n> I<Anz-Kopien> ] "
+"[ B<-o >I<Option>[B<=>I<Wert>] ] [ B<-q> I<Priorität> ] [ B<-t> I<Titel> ] "
+"[ B<-H> I<Handhabung> ] [ B<-P> I<Seitenliste> ]"
 
 #. type: Plain text
 #: lp.1:88
@@ -15653,10 +15651,11 @@ msgid ""
 "o> [ I<destination(s)> ] ] [ B<-p> [ I<printer(s)> ] ] [ B<-r> ] [ B<-R> ] "
 "[ B<-s> ] [ B<-t> ] [ B<-u> [ I<user(s)> ] ] [ B<-v> [ I<printer(s)> ] ]"
 msgstr ""
-"B<lpstat> [ B<-h >I<Rechnername>[B<:>I<Port>] ] [ B<-E> ] [ B<-H> ] [ B<-U> I<Benutzername> ] [ B<-l> ] [ B<-W> I<welche-Druckaufträge> ] "
-"[ B<-a> [ I<Ziel(e)> ] ] [ B<-c> [ I<Klasse(n)> ] ] [ B<-d> ] [ B<-e> ] [ B<-"
-"o> [ I<Ziel(e)> ] ] [ B<-p> [ I<Drucker> ] ] [ B<-r> ] [ B<-R> ] [ B<-s> ] "
-"[ B<-t> ] [ B<-u> [ I<Benutzer> ] ] [ B<-v> [ I<Drucker> ] ]"
+"B<lpstat> [ B<-h >I<Rechnername>[B<:>I<Port>] ] [ B<-E> ] [ B<-H> ] [ B<-U> "
+"I<Benutzername> ] [ B<-l> ] [ B<-W> I<welche-Druckaufträge> ] [ B<-a> "
+"[ I<Ziel(e)> ] ] [ B<-c> [ I<Klasse(n)> ] ] [ B<-d> ] [ B<-e> ] [ B<-o> "
+"[ I<Ziel(e)> ] ] [ B<-p> [ I<Drucker> ] ] [ B<-r> ] [ B<-R> ] [ B<-s> ] [ B<-"
+"t> ] [ B<-u> [ I<Benutzer> ] ] [ B<-v> [ I<Drucker> ] ]"
 
 #. type: Plain text
 #: lpstat.1:69
@@ -15702,20 +15701,20 @@ msgstr "Zeigt die Rangordnung der Druckaufträge."
 msgid "B<-W >I<which-jobs>"
 msgstr "B<-W >I<welche-Aufträge>"
 
+# FIXME Missing closing quote after "all"
 #. type: Plain text
 #: lpstat.1:87
 msgid ""
-"Specifies which jobs to show, \"completed\" or \"not-completed\" (the "
-"default).  This option I<must> appear before the I<-o> option and/or any "
-"printer names, otherwise the default (\"not-completed\") value will be used "
-"in the request to the scheduler."
+"Specifies which jobs to show, \"all, \"successful\", \"completed\" or \"not-"
+"completed\" (the default).  This option I<must> appear before the I<-o> "
+"option and/or any printer names, otherwise the default (\"not-completed\") "
+"value will be used in the request to the scheduler."
 msgstr ""
-"Legt fest, welche Druckaufträge angezeigt werden sollen, die "
-"»completed« (abgeschlossenen) oder (standardmäßig) die »not-"
-"completed« (nicht-abgeschlossenen). Diese Option I<muss> vor der Option I<-"
-"o> und/oder allen Druckernamen aufgeführt werden, da ansonsten der "
-"Vorgabewert (»not-completed«) für alle Anfragen am Auftragsplaner "
-"(Scheduler) verwandt wird."
+"Legt fest, welche Druckaufträge angezeigt werden sollen, »all« (alle), »successful« (erfolgreiche), »completed« "
+"(abgeschlossene) oder (standardmäßig) »not-completed« (nicht-"
+"abgeschlossene). Diese Option I<muss> vor der Option I<-o> und/oder allen "
+"Druckernamen aufgeführt werden, da ansonsten der Vorgabewert (»not-"
+"completed«) für alle Anfragen am Auftragsplaner (Scheduler) verwandt wird."
 
 #. type: TP
 #: lpstat.1:87
@@ -16077,7 +16076,7 @@ msgstr ""
 "sind relativ zu dem CUPS-Filterverzeichnis."
 
 #. type: Plain text
-#: mime.convs.5:40 mime.types.5:90
+#: mime.convs.5:40 mime.types.5:93
 msgid "I</etc/cups> - Typical CUPS configuration directory."
 msgstr "I</etc/cups> - Typisches CUPS-Konfigurationsverzeichnis."
 
@@ -16249,37 +16248,39 @@ msgid "B<ascii(>I<offset>B<,>I<length>B<)>"
 msgstr "B<ascii(>I<Versatz>B<,>I<Länge>B<)>"
 
 #. type: Plain text
-#: mime.types.5:48
+#: mime.types.5:49
 msgid ""
 "True if the I<length> bytes starting at I<offset> are valid printable ASCII "
-"(CR, NL, TAB, BS, 32-126)."
+"(CR, NL, TAB, BS, 32-126).  I<length> cannot exceed 8192 bytes."
 msgstr ""
 "Wahr, falls die I<Länge> Bytes beginnend an I<Versatz> gültige druckbare "
-"ASCII-Zeichen sind (CR, NL, TAB, BS, 32-126)"
+"ASCII-Zeichen sind (CR, NL, TAB, BS, 32-126). I<Länge> darf 8192 Byte nicht "
+"überschreiten."
 
 #. type: TP
-#: mime.types.5:48
+#: mime.types.5:49
 #, no-wrap
 msgid "B<printable(>I<offset>B<,>I<length>B<)>"
 msgstr "B<printable(>I<Versatz>B<,>I<Länge>B<)>"
 
 #. type: Plain text
-#: mime.types.5:51
+#: mime.types.5:53
 msgid ""
 "True if the I<length> bytes starting at I<offset> are printable 8-bit chars "
-"(CR, NL, TAB, BS, 32-126, 128-254)."
+"(CR, NL, TAB, BS, 32-126, 128-254).  I<length> cannot exceed 8192 bytes."
 msgstr ""
 "Wahr, falls die I<Länge> Bytes beginnend an I<Versatz> gültige druckbare 8-"
-"Bit-Zeichen sind (CR, NL, TAB, BS, 32-126, 128-254)."
+"Bit-Zeichen sind (CR, NL, TAB, BS, 32-126, 128-254). I<Länge> darf 8192 Byte "
+"nicht überschreiten."
 
 #. type: TP
-#: mime.types.5:51
+#: mime.types.5:53
 #, no-wrap
 msgid "B<priority(>I<number>B<)>"
 msgstr "B<priority(>I<Zahl>B<)>"
 
 #. type: Plain text
-#: mime.types.5:56
+#: mime.types.5:58
 msgid ""
 "Specifies the relative priority of this MIME media type.  The default "
 "priority is 100.  Larger values have higher priority while smaller values "
@@ -16290,26 +16291,26 @@ msgstr ""
 "niedrigere Priorität haben."
 
 #. type: TP
-#: mime.types.5:56
+#: mime.types.5:58
 #, no-wrap
 msgid "B<string(>I<offset>B<,\">I<string>B<\")>"
 msgstr "B<string(>I<Versatz>B<,\">I<Zeichenkette>B<\")>"
 
 #. type: Plain text
-#: mime.types.5:59
+#: mime.types.5:61
 msgid "True if the bytes starting at I<offset> are identical to I<string>."
 msgstr ""
 "Wahr, falls die bei I<Versatz> beginnenden Bytes identisch zur "
 "I<Zeichenkette> sind."
 
 #. type: TP
-#: mime.types.5:59
+#: mime.types.5:61
 #, no-wrap
 msgid "B<istring(>I<offset>B<,\">I<string>B<\")>"
 msgstr "B<istring(>I<Versatz>B<,\">I<Zeichenkette>B<\")>"
 
 #. type: Plain text
-#: mime.types.5:62
+#: mime.types.5:64
 msgid ""
 "True if the bytes starting at I<offset> match I<string> without respect to "
 "case."
@@ -16318,24 +16319,24 @@ msgstr ""
 "unabhängig von der Groß-/Kleinschreibung passen."
 
 #. type: TP
-#: mime.types.5:62
+#: mime.types.5:64
 #, no-wrap
 msgid "B<char(>I<offset>B<,>I<value>B<)>"
 msgstr "B<char(>I<Versatz>B<,>I<Wert>B<)>"
 
 #. type: Plain text
-#: mime.types.5:65
+#: mime.types.5:67
 msgid "True if the byte at I<offset> is identical to I<value>."
 msgstr "Wahr, falls das Byte bei I<Versatz> identisch zu I<Wert> ist."
 
 #. type: TP
-#: mime.types.5:65
+#: mime.types.5:67
 #, no-wrap
 msgid "B<short(>I<offset>B<,>I<value>B<)>"
 msgstr "B<short(>I<Versatz>B<,>I<Wert>B<)>"
 
 #. type: Plain text
-#: mime.types.5:68
+#: mime.types.5:70
 msgid ""
 "True if the 16-bit big-endian integer at I<offset> is identical to I<value>."
 msgstr ""
@@ -16343,13 +16344,13 @@ msgstr ""
 "I<Wert> ist."
 
 #. type: TP
-#: mime.types.5:68
+#: mime.types.5:70
 #, no-wrap
 msgid "B<int(>I<offset>B<,>I<value>B<)>"
 msgstr "B<int(>I<Versatz>B<,>I<Wert>B<)>"
 
 #. type: Plain text
-#: mime.types.5:71
+#: mime.types.5:73
 msgid ""
 "True if the 32-bit big-endian integer at I<offset> is identical to I<value>."
 msgstr ""
@@ -16357,39 +16358,39 @@ msgstr ""
 "I<Wert> ist."
 
 #. type: TP
-#: mime.types.5:71
+#: mime.types.5:73
 #, no-wrap
 msgid "B<locale(\">I<string>B<\")>"
 msgstr "B<locale(\">I<Zeichenkette>B<\")>"
 
 #. type: Plain text
-#: mime.types.5:74
+#: mime.types.5:76
 msgid "True if current locale matches I<string>."
 msgstr "Wahr, wenn die aktuelle Standorteinstellung zu I<Zeichenkette> passt."
 
 #. type: TP
-#: mime.types.5:74
+#: mime.types.5:76
 #, no-wrap
-msgid "B<contains(>I<offset>B<,>I<range>B<,\">I<string>B<\")>"
-msgstr "B<contains(>I<Versatz>B<,>I<Bereich>B<,\">I<Zeichenkette>B<\")>"
+msgid "B<contains(>I<offset>B<,>I<length>B<,\">I<string>B<\")>"
+msgstr "B<contains(>I<Versatz>B<,>I<Länge>B<,\">I<Zeichenkette>B<\")>"
 
 #. type: Plain text
-#: mime.types.5:77
+#: mime.types.5:80
 msgid ""
-"True if the bytes starting at I<offset> for I<range> bytes contains "
-"I<string>."
+"True if the bytes starting at I<offset> for I<length> bytes contains "
+"I<string>.  I<length> cannot exceed 8192 bytes."
 msgstr ""
-"Wahr, falls die bei I<Versatz> beginnenden Bytes für den I<Bereich> "
-"I<Zeichenkette> enthält."
+"Wahr, falls die bei I<Versatz> beginnenden Bytes für die I<Länge> "
+"I<Zeichenkette> enthält. I<Länge> darf 8192 Byte nicht überschreiten."
 
 #. type: SS
-#: mime.types.5:77
+#: mime.types.5:80
 #, no-wrap
 msgid "STRING CONSTANTS"
 msgstr "ZEICHENKETTENKONSTANTEN"
 
 #. type: Plain text
-#: mime.types.5:79
+#: mime.types.5:82
 msgid ""
 "String constants can be specified inside quotes (\"\") for strings "
 "containing whitespace and angle brackets (E<lt>E<gt>) for hexadecimal "
@@ -16400,13 +16401,13 @@ msgstr ""
 "innerhalb von Anführungszeichen (\"\") angegeben werden."
 
 #. type: SS
-#: mime.types.5:79
+#: mime.types.5:82
 #, no-wrap
 msgid "TYPE MATCHING AND PRIORITY"
 msgstr "TYP-ÜBEREINSTIMMUNG UND PRIORITÄT"
 
 #. type: Plain text
-#: mime.types.5:83
+#: mime.types.5:86
 msgid ""
 "When CUPS needs to determine the MIME media type of a given file, it checks "
 "every MIME media type defined in the I<.types> files.  When two or more "
@@ -16424,7 +16425,7 @@ msgstr ""
 "erste ausgewählt."
 
 #. type: Plain text
-#: mime.types.5:88
+#: mime.types.5:91
 msgid ""
 "For example, if two types \"text/bar\" and \"text/foo\" are defined as "
 "matching the extension \"doc\", normally the type \"text/bar\" will be "
@@ -16439,7 +16440,7 @@ msgstr ""
 "wird stattdessen »text/foo« ausgewählt."
 
 #. type: Plain text
-#: mime.types.5:92
+#: mime.types.5:95
 msgid ""
 "Define two MIME media types for raster data, with one being a subset with "
 "higher priority:"
@@ -16448,21 +16449,21 @@ msgstr ""
 "Teilmenge mit höherer Priorität ist:"
 
 #. type: Plain text
-#: mime.types.5:97
-#, no-wrap
-msgid ""
-"    application/vnd.cups-raster  string(0,\"RaSt\") string(0,\"tSaR\") \\e\n"
-"                                  string(0,\"RaS2\") string(0,\"2SaR\") \\e\n"
-"                                  string(0,\"RaS3\") string(0,\"3SaR\")\n"
-msgstr ""
-"    application/vnd.cups-raster  string(0,\"RaSt\") string(0,\"tSaR\") \\e\n"
-"                                  string(0,\"RaS2\") string(0,\"2SaR\") \\e\n"
-"                                  string(0,\"RaS3\") string(0,\"3SaR\")\n"
-
-#. type: Plain text
 #: mime.types.5:100
 #, no-wrap
 msgid ""
+"    application/vnd.cups-raster  string(0,\"RaSt\") string(0,\"tSaR\") \\e\n"
+"                                  string(0,\"RaS2\") string(0,\"2SaR\") \\e\n"
+"                                  string(0,\"RaS3\") string(0,\"3SaR\")\n"
+msgstr ""
+"    application/vnd.cups-raster  string(0,\"RaSt\") string(0,\"tSaR\") \\e\n"
+"                                  string(0,\"RaS2\") string(0,\"2SaR\") \\e\n"
+"                                  string(0,\"RaS3\") string(0,\"3SaR\")\n"
+
+#. type: Plain text
+#: mime.types.5:103
+#, no-wrap
+msgid ""
 "    image/pwg-raster              string(0,\"RaS2\") + \\e\n"
 "                                  string(4,PwgRasterE<lt>00E<gt>) priority(150)\n"
 msgstr ""
@@ -16470,7 +16471,7 @@ msgstr ""
 "                                  string(4,PwgRasterE<lt>00E<gt>) priority(150)\n"
 
 #. type: Plain text
-#: mime.types.5:108
+#: mime.types.5:111
 msgid ""
 "B<cups-files.conf>(5), B<cupsd.conf>(5), B<cupsd>(8), B<cupsfilter>(8), "
 "B<mime.convs>(5), CUPS Online Help (http://localhost:631/help)"
@@ -17483,6 +17484,9 @@ msgstr ""
 "B<classes.conf>(5), B<cups-files.conf>(5), B<cupsd>(8), B<cupsd.conf>(5), "
 "B<mime.convs>(5), B<mime.types>(5), B<printers.conf>(5), CUPS-Online-Hilfe "
 "(http://localhost:631/help)"
+
+#~ msgid "Copyright \\[co] 2021-2023 by OpenPrinting."
+#~ msgstr "Copyright \\[co] 2021-2023 by OpenPrinting."
 
 #, no-wrap
 #~ msgid "26 April 2019"

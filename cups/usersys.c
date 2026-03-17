@@ -1,7 +1,7 @@
 /*
  * User, system, and password routines for CUPS.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2025 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2006 by Easy Software Products.
  *
@@ -548,7 +548,7 @@ cupsSetUserAgent(const char *user_agent)/* I - User-Agent string or @code NULL@ 
 					/* Thread globals */
 #ifdef _WIN32
   SYSTEM_INFO		sysinfo;	/* System information */
-  OSVERSIONINFOA	version;	/* OS version info */
+  OSVERSIONINFOW	version;	/* OS version info */
   const char		*machine;	/* Hardware/machine name */
 #elif defined(__APPLE__)
   struct utsname	name;		/* uname info */
@@ -586,6 +586,7 @@ cupsSetUserAgent(const char *user_agent)/* I - User-Agent string or @code NULL@ 
 	  strlcpy(cg->user_agent, CUPS_MINIMAL " IPP/2.1", sizeof(cg->user_agent));
 	  break;
     }
+    return;
   }
 
 #ifdef _WIN32
@@ -593,8 +594,22 @@ cupsSetUserAgent(const char *user_agent)/* I - User-Agent string or @code NULL@ 
   * Gather Windows version information for the User-Agent string...
   */
 
-  version.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-  GetVersionExA(&version);
+  typedef NTSTATUS(WINAPI * RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
+
+  memset(&version, 0, sizeof(version));
+  version.dwOSVersionInfoSize = sizeof(version);
+
+  /* RtlGetVersion gets the current native version of Windows, even when running in compatibility mode */
+  RtlGetVersionPtr RtlGetVersionInternal = (RtlGetVersionPtr)GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion");
+  if (RtlGetVersionInternal)
+  {
+    RtlGetVersionInternal((PRTL_OSVERSIONINFOW)&version);
+  }
+  else
+  {
+    /* Should not happen, but just in case, fallback to deprecated GetVersionExW */
+    GetVersionExW(&version);
+  }
   GetNativeSystemInfo(&sysinfo);
 
   switch (sysinfo.wProcessorArchitecture)
@@ -621,9 +636,9 @@ cupsSetUserAgent(const char *user_agent)/* I - User-Agent string or @code NULL@ 
   }
 
   if (cg->uatokens == _CUPS_UATOKENS_OS)
-    snprintf(cg->user_agent, sizeof(cg->user_agent), CUPS_MINIMAL " (Windows %d.%d) IPP/2.0", version.dwMajorVersion, version.dwMinorVersion);
+    snprintf(cg->user_agent, sizeof(cg->user_agent), CUPS_MINIMAL " (Windows %lu.%lu) IPP/2.0", version.dwMajorVersion, version.dwMinorVersion);
   else
-    snprintf(cg->user_agent, sizeof(cg->user_agent), CUPS_MINIMAL " (Windows %d.%d; %s) IPP/2.0", version.dwMajorVersion, version.dwMinorVersion, machine);
+    snprintf(cg->user_agent, sizeof(cg->user_agent), CUPS_MINIMAL " (Windows %lu.%lu; %s) IPP/2.0", version.dwMajorVersion, version.dwMinorVersion, machine);
 
 #elif defined(__APPLE__)
  /*
@@ -1593,6 +1608,8 @@ cups_set_ssl_options(
       min_version = _HTTP_TLS_1_3;
     else if (!_cups_strcasecmp(start, "None"))
       options = _HTTP_TLS_NONE;
+    else if (!_cups_strcasecmp(start, "NoSystem"))
+      options |= _HTTP_TLS_NO_SYSTEM;
   }
 
   cc->ssl_options     = options;

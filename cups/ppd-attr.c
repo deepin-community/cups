@@ -1,6 +1,7 @@
 /*
  * PPD model-specific attribute routines for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright 2007-2015 by Apple Inc.
  * Copyright 1997-2006 by Easy Software Products.
  *
@@ -170,10 +171,12 @@ _ppdNormalizeMakeAndModel(
     if ((bufptr = strrchr(buffer, ')')) != NULL)
       *bufptr = '\0';
   }
-  else if (!_cups_strncasecmp(make_and_model, "XPrint", 6))
+  else if (!_cups_strncasecmp(make_and_model, "XPrint ", 7))
   {
    /*
     * Xerox XPrint...
+    * Note: We check for the space after XPrint to ensure we do not display
+    * Xerox for Xprinter devices, which are NOT by Xerox.
     */
 
     snprintf(buffer, bufsize, "Xerox %s", make_and_model);

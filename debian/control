@@ -5,10 +5,11 @@ Uploaders:
  Thorsten Alteholz <debian@alteholz.de>,
 Section: net
 Priority: optional
-Build-Depends:
+Build-Depends: dpkg-dev (>= 1.22.5),
  autoconf,
  automake,
  debhelper-compat (= 13),
+ debhelper (>= 13.11.6),
  dh-strip-nondeterminism,
  libavahi-client-dev,
  libavahi-common-dev,
@@ -25,18 +26,21 @@ Build-Depends:
  po-debconf,
  po4a,
  zlib1g-dev,
-Build-Depends-Arch:
+Build-Depends-Arch: dpkg-dev (>= 1.22.5),
  dh-apparmor,
 # libgmp-dev is not GPL-2 compatible before it's 6 release, which makes it also GPL-2+
 Build-Conflicts:
  libgmp-dev (<< 2:6),
-Standards-Version: 4.6.0
+Standards-Version: 4.6.2
 Vcs-Browser: https://salsa.debian.org/printing-team/cups
 Vcs-Git: https://salsa.debian.org/printing-team/cups.git
 Homepage: https://github.com/OpenPrinting/cups/
 Rules-Requires-Root: no
 
-Package: libcups2
+Package: libcups2t64
+Provides: ${t64:Provides}
+Replaces: libcups2
+Breaks: libcups2 (<< ${source:Version})
 Architecture: any
 Multi-Arch: same
 Section: libs
@@ -68,7 +72,7 @@ Depends:
  cups-server-common (>= ${source:Version}),
  debconf | debconf-2.0,
  ghostscript,
- libcups2 (= ${binary:Version}),
+ libcups2t64 (= ${binary:Version}),
  poppler-utils,
  procps,
  ${misc:Depends},
@@ -131,7 +135,7 @@ Multi-Arch: foreign
 Depends:
  adduser,
  cups-common (>= ${source:Version}),
- libcups2 (= ${binary:Version}),
+ libcups2t64 (= ${binary:Version}),
  ${misc:Depends},
  ${shlibs:Depends},
 Suggests:
@@ -168,7 +172,7 @@ Multi-Arch: foreign
 Depends:
  cups-daemon (>= ${binary:Version}),
  cups-filters-core-drivers,
- libcups2 (= ${binary:Version}),
+ libcups2t64 (= ${binary:Version}),
  ${misc:Depends},
  ${shlibs:Depends},
 Recommends:
@@ -196,7 +200,7 @@ Pre-Depends:
 Depends:
  adduser,
  bc,
- libcups2 (= ${binary:Version}),
+ libcups2t64 (= ${binary:Version}),
  lsb-base,
  procps,
  ssl-cert,
@@ -238,7 +242,7 @@ Package: cups-ipp-utils
 Architecture: any
 Multi-Arch: foreign
 Depends:
- libcups2 (= ${binary:Version}),
+ libcups2t64 (= ${binary:Version}),
  ${misc:Depends},
  ${shlibs:Depends},
 Recommends:
@@ -291,7 +295,7 @@ Multi-Arch: same
 Section: libdevel
 Depends:
  dpkg-dev,
- libcups2 (= ${binary:Version}),
+ libcups2t64 (= ${binary:Version}),
  libcupsimage2-dev (= ${binary:Version}),
  ${misc:Depends},
  ${shlibs:Depends},
@@ -306,12 +310,15 @@ Description: Common UNIX Printing System(tm) - Development files CUPS library
  with cups from different programming languages (Perl, Java, and
  PHP).
 
-Package: libcupsimage2
+Package: libcupsimage2t64
+Provides: ${t64:Provides}
+Replaces: libcupsimage2
+Breaks: libcupsimage2 (<< ${source:Version})
 Architecture: any
 Multi-Arch: same
 Section: libs
 Depends:
- libcups2 (= ${binary:Version}),
+ libcups2t64 (= ${binary:Version}),
  ${misc:Depends},
  ${shlibs:Depends},
 Recommends:
@@ -333,7 +340,7 @@ Multi-Arch: same
 Section: libdevel
 Depends:
  libcups2-dev (= ${binary:Version}),
- libcupsimage2 (= ${binary:Version}),
+ libcupsimage2t64 (= ${binary:Version}),
  libjpeg-dev,
  libpng-dev,
  libtiff-dev,

@@ -1,7 +1,7 @@
 /*
  * Configuration file definitions for the CUPS scheduler.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2018 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -176,6 +176,8 @@ VAR gid_t		LogFileGroup		VALUE(0);
 					/* Group ID for log files */
 VAR cupsd_loglevel_t	LogLevel		VALUE(CUPSD_LOG_WARN);
 					/* Error log level */
+VAR int			StripUserDomain		VALUE(FALSE);
+					/* Strip domain in local username? */
 VAR cupsd_time_t	LogTimeFormat		VALUE(CUPSD_TIME_STANDARD);
 					/* Log file time format */
 VAR cups_file_t		*LogStderr		VALUE(NULL);

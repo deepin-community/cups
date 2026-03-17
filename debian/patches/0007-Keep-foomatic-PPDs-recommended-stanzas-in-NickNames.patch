@@ -9,7 +9,7 @@ Forwarded: yes
  1 file changed, 10 deletions(-)
 
 diff --git a/scheduler/cups-driverd.cxx b/scheduler/cups-driverd.cxx
-index 66c95cb..41f207e 100644
+index 1154fbe..c01f374 100644
 --- a/scheduler/cups-driverd.cxx
 +++ b/scheduler/cups-driverd.cxx
 @@ -241,7 +241,6 @@ add_ppd(const char *filename,		/* I - PPD filename */

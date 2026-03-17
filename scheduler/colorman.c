@@ -1,7 +1,7 @@
 /*
  * Color management routines for the CUPS scheduler.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2014 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -1014,7 +1014,7 @@ colord_create_profile(
   DBusError	error;			/* D-Bus error */
   char		*idstr;			/* Profile ID string */
   size_t	idstrlen;		/* Profile ID allocated length */
-  const char	*profile_path;		/* Device object path */
+  char		*profile_path;		/* Device object path */
   char		format_str[1024];	/* Qualifier format as a string */
 
 
@@ -1080,7 +1080,7 @@ colord_create_profile(
 
   dbus_message_iter_get_basic(&args, &profile_path);
   cupsdLogMessage(CUPSD_LOG_DEBUG, "Created profile \"%s\".", profile_path);
-  cupsArrayAdd(profiles, strdup(profile_path));
+  cupsArrayAdd(profiles, profile_path);
 
 out:
 

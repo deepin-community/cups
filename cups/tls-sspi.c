@@ -2,7 +2,7 @@
  * TLS support for CUPS on Windows using the Security Support Provider
  * Interface (SSPI).
  *
- * Copyright © 2020-2022 by OpenPrinting.
+ * Copyright © 2020-2023 by OpenPrinting.
  * Copyright © 2010-2018 by Apple Inc.
  *
  * Licensed under Apache License v2.0.  See the file "LICENSE" for more
@@ -324,7 +324,7 @@ httpCredentialsString(
   if (!buffer)
     return (0);
 
-  if (buffer && bufsize > 0)
+  if (bufsize > 0)
     *buffer = '\0';
 
   cert = http_sspi_create_credential(first);
@@ -1232,7 +1232,7 @@ _httpTLSWrite(http_t     *http,		/* I - HTTP connection */
 static _http_sspi_t *			/* O  - New SSPI/SSL object */
 http_sspi_alloc(void)
 {
-  return ((_http_sspi_t *)calloc(sizeof(_http_sspi_t), 1));
+  return ((_http_sspi_t *)calloc(1, sizeof(_http_sspi_t)));
 }
 
 
@@ -1690,7 +1690,7 @@ http_sspi_find_credentials(
   }
 
  /*
-  * Set supported protocols (can also be overriden in the registry...)
+  * Set supported protocols (can also be overridden in the registry...)
   */
 
 #ifdef SP_PROT_TLS1_2_SERVER

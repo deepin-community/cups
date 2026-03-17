@@ -1,6 +1,7 @@
 #
 # German message catalog for CUPS.
 #
+# Copyright © 2020-2024 by OpenPrinting.
 # Copyright © 2007-2018 by Apple Inc.
 # Copyright © 2005-2007 by Easy Software Products.
 #
@@ -75,7 +76,7 @@ msgid "\tDefault page size:"
 msgstr "\tVoreingestellte Seitengröße:"
 
 msgid "\tDefault pitch:"
-msgstr "\tVoreingestellte Neigung:"
+msgstr "\tVoreingestellte Gradation:"
 
 msgid "\tDefault port settings:"
 msgstr "\tVoreingestellte Porteinstellungen:"
@@ -96,7 +97,7 @@ msgstr "\tSchnittstelle: %s.ppd"
 
 #, c-format
 msgid "\tInterface: %s/ppd/%s.ppd"
-msgstr "\tSchnittstelle: %s/ppp/%s.ppd"
+msgstr "\tSchnittstelle: %s/ppd/%s.ppd"
 
 #, c-format
 msgid "\tLocation: %s"

@@ -175,7 +175,7 @@
   }
 
   # Site-specific additions and overrides. See local/README for details.
-  #include <local/usr.sbin.cupsd>
+  #include if exists <local/usr.sbin.cupsd>
 }
 
 # separate profile since this needs to write into /home
@@ -220,4 +220,7 @@
   #include <abstractions/private-files-strict>
   @{HOME}/[^.]*/{,**/} rw,
   @{HOME}/[^.]*/**     rw,
+
+  # Site-specific additions and overrides.
+  #include if exists <local/usr.lib.cups.backend.cups-pdf>
 }

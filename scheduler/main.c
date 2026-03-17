@@ -1,7 +1,7 @@
 /*
  * Main loop for the CUPS scheduler.
  *
- * Copyright © 2021-2022 by OpenPrinting.
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 1997-2007 by Easy Software Products, all rights reserved.
  *
@@ -519,22 +519,20 @@ main(int  argc,				/* I - Number of command-line args */
 #endif /* HAVE_DBUS_THREADS_INIT */
 
  /*
-  * Set the maximum number of files...
+  * Set the maximum number of files, which for practical reasons can be limited
+  * to the number of TCP port number values (64k-1)...
   */
 
+  limit.rlim_max = 0;
   getrlimit(RLIMIT_NOFILE, &limit);
 
 #if !defined(HAVE_POLL) && !defined(HAVE_EPOLL) && !defined(HAVE_KQUEUE)
-  if (limit.rlim_max > FD_SETSIZE)
+  if ((MaxFDs = limit.rlim_max) > FD_SETSIZE || MaxFDs <= 0)
     MaxFDs = FD_SETSIZE;
-  else
-#endif /* !HAVE_POLL && !HAVE_EPOLL && !HAVE_KQUEUE */
-#ifdef RLIM_INFINITY
-  if (limit.rlim_max == RLIM_INFINITY)
-    MaxFDs = 16384;
-  else
+#else
+  if ((MaxFDs = limit.rlim_max) > 65535 || MaxFDs <= 0)
+    MaxFDs = 65535;
 #endif /* RLIM_INFINITY */
-    MaxFDs = limit.rlim_max;
 
   limit.rlim_cur = (rlim_t)MaxFDs;
 
@@ -1400,7 +1398,7 @@ process_children(void)
   int		pid,			/* Process ID of child */
 		job_id;			/* Job ID of child */
   cupsd_job_t	*job;			/* Current job */
-  int		i;			/* Looping var */
+  size_t		i;			/* Looping var */
   char		name[1024];		/* Process name */
   const char	*type;			/* Type of program */
 
@@ -1435,8 +1433,7 @@ process_children(void)
     * Delete certificates for CGI processes...
     */
 
-    if (pid)
-      cupsdDeleteCert(pid);
+    cupsdDeleteCert(pid);
 
    /*
     * Handle completed job filters...
@@ -1625,7 +1622,7 @@ process_children(void)
   * If wait*() is interrupted by a signal, tell main() to call us again...
   */
 
-  if (pid < 0 && errno == EINTR)
+  if (pid && errno == EINTR)
     dead_children = 1;
 }
 
@@ -1862,7 +1859,7 @@ service_add_listener(int fd,		/* I - Socket file descriptor */
   cupsd_listener_t	*lis;		/* Listeners array */
   http_addr_t		addr;		/* Address variable */
   socklen_t		addrlen;	/* Length of address */
-  char			s[256];		/* String addresss */
+  char			s[256];		/* String address */
 
 
   addrlen = sizeof(addr);
@@ -2023,7 +2020,7 @@ service_checkin(void)
 
     cupsdLogMessage(CUPSD_LOG_DEBUG, "service_checkin: UPSTART_FDS=%s", e);
 
-    fd = (int)strtol(e, NULL, 10);
+    fd = atoi(e);
     if (fd < 0)
     {
       cupsdLogMessage(CUPSD_LOG_ERROR, "service_checkin: Could not parse UPSTART_FDS: %s", strerror(errno));
@@ -2031,12 +2028,27 @@ service_checkin(void)
     }
 
    /*
-    * Upstart only supportst a single on-demand socket file descriptor...
+    * Upstart only supports a single on-demand socket file descriptor...
     */
 
     service_add_listener(fd, 0);
   }
 #endif /* HAVE_LAUNCHD */
+
+  if (cupsArrayCount(Listeners) == 0)
+  {
+   /*
+    * No listeners!
+    */
+
+    cupsdLogMessage(CUPSD_LOG_EMERG, "No listener sockets present.");
+
+   /*
+    * Commit suicide...
+    */
+
+    cupsdEndProcess(getpid(), 0);
+  }
 }
 
 

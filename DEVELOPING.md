@@ -120,6 +120,16 @@ Manual, which is generated using the [codedoc](https://www.msweet.org/codedoc)
 software.
 
 
+### Copyright notice
+
+If there are changes for a file, which contains copyright notice already
+and the notice is not updated for the current year, update the year of copyright
+notice to include the current year.
+
+Only the following files must have copyright notice updated every year: README.md,
+NOTICE, index.html.in, and header.html.in.
+
+
 ### Source Files
 
 All source files names must consist of lowercase ASCII letters, numbers, dash
@@ -137,7 +147,7 @@ the source file and the copyright and licensing notice:
     /*
      * Description of file contents.
      *
-     * Copyright © 2021-2022 by OpenPrinting
+     * Copyright © 2021-2023 by OpenPrinting
      *
      * Licensed under Apache License v2.0.  See the file "LICENSE" for more
      * information.
@@ -379,7 +389,7 @@ of the file, and CUPS copyright and license notice:
     #
     # Makefile for ...
     #
-    # Copyright © 2021-2022 by OpenPrinting
+    # Copyright © 2021-2023 by OpenPrinting
     #
     # Licensed under Apache License v2.0.  See the file "LICENSE" for more
     # information.

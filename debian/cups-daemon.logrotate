@@ -1,14 +1,4 @@
-/var/log/cups/os_audit.log {
-	size 10M
-	missingok
-	rotate 10
-	compress
-	delaycompress
-	notifempty
-	create
-}
-
-/var/log/cups/*_log {
+/var/log/cups/*log {
 	daily
 	missingok
 	rotate 7

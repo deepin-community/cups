@@ -181,7 +181,7 @@ httpAddrListen(http_addr_t *addr,	/* I - Address to bind to */
 
   if ((fd = socket(addr->addr.sa_family, SOCK_STREAM, 0)) < 0)
   {
-    _cupsSetHTTPError(HTTP_STATUS_ERROR);
+    _cupsSetError(IPP_STATUS_ERROR_INTERNAL, strerror(errno), 0);
     return (-1);
   }
 
@@ -206,27 +206,29 @@ httpAddrListen(http_addr_t *addr,	/* I - Address to bind to */
     * Remove any existing domain socket file...
     */
 
-    unlink(addr->un.sun_path);
+    if ((status = unlink(addr->un.sun_path)) < 0)
+    {
+      DEBUG_printf(("1httpAddrListen: Unable to unlink \"%s\": %s", addr->un.sun_path, strerror(errno)));
 
-   /*
-    * Save the current umask and set it to 0 so that all users can access
-    * the domain socket...
-    */
+      if (errno == ENOENT)
+	status = 0;
+    }
 
-    mask = umask(0);
+    if (!status)
+    {
+      // Save the current umask and set it to 0 so that all users can access
+      // the domain socket...
+      mask = umask(0);
 
-   /*
-    * Bind the domain socket...
-    */
+      // Bind the domain socket...
+      if ((status = bind(fd, (struct sockaddr *)addr, (socklen_t)httpAddrLength(addr))) < 0)
+      {
+	DEBUG_printf(("1httpAddrListen: Unable to bind domain socket \"%s\": %s", addr->un.sun_path, strerror(errno)));
+      }
 
-    status = bind(fd, (struct sockaddr *)addr, (socklen_t)httpAddrLength(addr));
-
-   /*
-    * Restore the umask and fix permissions...
-    */
-
-    umask(mask);
-    chmod(addr->un.sun_path, 0140777);
+      // Restore the umask...
+      umask(mask);
+    }
   }
   else
 #endif /* AF_LOCAL */
@@ -238,7 +240,7 @@ httpAddrListen(http_addr_t *addr,	/* I - Address to bind to */
 
   if (status)
   {
-    _cupsSetHTTPError(HTTP_STATUS_ERROR);
+    _cupsSetError(IPP_STATUS_ERROR_INTERNAL, strerror(errno), 0);
 
     close(fd);
 
@@ -249,9 +251,9 @@ httpAddrListen(http_addr_t *addr,	/* I - Address to bind to */
   * Listen...
   */
 
-  if (listen(fd, 128))
+  if (listen(fd, INT_MAX))
   {
-    _cupsSetHTTPError(HTTP_STATUS_ERROR);
+    _cupsSetError(IPP_STATUS_ERROR_INTERNAL, strerror(errno), 0);
 
     close(fd);
 
@@ -746,9 +748,7 @@ httpGetHostByName(const char *name)	/* I - Hostname or IP address */
     if (ip[0] > 255 || ip[1] > 255 || ip[2] > 255 || ip[3] > 255)
       return (NULL);			/* Invalid byte ranges! */
 
-    cg->ip_addr = htonl((((((((unsigned)ip[0] << 8) | (unsigned)ip[1]) << 8) |
-                           (unsigned)ip[2]) << 8) |
-                         (unsigned)ip[3]));
+    cg->ip_addr = htonl((ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | ip[3]);
 
    /*
     * Fill in the host entry and return it...

@@ -1,7 +1,7 @@
 dnl
 dnl Compiler tests for CUPS.
 dnl
-dnl Copyright © 2021-2022 by OpenPrinting.
+dnl Copyright © 2020-2024 by OpenPrinting.
 dnl Copyright © 2007-2018 by Apple Inc.
 dnl Copyright © 1997-2007 by Easy Software Products, all rights reserved.
 dnl
@@ -105,11 +105,13 @@ AS_IF([test -n "$GCC"], [
     AS_IF([test x$enable_sanitizer = xyes], [
 	# Use -fsanitize=address with debugging...
 	OPTIM="$OPTIM -g -fsanitize=address"
+    ], [echo "$CXXFLAGS $CFLAGS" | grep -q _FORTIFY_SOURCE], [
+        # Don't add _FORTIFY_SOURCE if it is already there
     ], [
 	# Otherwise use the Fortify enhancements to catch any unbounded
 	# string operations...
-	CFLAGS="$CFLAGS -D_FORTIFY_SOURCE=2"
-	CXXFLAGS="$CXXFLAGS -D_FORTIFY_SOURCE=2"
+	CFLAGS="$CFLAGS -D_FORTIFY_SOURCE=3"
+	CXXFLAGS="$CXXFLAGS -D_FORTIFY_SOURCE=3"
     ])
 
     # Default optimization options...
@@ -200,7 +202,7 @@ AS_IF([test -n "$GCC"], [
     ])
 ], [
     # Add vendor-specific compiler options...
-    AS_CASE([$host_os_name], [sunos*], [
+    AS_CASE([$host_os_name], [sunos* | solaris*], [
 	# Solaris
 	AS_IF([test -z "$OPTIM"], [
 	    OPTIM="-xO2"
@@ -212,9 +214,9 @@ AS_IF([test -n "$GCC"], [
     ], [*], [
 	# Running some other operating system; inform the user
 	# they should contribute the necessary options via
-	# Github...
+	# GitHub...
 	echo "Building CUPS with default compiler optimizations."
-	echo "Contact the OpenPrinting CUPS developers on Github with the uname and compiler"
+	echo "Contact the OpenPrinting CUPS developers on GitHub with the uname and compiler"
 	echo "options needed for your platform, or set the CFLAGS and LDFLAGS environment"
 	echo "variables before running configure."
 	echo ""

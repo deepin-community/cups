@@ -1,6 +1,7 @@
 /*
  * SNMP functions for CUPS.
  *
+ * Copyright © 2020-2024 by OpenPrinting.
  * Copyright © 2007-2019 by Apple Inc.
  * Copyright © 2006-2007 by Easy Software Products, all rights reserved.
  *
@@ -508,13 +509,18 @@ _cupsSNMPStringToOID(const char *src,	/* I - OID string */
        *src && dstptr < dstend;
        src ++)
   {
-    if (*src == '.')
+    if (*src == '.' && src[1])
     {
       dstptr ++;
       *dstptr = 0;
     }
     else if (isdigit(*src & 255))
+    {
+      if ((*dstptr * 10 + *src - '0') > 0xffff)
+        break;
+
       *dstptr = *dstptr * 10 + *src - '0';
+    }
     else
       break;
   }
@@ -1238,7 +1244,11 @@ asn1_get_integer(
 
   if (length > sizeof(int))
   {
-    (*buffer) += length;
+    if (length > (unsigned)(bufend - *buffer))
+      *buffer = bufend;
+    else
+      (*buffer) += length;
+
     return (0);
   }
 
@@ -1272,10 +1282,13 @@ asn1_get_length(unsigned char **buffer,	/* IO - Pointer in buffer */
   {
     int	count;				/* Number of bytes for length */
 
-
     if ((count = length & 127) > sizeof(unsigned))
     {
-      (*buffer) += count;
+      if (count > (bufend - *buffer))
+	*buffer = bufend;
+      else
+	(*buffer) += count;
+
       return (0);
     }
 
@@ -1308,7 +1321,14 @@ asn1_get_oid(
 
 
   if (*buffer >= bufend)
+  {
     return (0);
+  }
+  else if (length > (unsigned)(bufend - *buffer))
+  {
+    *buffer = bufend;
+    return (0);
+  }
 
   valend = *buffer + length;
   oidptr = oid;
@@ -1317,7 +1337,7 @@ asn1_get_oid(
   if (valend > bufend)
     valend = bufend;
 
-  number = asn1_get_packed(buffer, bufend);
+  number = asn1_get_packed(buffer, valend);
 
   if (number < 80)
   {
@@ -1334,7 +1354,7 @@ asn1_get_oid(
 
   while (*buffer < valend)
   {
-    number = asn1_get_packed(buffer, bufend);
+    number = asn1_get_packed(buffer, valend);
 
     if (oidptr < oidend)
       *oidptr++ = number;
