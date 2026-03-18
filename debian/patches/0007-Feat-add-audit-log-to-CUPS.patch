@@ -1,0 +1,209 @@
+From c224a7dff8fb6d03d34fb1bf8085dd6fffaf293a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=E5=88=98=E8=8E=89?= <liuli@uniontech.com>
+Date: Tue, 12 Jul 2022 15:14:53 +0800
+Subject: [PATCH] Feat: add audit log to CUPS
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+log to /var/log/cups/os_audit.log
+
+Signed-off-by: 刘莉 <liuli@uniontech.com>
+Change-Id: I9e3ee7176b158a381db9274f11aeb34ab5bc62b9
+---
+ scheduler/subscriptions.c | 160 +++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 156 insertions(+), 4 deletions(-)
+
+diff --git a/scheduler/subscriptions.c b/scheduler/subscriptions.c
+index 2dbb28f85..0bcdfe457 100644
+--- a/scheduler/subscriptions.c
++++ b/scheduler/subscriptions.c
+@@ -39,8 +39,157 @@ static void	cupsd_send_notification(cupsd_subscription_t *sub,
+ 					cupsd_event_t *event);
+ static void	cupsd_start_notifier(cupsd_subscription_t *sub);
+ static void	cupsd_update_notifier(void);
++static int last_log_jobid = 0;
+ 
+ 
++
++static void addJobAuditLog(cupsd_eventmask_t event,		/* I - Event */
++    cupsd_printer_t   *dest,		/* I - Printer associated with event */
++    cupsd_job_t	      *job,
++    const char	      *text)
++{
++  if ((CUPSD_EVENT_JOB_STATE_CHANGED & event) == 0 || !job || !strncmp(text, "Job purged by", strlen("Job purged by"))) {
++    return;
++  }
++
++  char jobResult[8] = {0};
++
++  if (job->state_value == IPP_JOB_COMPLETED)
++    strcpy(jobResult, "成功");
++  if (job->state_value == IPP_JOB_CANCELED)
++    strcpy(jobResult, "取消");
++  if (job->state_value == IPP_JOB_ABORTED || job->state_value == IPP_JOB_STOPPED)
++    strcpy(jobResult, "失败");
++
++  if (strlen(jobResult) == 0)
++    return;
++
++  int copies = 0,
++    impressions = 0;
++
++  ipp_attribute_t * attr;
++
++  if ((attr = ippFindAttribute(job->attrs, "copies", IPP_TAG_INTEGER)) != NULL) {
++    copies = attr->values[0].integer;
++  } else {
++    copies = 1;
++  }
++
++  char *jobName = NULL;
++  if ((attr = ippFindAttribute(job->attrs, "job-name", IPP_TAG_NAME)) != NULL) {
++    jobName = attr->values[0].string.text;
++  }
++
++  impressions = job->sheets ? job->sheets->values[0].integer : 0;
++
++  char *printerUri = NULL;
++
++  char printerType[64] = {0};
++  cupsd_printer_t *printer = cupsdFindPrinter(job->dest);
++  if (printer) {
++    printerUri = strdup(printer->device_uri);
++    char *ptr = strchr(printerUri,':');
++    if (ptr)
++      *ptr = '\0';
++
++    if (strcmp(printerUri, "ipp") == 0 || strcmp(printerUri, "ipps") == 0 || strcmp(printerUri, "http") == 0 || strcmp(printerUri, "https") == 0 ||
++        strcmp(printerUri, "smb") == 0 || strcmp(printerUri, "lpd") == 0 || strcmp(printerUri, "socket") == 0 || strcmp(printerUri, "dnssd") == 0) {
++      strcpy(printerType, "网络打印机");
++    } else {
++      strcpy(printerType, "本地打印机");
++    }
++
++    if (printerUri)
++      free(printerUri);
++  } else {
++    strcpy(printerType, "未知");
++  }
++
++  struct timeval	curtime;
++  gettimeofday(&curtime, NULL);
++  struct tm		date;
++  localtime_r(&(curtime.tv_sec), &date);
++  char	fomatTime[1024] = {0};
++  snprintf(fomatTime, sizeof(fomatTime), "%04d-%02d-%02d %02d:%02d:%02d",
++	       1900 + date.tm_year, date.tm_mon + 1, date.tm_mday,
++	       date.tm_hour, date.tm_min, date.tm_sec);
++
++  char fileSize[64] = {0};
++  fileSize[0] = '-';
++  char *absPath = NULL;
++  absPath = realpath(jobName, NULL);
++  if ( absPath && strcmp(absPath, jobName) == 0){
++        struct stat buf;
++        if (stat(absPath, &buf) == 0) {
++            snprintf(fileSize, sizeof(fileSize), "%ldbyte(s)", buf.st_size);
++        }else{
++            cupsdLogMessage(CUPSD_LOG_ERROR,
++		    "addJobAuditLog get file %s size failed, errno = 0x%x", absPath, errno);
++        }
++      free(absPath);
++      absPath = NULL;
++  }
++
++  cups_file_t *logFd = cupsFileOpen("/var/log/cups/os_audit.log", "a");
++  if (logFd == NULL) {
++    cupsdLogMessage(CUPSD_LOG_DEBUG,
++		  "addJobAuditLog(ID=%ld time=%s pirnter-name=%s printer-type=%s 用户=%s job-ID=%d title=%s filesize=%s copies=%d impressions=%d result=%s)",
++		  time(NULL), fomatTime, job->dest, printerType, job->username,
++      job->id, jobName, fileSize, copies, impressions, jobResult);
++
++    return ;
++  }
++
++  cupsFilePrintf(logFd, "ID=%ld 时间=%s 打印机名称=%s 打印机类型=%s 打印机地址=%s 用户=%s 打印机队列ID=%d 文件名称=%s 文件大小=%s 份数=%d 页数=%d 结果=%s\n",
++    time(NULL), fomatTime, job->dest, printerType, printer->device_uri, job->username,
++    job->id, jobName, fileSize, copies, impressions, jobResult);
++  cupsFileFlush(logFd);
++  cupsFileClose(logFd);
++  int rotatePid;
++  struct stat logSize;
++  //   log size >= 10M or get log size failed
++  if((stat("/var/log/cups/os_audit.log", &logSize) == 0 && logSize.st_size>=10*1024*1024))
++  {
++      cupsdLogMessage(CUPSD_LOG_DEBUG, "addJobAuditLog logrotate!");
++      if((rotatePid = fork()) == 0)
++        execlp("logrotate", "logrotate", "/etc/logrotate.d/cups-daemon", NULL);
++  }
++  return;
++}
++
++#define AUDIT_PRINT_FILE "/var/lib/deepin/permission-manager/print_audit"
++#define CHECK_AUDIT_FILE "/sys/fs/selinux/checkaudit"
++#define CHECK_AUDIT_FILE_1070 "/sys/fs/selinux2/checkaudit"
++#define CHECK_AUDIT_FILE_v25 "/sys/fs/usec/checkaudit"
++
++// 0  表示审计开启
++// -1 表示审计关闭
++static int get_file_audit_status(const char *file_path)
++{
++    int fd, len, file_path_len;
++    int ret = -1;
++
++    file_path_len = strlen(file_path);
++    if (file_path_len == 0)
++        return -1;
++
++   fd = open(CHECK_AUDIT_FILE, O_RDWR | O_CLOEXEC);
++   if ( fd <= 0 ){
++      fd = open(CHECK_AUDIT_FILE_v25, O_RDWR | O_CLOEXEC);
++   }
++   if ( fd <= 0 ){
++      fd = open(CHECK_AUDIT_FILE_1070, O_RDWR | O_CLOEXEC);
++      if ( fd <= 0 ) return -1;
++   }
++   len = write(fd, file_path, file_path_len);
++   if ( len == file_path_len){
++        ret = 0;
++    }
++    close(fd);
++
++    return ret;
++}
++
+ /*
+  * 'cupsdAddEvent()' - Add an event to the global event cache.
+  */
+@@ -60,10 +209,15 @@ cupsdAddEvent(
+   cupsd_subscription_t	*sub;		/* Current subscription */
+ 
+ 
++  va_start(ap, text);
++  vsnprintf(ftext, sizeof(ftext), text, ap);
++  va_end(ap);
++  if (job && get_file_audit_status(AUDIT_PRINT_FILE) == 0)
++    addJobAuditLog(event, dest, job, ftext);
+   cupsdLogMessage(CUPSD_LOG_DEBUG2,
+ 		  "cupsdAddEvent(event=%s, dest=%p(%s), job=%p(%d), text=\"%s\", ...)",
+ 		  cupsdEventName(event), dest, dest ? dest->name : "",
+-		  job, job ? job->id : 0, text);
++		  job, job ? job->id : 0, ftext);
+ 
+  /*
+   * Keep track of events with any OS-supplied notification mechanisms...
+@@ -151,9 +305,7 @@ cupsdAddEvent(
+       ippAddInteger(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_INTEGER,
+ 		    "printer-up-time", time(NULL));
+ 
+-      va_start(ap, text);
+-      vsnprintf(ftext, sizeof(ftext), text, ap);
+-      va_end(ap);
++
+ 
+       ippAddString(temp->attrs, IPP_TAG_EVENT_NOTIFICATION, IPP_TAG_TEXT,
+ 		   "notify-text", NULL, ftext);
+-- 
+2.20.1
+
