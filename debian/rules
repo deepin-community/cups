@@ -254,7 +254,7 @@ ifeq (,$(findstring nocheck,$(LOCAL_DEB_BUILD_OPTIONS)))
 	# enabling the tests on riscv64 again (-> #1107504)
 	# maybe there are future problems with other architectures, so keeping this code
 	echo ${arch}
-	if [ "${arch}" = "DUMMY" ]; then \
+	if [ "${arch}" = "loong64" ]; then \
 	  echo "Do not make tests on this architecture" ;\
 	else \
 	  echo "Do make tests on this architecture" ;\

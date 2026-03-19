@@ -1,8 +1,8 @@
-cups (2.4.16-1deepin2) unstable; urgency=medium
+cups (2.4.16-1deepin3) unstable; urgency=medium
 
-  * remove testlang as CI zh_TW FAILED
+  * remove auto_test on loong64
 
- -- liuli <liuli@uniontech.com>  Thu, 19 Mar 2026 11:02:20 +0800
+ -- liuli <liuli@uniontech.com>  Thu, 19 Mar 2026 14:12:20 +0800
 
 cups (2.4.16-1deepin1) unstable; urgency=medium
 
