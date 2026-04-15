@@ -1,3 +1,14 @@
+cups (2.4.16-1deepin4) unstable; urgency=medium
+
+  * Fix CVE-2026-39316: use-after-free in cupsdDeleteTemporaryPrinters()
+  * Fix CVE-2026-39314: integer underflow in _ppdCreateFromIPP()
+  * Fix CVE-2026-34990: Authorization token vulnerability
+  * Fix CVE-2026-34980: page-border injection vulnerability
+  * Fix CVE-2026-34979: heap-based buffer overflow in filter options
+  * Fix CVE-2026-34978: RSS notifier path traversal
+
+ -- deepin-ci-robot <packages@deepin.org>  Wed, 15 Apr 2026 15:28:55 +0800
+
 cups (2.4.16-1deepin3) unstable; urgency=medium
 
   * remove auto_test on loong64
