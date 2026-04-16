@@ -1,3 +1,10 @@
+cups (2.4.16-1deepin4) unstable; urgency=medium
+
+  * Fix CVE-2026-27447: authorization bypass via case-insensitive
+    username comparison
+
+ -- deepin-ci-robot <packages@deepin.org>  Fri, 17 Apr 2026 06:16:25 +0800
+
 cups (2.4.16-1deepin3) unstable; urgency=medium
 
   * remove auto_test on loong64
