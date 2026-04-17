@@ -1,3 +1,10 @@
+cups (2.4.16-1deepin4) unstable; urgency=medium
+
+  * Drop Prevides & Replaces libcups{,image}2t64.
+  * Drop unused package-name-doesnt-match-sonames in lintian-overrides.
+
+ -- Tianyu Chen <sweetyfish@deepin.org>  Fri, 17 Apr 2026 14:18:13 +0800
+
 cups (2.4.16-1deepin3) unstable; urgency=medium
 
   * remove auto_test on loong64
