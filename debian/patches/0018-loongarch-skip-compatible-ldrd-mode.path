@@ -1,0 +1,22 @@
+Index: cups-deepin/scheduler/process.c
+===================================================================
+--- cups-deepin.orig/scheduler/process.c
++++ cups-deepin/scheduler/process.c
+@@ -571,6 +571,7 @@ cupsdStartProcess(
+     if (!stat("/usr/bin/deepin-compatible-ctl", &fileinfo) &&
+          (strncmp(command, filter_path, strlen(filter_path)) == 0 || strncmp(command, backend_path, strlen(backend_path)) == 0))
+     {
++#if defined(__loongarch64) || defined(__loongarch__)
+         real_argv[0] = (char *)"deepin-compatible-ctl";
+         real_argv[1] = (char *)"app";
+         real_argv[2] = (char *)"--ldrd";
+@@ -578,6 +579,9 @@ cupsdStartProcess(
+         real_argv[4] = (char *)"--";
+         idx = 5;
+         exec_path = "/usr/bin/deepin-compatible-ctl";
++#else
++        exec_path = cups_exec;
++#endif
+     } else {
+         exec_path = cups_exec;
+     }
