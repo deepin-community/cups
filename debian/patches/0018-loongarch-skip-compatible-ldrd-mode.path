@@ -6,7 +6,7 @@ Index: cups-deepin/scheduler/process.c
      if (!stat("/usr/bin/deepin-compatible-ctl", &fileinfo) &&
           (strncmp(command, filter_path, strlen(filter_path)) == 0 || strncmp(command, backend_path, strlen(backend_path)) == 0))
      {
-+#if defined(__loongarch64) || defined(__loongarch__)
++#if !defined(__loongarch64) && !defined(__loongarch__)
          real_argv[0] = (char *)"deepin-compatible-ctl";
          real_argv[1] = (char *)"app";
          real_argv[2] = (char *)"--ldrd";
