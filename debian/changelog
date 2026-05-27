@@ -1,3 +1,8 @@
+cups (2.4.16-1deepin6) unstable; urgency=medium
+
+  * add loongarch64 support for skipping deepin-compatible-ctl
+
+ -- liuli <liuli@uniontech.com>  Wed, 27 May 2026 12:24:40 +0800
 cups (2.4.16-1deepin5) unstable; urgency=medium
 
   * add loongarch64 support for skipping deepin-compatible-ctl
