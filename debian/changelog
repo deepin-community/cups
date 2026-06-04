@@ -1,8 +1,9 @@
-cups (2.4.16-1deepin6) unstable; urgency=medium
+cups (2.4.16-1deepin7) unstable; urgency=medium
 
-  * add loongarch64 support for skipping deepin-compatible-ctl
+  * Fix CVE-2026-41079: SNMP backend out-of-bounds read via crafted SNMP
+    response. Clamp num_bytes to prevent reading past stack buffer.
 
- -- liuli <liuli@uniontech.com>  Wed, 27 May 2026 12:24:40 +0800
+ -- deepin-ci-robot <packages@deepin.org>  Thu, 04 Jun 2026 17:24:40 +0800
 cups (2.4.16-1deepin5) unstable; urgency=medium
 
   * add loongarch64 support for skipping deepin-compatible-ctl
