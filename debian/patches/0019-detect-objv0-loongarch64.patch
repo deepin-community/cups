@@ -1,0 +1,133 @@
+Index: cups-upstream/scheduler/process.c
+===================================================================
+--- cups-upstream.orig/scheduler/process.c
++++ cups-upstream/scheduler/process.c
+@@ -35,6 +35,9 @@ extern char **environ;
+ #  define USE_POSIX_SPAWN 0
+ #endif /* HAVE_POSIX_SPAWN */
+ 
++#define EM_LOONGARCH 258
++#define EF_LOONGARCH_OBJ_V1 0x40
++
+ 
+ /*
+  * Process structure...
+@@ -449,7 +452,52 @@ cupsdFinishProcess(int    pid,		/* I - P
+ 
+   cupsdLogMessage(CUPSD_LOG_DEBUG2, "cupsdFinishProcess(pid=%d, name=%p, namelen=" CUPS_LLFMT ", job_id=%p(%d)) = \"%s\"", pid, name, CUPS_LLCAST namelen, job_id, job_id ? *job_id : 0, name);
+ 
+-  return (name);
++}
++
++/*
++* loongarch_detect_objv0_func
++*/
++int loongarch_detect_objv0_func(const char *command_path)
++{
++  if (command_path == NULL || command_path[0] == '\0') {
++    cupsdLogMessage(CUPSD_LOG_DEBUG,"Error: Empty path provided");
++    return -1;
++  }
++  if (command_path[0] != '/')
++  {
++    cupsdLogMessage(CUPSD_LOG_DEBUG,"command path not realpath");
++    return -1;
++  }
++  int fd = open(command_path, O_RDONLY);
++  if (fd == -1) {
++        cupsdLogMessage(CUPSD_LOG_DEBUG,"open failed");
++        return -1;
++  }
++  unsigned char elf_header[64];
++  ssize_t bytes_read = read(fd, elf_header, sizeof(elf_header));
++  close(fd);
++  if (bytes_read < (ssize_t)sizeof(elf_header)) {
++        cupsdLogMessage(CUPSD_LOG_DEBUG, "Error: Failed to read full ELF header");
++        return -1;
++  }
++  if (elf_header[0] != 0x7F || elf_header[1] != 'E' ||
++        elf_header[2] != 'L' || elf_header[3] != 'F') {
++        cupsdLogMessage(CUPSD_LOG_DEBUG, "Error: Not an ELF file");
++        return -1;
++  }
++  uint16_t e_machine = (elf_header[19] << 8) | elf_header[18];
++  if (e_machine != EM_LOONGARCH) {
++        cupsdLogMessage(CUPSD_LOG_WARN, "Info: Not a LoongArch binary");
++        return -1;
++  }
++  uint32_t e_flags = (elf_header[51] << 24) | (elf_header[50] << 16) | (elf_header[49] << 8)  | elf_header[48];
++  if ((e_flags & EF_LOONGARCH_OBJ_V1) == 0) {
++        cupsdLogMessage(CUPSD_LOG_DEBUG2,"Success: '%s' is a LoongArch old-world binary", command_path);
++        return 0;
++  } else {
++        cupsdLogMessage(CUPSD_LOG_DEBUG2,"Info: '%s' is LoongArch new-world (modern ABI)", command_path);
++        return -1;
++  }
+ }
+ 
+ 
+@@ -474,7 +522,7 @@ cupsdStartProcess(
+ {
+   int		i;			/* Looping var */
+   const char	*exec_path = command;	/* Command to be exec'd */
+-  char		*real_argv[110],	/* Real command-line arguments */
++  char		*real_argv[120],	/* Real command-line arguments */
+ 		cups_exec[1024],	/* Path to "cups-exec" program */
+ 		user_str[16],		/* User string */
+ 		group_str[16],		/* Group string */
+@@ -560,6 +608,7 @@ cupsdStartProcess(
+   {
+     struct stat fileinfo;
+     int idx = 0;
++    int wrap_with_deepin_ctl = 0;
+ 
+     snprintf(cups_exec, sizeof(cups_exec), "%s/daemon/cups-exec", ServerBin);
+     snprintf(user_str, sizeof(user_str), "%d", user);
+@@ -580,7 +629,13 @@ cupsdStartProcess(
+         idx = 5;
+         exec_path = "/usr/bin/deepin-compatible-ctl";
+ #else
+-        exec_path = cups_exec;
++        if (loongarch_detect_objv0_func(command) == 0)
++        {
++          exec_path = cups_exec;
++          wrap_with_deepin_ctl = 1;
++        } else {
++          exec_path = cups_exec;
++        }
+ #endif
+     } else {
+         exec_path = cups_exec;
+@@ -594,14 +649,24 @@ cupsdStartProcess(
+     real_argv[idx + 5] = (char *)"-u";
+     real_argv[idx + 6] = user_str;
+     real_argv[idx + 7] = profile ? profile : "none";
+-    real_argv[idx + 8] = (char *)command;
+-
+-    for (i = 0;
+-         i < (int)(sizeof(real_argv) / sizeof(real_argv[0]) - 10) && argv[i];
+-	 i ++)
+-      real_argv[idx + i + 9] = argv[i];
+-
+-    real_argv[idx + i + 9] = NULL;
++      if (wrap_with_deepin_ctl)
++      {
++        real_argv[idx + 8] = (char *)"/usr/bin/deepin-compatible-ctl";
++        real_argv[idx + 9] = (char *)"deepin-compatible-ctl";
++        real_argv[idx + 10] = (char *)"app";
++        real_argv[idx + 11] = (char *)"--ldrd";
++        real_argv[idx + 12] = (char *)"run";
++        real_argv[idx + 13] = (char *)"--";
++        real_argv[idx + 14] = (char *)command;
++        for (i = 1; i < (int)(sizeof(real_argv) / sizeof(real_argv[0]) - 10 - idx - 5) && argv[i]; i++)
++          real_argv[idx + i + 14] = argv[i];
++        real_argv[idx + i + 14] = NULL;
++      } else {
++        real_argv[idx + 8] = (char *)command;
++        for (i = 0; i < (int)(sizeof(real_argv) / sizeof(real_argv[0]) - 10 - idx) && argv[i]; i++)
++          real_argv[idx + i + 9] = argv[i];
++        real_argv[idx + i + 9] = NULL;
++      }
+ 
+     argv      = real_argv;
+   }
