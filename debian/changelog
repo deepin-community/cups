@@ -1,3 +1,9 @@
+cups (2.4.16-1deepin7) unstable; urgency=medium
+
+  * add detect LoongArch obj-v0 binaries for compatible-ctl wrapping
+
+ -- Heysion Yuan <heysion@deepin.com>  Tue, 16 Jun 2026 15:16:09 +0800
+
 cups (2.4.16-1deepin6) unstable; urgency=medium
 
   * add loongarch64 support for skipping deepin-compatible-ctl
