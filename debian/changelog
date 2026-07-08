@@ -2,7 +2,7 @@ cups (2.4.16-1deepin8) unstable; urgency=medium
 
   * update saving password of SMB printer by Uadp
 
- -- Heysion Yuan <uos@uos-PC>  Wed, 08 Jul 2026 13:35:19 +0800
+ -- LIU Li <liuli@uniontech.com>  Wed, 08 Jul 2026 13:35:19 +0800
 
 cups (2.4.16-1deepin7) unstable; urgency=medium
 
