@@ -17,3 +17,5 @@
 0017-Compatible-with-printer-driver-which-runs-on-V20.patch
 0018-loongarch-skip-compatible-ldrd-mode.path
 0019-detect-objv0-loongarch64.patch
+0020-feat-save-smb-password-by-com.deepin.daemon.Uadp.patch
+
