@@ -1,4 +1,4 @@
-cups (2.4.16-1deepin9) UNRELEASED; urgency=medium
+cups (2.4.16-1deepin9) unstable; urgency=medium
 
   * Add a configuration switch for avahi (mDNS) discovery
 
