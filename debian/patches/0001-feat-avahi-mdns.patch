@@ -1,10 +1,7 @@
 From 855536c22dfdc6db5f830cfb4c0bba86b8bf14dc Mon Sep 17 00:00:00 2001
 From: LIU Li <liuli@uniontech.com>
 Date: Tue, 14 Jul 2026 15:02:56 +0800
-Subject: [PATCH] =?UTF-8?q?feat:=20=E6=B7=BB=E5=8A=A0=E8=8E=B7=E5=8F=96ava?=
- =?UTF-8?q?hi(mdns)=E7=9A=84=E5=BC=80=E5=85=B3=E9=85=8D=E7=BD=AE=E9=A1=B9,?=
- =?UTF-8?q?=E9=BB=98=E8=AE=A4=E4=B8=BA=E4=B8=8D=E5=B1=95=E7=A4=BA=E8=BF=99?=
- =?UTF-8?q?=E7=B1=BB=E6=89=93=E5=8D=B0=E6=9C=BA?=
+Subject: [PATCH] Add a configuration switch for avahi (mDNS) discovery, with the default set to not display such printers.
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
