@@ -18,4 +18,5 @@
 0018-loongarch-skip-compatible-ldrd-mode.path
 0019-detect-objv0-loongarch64.patch
 0020-feat-save-smb-password-by-com.deepin.daemon.Uadp.patch
+0001-feat-avahi-mdns.patch
 

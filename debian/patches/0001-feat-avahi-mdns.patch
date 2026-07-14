@@ -1,0 +1,231 @@
+From 855536c22dfdc6db5f830cfb4c0bba86b8bf14dc Mon Sep 17 00:00:00 2001
+From: LIU Li <liuli@uniontech.com>
+Date: Tue, 14 Jul 2026 15:02:56 +0800
+Subject: [PATCH] =?UTF-8?q?feat:=20=E6=B7=BB=E5=8A=A0=E8=8E=B7=E5=8F=96ava?=
+ =?UTF-8?q?hi(mdns)=E7=9A=84=E5=BC=80=E5=85=B3=E9=85=8D=E7=BD=AE=E9=A1=B9,?=
+ =?UTF-8?q?=E9=BB=98=E8=AE=A4=E4=B8=BA=E4=B8=8D=E5=B1=95=E7=A4=BA=E8=BF=99?=
+ =?UTF-8?q?=E7=B1=BB=E6=89=93=E5=8D=B0=E6=9C=BA?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+DisableAvahiBrowsing Off/No/False配置为展示,其他或不配置为不展示
+---
+ cups/adminutil.c | 70 +++++++++++++++++++++++++++++++++++++++++++++---
+ cups/dest.c      | 30 +++++++++++++++++++++
+ 2 files changed, 97 insertions(+), 3 deletions(-)
+
+diff --git a/cups/adminutil.c b/cups/adminutil.c
+index 0d69693..509910c 100644
+--- a/cups/adminutil.c
++++ b/cups/adminutil.c
+@@ -24,6 +24,7 @@
+ #  include <sys/wait.h>
+ #endif /* !_WIN32 */
+ 
++#define DDE_PRINTER_ENABLE_PRINTER_DISCOVER "printer-discovery-enabled"
+ 
+ /*
+  * Local functions...
+@@ -224,7 +225,8 @@ cupsAdminGetServerSettings(
+ 		in_location = 0,	/* In a location section? */
+ 		in_policy = 0,		/* In a policy section? */
+ 		in_cancel_job = 0,	/* In a cancel-job section? */
+-		in_admin_location = 0;	/* In the /admin location? */
++		in_admin_location = 0,	/* In the /admin location? */
++		enable_discovery = 0;
+ 
+ 
+     invalidate_cupsd_cache(cg);
+@@ -274,6 +276,12 @@ cupsAdminGetServerSettings(
+       {
+ 	debug_logging = !_cups_strncasecmp(value, "debug", 5);
+       }
++      else if (!_cups_strcasecmp(line, "DisableAvahiBrowsing") && value)
++      {
++	enable_discovery = !_cups_strcasecmp(value, "Off") ||
++                    !_cups_strcasecmp(value, "No") ||
++                    !_cups_strcasecmp(value, "False");
++      }
+       else if (!_cups_strcasecmp(line, "<Policy") && value && !_cups_strcasecmp(value, "default"))
+       {
+ 	in_policy = 1;
+@@ -356,6 +364,11 @@ cupsAdminGetServerSettings(
+ 
+     cupsFileClose(cupsd);
+ 
++    cg->cupsd_num_settings = cupsAddOption(DDE_PRINTER_ENABLE_PRINTER_DISCOVER,
++                                           enable_discovery ? "1" : "0",
++					   cg->cupsd_num_settings,
++					   &(cg->cupsd_settings));
++
+     cg->cupsd_num_settings = cupsAddOption(CUPS_SERVER_DEBUG_LOGGING,
+                                            debug_logging ? "1" : "0",
+ 					   cg->cupsd_num_settings,
+@@ -440,11 +453,13 @@ cupsAdminSetServerSettings(
+ 		remote_admin,		/* Remote administration allowed? */
+ 		remote_any,		/* Remote access from anywhere? */
+ 		user_cancel_any,	/* Cancel-job policy set? */
+-		debug_logging;		/* LogLevel debug set? */
++		debug_logging,		/* LogLevel debug set? */
++		printer_discovery;
+   int		wrote_port_listen,	/* Wrote the port/listen lines? */
+ 		wrote_browsing,		/* Wrote the browsing lines? */
+ 		wrote_policy,		/* Wrote the policy? */
+ 		wrote_loglevel,		/* Wrote the LogLevel line? */
++		wrote_printer_discovery,
+ 		wrote_admin_location,	/* Wrote the /admin location? */
+ 		wrote_conf_location,	/* Wrote the /admin/conf location? */
+ 		wrote_log_location,	/* Wrote the /admin/log location? */
+@@ -455,7 +470,8 @@ cupsAdminSetServerSettings(
+ 		old_remote_admin,	/* Remote administration allowed? */
+ 		old_remote_any,		/* Remote access from anywhere? */
+ 		old_user_cancel_any,	/* Cancel-job policy set? */
+-		old_debug_logging;	/* LogLevel debug set? */
++		old_debug_logging,	/* LogLevel debug set? */
++		old_printer_discovery;   /* Printer discovery enabled? */
+   cups_option_t	*cupsd_settings,	/* New settings */
+ 		*setting;		/* Current setting */
+   _cups_globals_t *cg = _cupsGlobals();	/* Global data */
+@@ -499,6 +515,16 @@ cupsAdminSetServerSettings(
+ 				  &cupsd_settings))
+     return (0);
+ 
++
++  if ((val = cupsGetOption(DDE_PRINTER_ENABLE_PRINTER_DISCOVER, cupsd_num_settings,
++                           cupsd_settings)) != NULL)
++    old_printer_discovery= atoi(val);
++  else
++    old_printer_discovery = 0;
++
++  DEBUG_printf(("1cupsAdminSetServerSettings: old printer_discovery=%d",
++                old_printer_discovery));
++
+   if ((val = cupsGetOption(CUPS_SERVER_DEBUG_LOGGING, cupsd_num_settings,
+                            cupsd_settings)) != NULL)
+     old_debug_logging = atoi(val);
+@@ -517,6 +543,16 @@ cupsAdminSetServerSettings(
+   DEBUG_printf(("1cupsAdminSetServerSettings: old remote_admin=%d",
+                 old_remote_admin));
+ 
++  printer_discovery = old_printer_discovery;
++  if ((val = cupsGetOption(DDE_PRINTER_ENABLE_PRINTER_DISCOVER, num_settings,
++                           settings)) != NULL)
++  {
++    printer_discovery = atoi(val);
++  }
++
++  DEBUG_printf(("1cupsAdminSetServerSettings: printer_discovery=%d",
++                printer_discovery));
++
+   if ((val = cupsGetOption(CUPS_SERVER_REMOTE_ANY, cupsd_num_settings,
+                            cupsd_settings)) != NULL)
+     old_remote_any = atoi(val);
+@@ -632,6 +668,7 @@ cupsAdminSetServerSettings(
+   wrote_conf_location  = 0;
+   wrote_log_location   = 0;
+   wrote_loglevel       = 0;
++  wrote_printer_discovery = 0;
+   wrote_policy         = 0;
+   wrote_port_listen    = 0;
+   wrote_root_location  = 0;
+@@ -736,6 +773,21 @@ cupsAdminSetServerSettings(
+ 	cupsFilePuts(temp, "LogLevel " CUPS_DEFAULT_LOG_LEVEL "\n");
+       }
+     }
++    else if (!_cups_strcasecmp(line, "DisableAvahiBrowsing") &&
++             (printer_discovery != old_printer_discovery))
++    {
++      wrote_printer_discovery = 1;
++
++      if (printer_discovery)
++      {
++        cupsFilePuts(temp, "# Enable printer discovery.\n");
++        cupsFilePuts(temp, "DisableAvahiBrowsing Off\n");
++      }else{
++        cupsFilePuts(temp, "# Disable printer discovery.\n");
++        cupsFilePuts(temp, "DisableAvahiBrowsing On\n");
++      }
++
++    }
+     else if (!_cups_strcasecmp(line, "<Policy"))
+     {
+       in_default_policy = !_cups_strcasecmp(value, "default");
+@@ -1039,6 +1091,15 @@ cupsAdminSetServerSettings(
+     }
+   }
+ 
++  if (!wrote_printer_discovery && (printer_discovery != old_printer_discovery))
++  {
++    if (printer_discovery)
++    {
++      cupsFilePuts(temp, "# Enable printer discovery.\n");
++      cupsFilePuts(temp, "DisableAvahiBrowsing Off\n");
++    }
++  }
++
+   if (!wrote_port_listen &&
+       ((remote_admin != old_remote_admin) || (remote_any != old_remote_any) ||
+        (share_printers != old_share_printers)))
+@@ -1228,6 +1289,9 @@ cupsAdminSetServerSettings(
+     cupsd_num_settings = cupsAddOption(CUPS_SERVER_DEBUG_LOGGING,
+             debug_logging ? "1" : "0", cupsd_num_settings, &cupsd_settings);
+ 
++    cupsd_num_settings = cupsAddOption(DDE_PRINTER_ENABLE_PRINTER_DISCOVER,
++            printer_discovery ? "1" : "0", cupsd_num_settings, &cupsd_settings);
++
+     cupsd_num_settings = cupsAddOption(CUPS_SERVER_REMOTE_ADMIN,
+             remote_admin ? "1" : "0", cupsd_num_settings, &cupsd_settings);
+ 
+diff --git a/cups/dest.c b/cups/dest.c
+index 470cff4..265d3f6 100644
+--- a/cups/dest.c
++++ b/cups/dest.c
+@@ -12,6 +12,7 @@
+ #include "cups-private.h"
+ #include "debug-internal.h"
+ #include <sys/stat.h>
++#include <stdbool.h>
+ 
+ #ifdef HAVE_NOTIFY_H
+ #  include <notify.h>
+@@ -3460,7 +3461,36 @@ cups_enum_dests(
+   char		filename[1024];		/* Local lpoptions file */
+   _cups_globals_t *cg = _cupsGlobals();	/* Pointer to library globals */
+ 
++  cups_file_t *fp;
++  char line[1024], *value;
++  int linenum = 0;
++  char confpath[1024];
++  bool disable_discover_network_printers = true; // 默认不显示网络发现打印机
+ 
++  /* Default to enabled, but read /etc/cups/cupsd.conf (or serverroot) to check. */
++  snprintf(confpath, sizeof(confpath), "%s/cupsd.conf", cg->cups_serverroot);
++
++  if ((fp = cupsFileOpen(confpath, "r")) != NULL)
++  {
++    while (cupsFileGetConf(fp, line, sizeof(line), &value, &linenum))
++    {
++      /* Look for "DisableAvahiBrowsing" directive and treat "Off", "No", "False" as disabled */
++      if (!_cups_strcasecmp(line, "DisableAvahiBrowsing") && value)
++      {
++        if (!_cups_strcasecmp(value, "Off") ||
++            !_cups_strcasecmp(value, "No") ||
++            !_cups_strcasecmp(value, "False"))
++          disable_discover_network_printers = false;
++        else
++          disable_discover_network_printers = true;
++        break;
++      }
++    }
++    cupsFileClose(fp);
++  }
++  if (disable_discover_network_printers)
++    mask |= CUPS_PRINTER_DISCOVERED;
++  
+   DEBUG_printf(("cups_enum_dests(flags=%x, msec=%d, cancel=%p, type=%x, mask=%x, cb=%p, user_data=%p)", flags, msec, (void *)cancel, type, mask, (void *)cb, (void *)user_data));
+ 
+  /*
+-- 
+2.50.1
+
