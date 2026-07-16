@@ -1,0 +1,120 @@
+From 2ba904e7c862f230935bd22825e0ff337cbc2d9a Mon Sep 17 00:00:00 2001
+From: LIU Li <liuli@uniontech.com>
+Date: Thu, 16 Jul 2026 15:53:01 +0800
+Subject: [PATCH] fix: wait until Uadp avalible
+
+---
+ scheduler/cups.service.in |  3 ++-
+ scheduler/printers.c      |  8 +++++++
+ scheduler/uadp-secret.c   | 45 ++++++++-------------------------------
+ 3 files changed, 19 insertions(+), 37 deletions(-)
+
+diff --git a/scheduler/cups.service.in b/scheduler/cups.service.in
+index ce7bcea..f39166a 100644
+--- a/scheduler/cups.service.in
++++ b/scheduler/cups.service.in
+@@ -1,7 +1,8 @@
+ [Unit]
+ Description=CUPS Scheduler
+ Documentation=man:cupsd(8)
+-After=network.target nss-user-lookup.target time-set.target nslcd.service
++After=network.target nss-user-lookup.target time-set.target nslcd.service dde-system-daemon.service
++Wants=dde-system-daemon.service
+ Requires=cups.socket
+ 
+ [Service]
+diff --git a/scheduler/printers.c b/scheduler/printers.c
+index 45d6dcc..4b36595 100644
+--- a/scheduler/printers.c
++++ b/scheduler/printers.c
+@@ -1061,6 +1061,14 @@ cupsdLoadAllPrinters(void)
+ 
+ 
+ 		  snprintf(tpm_key, sizeof(tpm_key), "printer-cred/%s", p->name);
++		  int wait_seconds = 0;
++		  while(!cupsd_uadp_available() && wait_seconds < 120)
++		  {
++			  sleep(1);
++			  wait_seconds ++;
++		  }
++		  if (!cupsd_uadp_available())
++		    cupsdLogMessage(CUPSD_LOG_ERROR,"cupsd_uadp_available still not available after 2 minutes, continuing");
+ 
+ 		  if (cupsd_uadp_safe_key_name(p->name) &&
+ 		      cupsd_uadp_retrieve(tpm_key, &tpm_data, &tpm_len) == 0 &&
+diff --git a/scheduler/uadp-secret.c b/scheduler/uadp-secret.c
+index 60ffb46..df4a805 100644
+--- a/scheduler/uadp-secret.c
++++ b/scheduler/uadp-secret.c
+@@ -52,8 +52,6 @@ int					/* O - 1 if available, 0 otherwise */
+ cupsd_uadp_available(void)
+ {
+ #ifdef HAVE_DBUS
+-  DBusMessage	*message,		/* D-Bus method call */
+-		*reply;			/* D-Bus reply */
+   DBusError	error;			/* D-Bus error */
+   dbus_bool_t	available = FALSE;	/* Service response */
+ 
+@@ -61,24 +59,17 @@ cupsd_uadp_available(void)
+   if (!cupsd_uadp_get_connection())
+     return (0);
+ 
+-  if ((message = dbus_message_new_method_call(CUPS_UADP_DBUS_SERVICE,
+-                                               CUPS_UADP_DBUS_PATH,
+-                                               CUPS_UADP_DBUS_INTERFACE,
+-                                               "Available")) == NULL)
+-  {
+-    cupsdLogMessage(CUPSD_LOG_ERROR,
+-                    "cupsd_uadp_available: Out of memory.");
+-    return (0);
+-  }
+-
+   dbus_error_init(&error);
+ 
+-  reply = dbus_connection_send_with_reply_and_block(uadp_con, message,
+-                                                     CUPS_UADP_DBUS_TIMEOUT,
+-                                                     &error);
+-  dbus_message_unref(message);
++  /*
++   * Check if the Uadp service is registered on the system bus by querying
++   * whether the bus has an owner for the service name.  This avoids relying
++   * on a specific "Available" D-Bus method that the service may not expose.
++   */
+ 
+-  if (!reply)
++  available = dbus_bus_name_has_owner(uadp_con, CUPS_UADP_DBUS_SERVICE, &error);
++
++  if (dbus_error_is_set(&error))
+   {
+     cupsdLogMessage(CUPSD_LOG_DEBUG,
+                     "cupsd_uadp_available: D-Bus call failed: %s: %s",
+@@ -87,25 +78,7 @@ cupsd_uadp_available(void)
+     return (0);
+   }
+ 
+-  /*
+-   * Parse the reply (boolean)...
+-   */
+-
+-  if (dbus_message_get_args(reply, &error,
+-                             DBUS_TYPE_BOOLEAN, &available,
+-                             DBUS_TYPE_INVALID))
+-  {
+-    dbus_message_unref(reply);
+-    return (available != FALSE);
+-  }
+-
+-  cupsdLogMessage(CUPSD_LOG_ERROR,
+-                  "cupsd_uadp_available: Bad reply: %s: %s",
+-                  error.name, error.message);
+-  dbus_error_free(&error);
+-  dbus_message_unref(reply);
+-
+-  return (0);
++  return (available != FALSE);
+ 
+ #else
+   return (0);
+-- 
+2.50.1
+

@@ -19,4 +19,5 @@
 0019-detect-objv0-loongarch64.patch
 0020-feat-save-smb-password-by-com.deepin.daemon.Uadp.patch
 0001-feat-avahi-mdns.patch
+0001-fix-wait-until-Uadp-avalible.patch
 
