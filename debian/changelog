@@ -1,3 +1,9 @@
+cups (2.4.16-1deepin11) unstable; urgency=medium
+
+  * fix(cve): CVE-2025-58436
+
+ -- deepin-ci-robot <packages@deepin.org>  Fri, 17 Jul 2026 16:00:55 +0800
+
 cups (2.4.16-1deepin10) unstable; urgency=medium
 
   * fix Uadp invailable when restart os

@@ -21,3 +21,4 @@
 0001-feat-avahi-mdns.patch
 0001-fix-wait-until-Uadp-avalible.patch
 
+CVE-2025-58436.patch
