@@ -1,3 +1,9 @@
+cups (2.4.16-1deepin17) unstable; urgency=medium
+
+  * fix(cve): CVE-2026-27447
+
+ -- deepin-ci-robot <packages@deepin.org>  Wed, 22 Jul 2026 21:43:22 +0800
+
 cups (2.4.16-1deepin16) unstable; urgency=medium
 
   * fix(cve): CVE-2026-39314
