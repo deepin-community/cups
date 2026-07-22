@@ -1,3 +1,4 @@
+CVE-2026-41079-limit-num-bytes-for-snmp-string-values.patch
 0006-Apple-AirPrint-support.patch
 0007-Keep-foomatic-PPDs-recommended-stanzas-in-NickNames.patch
 0008-Debian-Set-LogFileGroup-to-adm.patch

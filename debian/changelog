@@ -1,3 +1,10 @@
+cups (2.4.16-1deepin11) unstable; urgency=medium
+
+  * Fix CVE-2026-41079: SNMP backend out-of-bounds read via crafted SNMP
+    response
+
+ -- deepin-ci-robot <packages@deepin.org>  Wed, 22 Jul 2026 19:57:02 +0800
+
 cups (2.4.16-1deepin10) unstable; urgency=medium
 
   * fix Uadp invailable when restart os
