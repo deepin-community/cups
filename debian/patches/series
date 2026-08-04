@@ -24,6 +24,7 @@
 CVE-2026-34979.patch
 CVE-2026-39316.patch
 CVE-2026-34980.patch
+0001-Fix-get_options-regression-Issue-1532.patch
 CVE-2026-34990.patch
 CVE-2026-34978.patch
 CVE-2026-39314.patch

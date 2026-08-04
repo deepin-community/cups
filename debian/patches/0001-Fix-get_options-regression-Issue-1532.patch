@@ -1,0 +1,34 @@
+From d04cab814b5e3a3a7d0b315427758241a5bf3b17 Mon Sep 17 00:00:00 2001
+From: Michael R Sweet <msweet@msweet.org>
+Date: Wed, 8 Apr 2026 16:43:25 -0400
+Subject: [PATCH] Fix get_options regression (Issue #1532)
+
+---
+ scheduler/job.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/scheduler/job.c b/scheduler/job.c
+index 3f0a9a8..6c45cdc 100644
+--- a/scheduler/job.c
++++ b/scheduler/job.c
+@@ -4116,7 +4116,7 @@ get_options(cupsd_job_t *job,		/* I - Job */
+ 	  case IPP_TAG_CHARSET :
+ 	  case IPP_TAG_LANGUAGE :
+ 	  case IPP_TAG_URI :
+-	      for (valptr = attr->values[i].string.text; *valptr;)
++	      for (valptr = attr->values[i].string.text; *valptr; valptr ++)
+ 	      {
+ 	       /*
+ 	        * Convert tabs and newlines to spaces, filter out control chars,
+@@ -4131,7 +4131,7 @@ get_options(cupsd_job_t *job,		/* I - Job */
+ 	        {
+ 	          if (strchr("\\\'\"", *valptr))
+ 		    *optptr++ = '\\';
+-		  *optptr++ = *valptr++;
++		  *optptr++ = *valptr;
+ 		}
+ 	      }
+ 
+-- 
+2.50.1
+
