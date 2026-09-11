@@ -1,3 +1,9 @@
+cups (2.4.16-1deepin20) unstable; urgency=medium
+
+  * Rebuild with LTO enabled (dpkg vendor feature optimize/lto).
+
+ -- tunaichao <tunaichao@uniontech.com>  Fri, 11 Sep 2026 10:07:54 +0800
+
 cups (2.4.16-1deepin19) unstable; urgency=medium
 
   * fix CVE-2026-34980 crash
