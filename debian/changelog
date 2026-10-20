@@ -42,6 +42,11 @@ cups (2.4.16-1deepin21) unstable; urgency=medium
     systems.   Upstream:
     https://github.com/OpenPrinting/cups/commit/2b1dc178a2d2325135b85514
     2e384f4e8c42d8e4
+  * fix(cve): CVE-2026-107655 (medium) - Add JobTicketComments
+    directive, fix job ticket comment support, and disable by default
+    (GHSA-58wv-9ffm-5w78)   Upstream:
+    https://github.com/OpenPrinting/cups/commit/25d68309b1af89c4b003f27f
+    56ab0f8e7a189ea3
 
  -- deepin-ci-robot <packages@deepin.org>  Wed, 21 Oct 2026 02:00:51 +0800
 
