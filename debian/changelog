@@ -4,6 +4,10 @@ cups (2.4.16-1deepin21) unstable; urgency=medium
     securely.   Upstream:
     https://github.com/OpenPrinting/cups/commit/98adfd855950e806508f961d
     5438ad32e26aac62
+  * fix(cve): CVE-2026-61702 (medium) - Validate attributes-natural-
+    language, and normalize the logging punctuation   Upstream:
+    https://github.com/OpenPrinting/cups/commit/08a8a277ce2a8948a1af3355
+    2247a1ac53b72df3
 
  -- deepin-ci-robot <packages@deepin.org>  Wed, 21 Oct 2026 02:00:51 +0800
 
