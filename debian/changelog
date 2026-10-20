@@ -1,3 +1,12 @@
+cups (2.4.16-1deepin21) unstable; urgency=medium
+
+  * fix(cve): CVE-2026-55480 (medium) - Open temporary PPD files more
+    securely.   Upstream:
+    https://github.com/OpenPrinting/cups/commit/98adfd855950e806508f961d
+    5438ad32e26aac62
+
+ -- deepin-ci-robot <packages@deepin.org>  Wed, 21 Oct 2026 02:00:51 +0800
+
 cups (2.4.16-1deepin20) unstable; urgency=medium
 
   * Rebuild with LTO enabled (dpkg vendor feature optimize/lto).
