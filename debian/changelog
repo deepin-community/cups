@@ -20,6 +20,10 @@ cups (2.4.16-1deepin21) unstable; urgency=medium
     dial-string values.   Upstream:
     https://github.com/OpenPrinting/cups/commit/0cf4e7814d6810ed3c454222
     bce3aa342d541681
+  * fix(cve): CVE-2026-87876 (low) - Consistently compare usernames for
+    policies and quotas.   Upstream:
+    https://github.com/OpenPrinting/cups/commit/88e67c00c130a45f3a1edf36
+    686f7a0b2982fef8.patch
 
  -- deepin-ci-robot <packages@deepin.org>  Wed, 21 Oct 2026 02:00:51 +0800
 
