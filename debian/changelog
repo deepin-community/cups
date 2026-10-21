@@ -8,6 +8,10 @@ cups (2.4.16-1deepin21) unstable; urgency=medium
     language, and normalize the logging punctuation   Upstream:
     https://github.com/OpenPrinting/cups/commit/08a8a277ce2a8948a1af3355
     2247a1ac53b72df3
+  * fix(cve): CVE-2026-107888 (medium) - Abort held jobs if the
+    destination has gone away (GHSA-qqm8-4q5h-jg55)   Upstream:
+    https://github.com/OpenPrinting/cups/commit/c5fc041ca0a211f8e6985490
+    7be7b55f56955659
 
  -- deepin-ci-robot <packages@deepin.org>  Wed, 21 Oct 2026 02:00:51 +0800
 
