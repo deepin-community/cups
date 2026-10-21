@@ -24,6 +24,10 @@ cups (2.4.16-1deepin21) unstable; urgency=medium
     policies and quotas.   Upstream:
     https://github.com/OpenPrinting/cups/commit/88e67c00c130a45f3a1edf36
     686f7a0b2982fef8.patch
+  * fix(cve): CVE-2026-107890 (low) - Filter out group separators in job
+    creation requests (GHSA-wjc4-qhjr-5m5x)   Upstream:
+    https://github.com/OpenPrinting/cups/commit/f3fb41912e4e29dbbbe7c4af
+    d4fe48508af21bc0
 
  -- deepin-ci-robot <packages@deepin.org>  Wed, 21 Oct 2026 02:00:51 +0800
 
