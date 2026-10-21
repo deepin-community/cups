@@ -33,3 +33,4 @@ CVE-2026-27447-fix-unauthenticated-print-policies.patch
 CVE-2026-55480.patch
 CVE-2026-61702.patch
 CVE-2026-107888.patch
+CVE-2026-107886.patch
