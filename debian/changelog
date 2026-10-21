@@ -12,6 +12,10 @@ cups (2.4.16-1deepin21) unstable; urgency=medium
     destination has gone away (GHSA-qqm8-4q5h-jg55)   Upstream:
     https://github.com/OpenPrinting/cups/commit/c5fc041ca0a211f8e6985490
     7be7b55f56955659
+  * fix(cve): CVE-2026-107886 (low) - Initialize printers array to NULL
+    after freeing (GHSA-pwg4-pv39-8c22)   Upstream:
+    https://github.com/OpenPrinting/cups/commit/13bc9d4f8d695403d54469cc
+    3c8b675e34a7037f
 
  -- deepin-ci-robot <packages@deepin.org>  Wed, 21 Oct 2026 02:00:51 +0800
 
