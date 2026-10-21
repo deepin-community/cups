@@ -28,6 +28,11 @@ cups (2.4.16-1deepin21) unstable; urgency=medium
     creation requests (GHSA-wjc4-qhjr-5m5x)   Upstream:
     https://github.com/OpenPrinting/cups/commit/f3fb41912e4e29dbbbe7c4af
     d4fe48508af21bc0
+  * fix(cve): CVE-2026-107885 (low) - Don't allow clients to hold a job
+    open longer than the multiple-operation-time-out value (GHSA-hhw5-
+    qqmc-p6rg)   Upstream:
+    https://github.com/OpenPrinting/cups/commit/6c61d23f5523055ec4374465
+    e85d1dec9396994f
 
  -- deepin-ci-robot <packages@deepin.org>  Wed, 21 Oct 2026 02:00:51 +0800
 
