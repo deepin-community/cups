@@ -16,6 +16,10 @@ cups (2.4.16-1deepin21) unstable; urgency=medium
     after freeing (GHSA-pwg4-pv39-8c22)   Upstream:
     https://github.com/OpenPrinting/cups/commit/13bc9d4f8d695403d54469cc
     3c8b675e34a7037f
+  * fix(cve): CVE-2026-55467 (low) - Sanitizer destination-uri and pre-
+    dial-string values.   Upstream:
+    https://github.com/OpenPrinting/cups/commit/0cf4e7814d6810ed3c454222
+    bce3aa342d541681
 
  -- deepin-ci-robot <packages@deepin.org>  Wed, 21 Oct 2026 02:00:51 +0800
 
