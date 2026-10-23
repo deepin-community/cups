@@ -1,3 +1,59 @@
+cups (2.4.16-1deepin21) unstable; urgency=medium
+
+  * fix(cve): CVE-2026-55480 (medium) - Open temporary PPD files more
+    securely.   Upstream:
+    https://github.com/OpenPrinting/cups/commit/98adfd855950e806508f961d
+    5438ad32e26aac62
+  * fix(cve): CVE-2026-61702 (medium) - Validate attributes-natural-
+    language, and normalize the logging punctuation   Upstream:
+    https://github.com/OpenPrinting/cups/commit/08a8a277ce2a8948a1af3355
+    2247a1ac53b72df3
+  * fix(cve): CVE-2026-107888 (medium) - Abort held jobs if the
+    destination has gone away (GHSA-qqm8-4q5h-jg55)   Upstream:
+    https://github.com/OpenPrinting/cups/commit/c5fc041ca0a211f8e6985490
+    7be7b55f56955659
+  * fix(cve): CVE-2026-107886 (low) - Initialize printers array to NULL
+    after freeing (GHSA-pwg4-pv39-8c22)   Upstream:
+    https://github.com/OpenPrinting/cups/commit/13bc9d4f8d695403d54469cc
+    3c8b675e34a7037f
+  * fix(cve): CVE-2026-55467 (low) - Sanitizer destination-uri and pre-
+    dial-string values.   Upstream:
+    https://github.com/OpenPrinting/cups/commit/0cf4e7814d6810ed3c454222
+    bce3aa342d541681
+  * fix(cve): CVE-2026-87876 (low) - Consistently compare usernames for
+    policies and quotas.   Upstream:
+    https://github.com/OpenPrinting/cups/commit/88e67c00c130a45f3a1edf36
+    686f7a0b2982fef8.patch
+  * fix(cve): CVE-2026-107890 (low) - Filter out group separators in job
+    creation requests (GHSA-wjc4-qhjr-5m5x)   Upstream:
+    https://github.com/OpenPrinting/cups/commit/f3fb41912e4e29dbbbe7c4af
+    d4fe48508af21bc0
+  * fix(cve): CVE-2026-107885 (low) - Don't allow clients to hold a job
+    open longer than the multiple-operation-time-out value (GHSA-hhw5-
+    qqmc-p6rg)   Upstream:
+    https://github.com/OpenPrinting/cups/commit/6c61d23f5523055ec4374465
+    e85d1dec9396994f
+  * fix(cve): CVE-2026-55453 (low) - Sanitize IPP attribute strings.
+    Upstream:
+    https://github.com/OpenPrinting/cups/commit/d41cf0616688721e9d435d54
+    118c4c8a36ed596a
+
+  * fix(cve): CVE-2026-87875 (medium) - Fix UTF-32 data type on 64-bit
+    systems.   Upstream:
+    https://github.com/OpenPrinting/cups/commit/2b1dc178a2d2325135b85514
+    2e384f4e8c42d8e4
+  * fix(cve): CVE-2026-107655 (medium) - Add JobTicketComments
+    directive, fix job ticket comment support, and disable by default
+    (GHSA-58wv-9ffm-5w78)   Upstream:
+    https://github.com/OpenPrinting/cups/commit/25d68309b1af89c4b003f27f
+    56ab0f8e7a189ea3
+  * fix(cve): CVE-2026-105326 (low) - Validate notification email
+    addresses and fix sendmail usage (GHSA-r4wf-366f-f6g3)   Upstream:
+    https://github.com/OpenPrinting/cups/commit/611d1bd3bdf8323638323835
+    67906a6d7fd6c47d
+
+ -- deepin-ci-robot <packages@deepin.org>  Wed, 21 Oct 2026 02:00:51 +0800
+
 cups (2.4.16-1deepin20) unstable; urgency=medium
 
   * Rebuild with LTO enabled (dpkg vendor feature optimize/lto).
