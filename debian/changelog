@@ -51,6 +51,12 @@ cups (2.4.16-1deepin21) unstable; urgency=medium
     addresses and fix sendmail usage (GHSA-r4wf-366f-f6g3)   Upstream:
     https://github.com/OpenPrinting/cups/commit/611d1bd3bdf8323638323835
     67906a6d7fd6c47d
+  * fix(cve): CVE-2026-105326 - Fix regression in mailto address
+    validation (Issue #1744): addresses containing a period, such as
+    "user@example.com", were rejected so no notification was sent.
+    Upstream:
+    https://github.com/OpenPrinting/cups/commit/4c5a15599ccbbc2d3b69b06
+    190a44b85321c3211
 
  -- deepin-ci-robot <packages@deepin.org>  Wed, 21 Oct 2026 02:00:51 +0800
 
