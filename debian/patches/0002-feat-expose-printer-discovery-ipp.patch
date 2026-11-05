@@ -1,0 +1,147 @@
+From a02c2b1d6154909cfc524cf0bc5c3251dd8e269a Mon Sep 17 00:00:00 2001
+From: LIU Li <liuli@uniontech.com>
+Date: Fri, 16 Oct 2026 13:21:51 +0800
+Subject: [PATCH] feat: expose printer-discovery-enabled via IPP attribute
+
+Parse the DisableAvahiBrowsing directive in cupsd and expose the printer
+discovery setting via a public IPP attribute so clients can read it
+without admin authentication, including inside containers.
+
+cupsd 解析 DisableAvahiBrowsing 指令并通过公开 IPP 属性
+printer-discovery-enabled 暴露网络发现开关，客户端无需管理员认证即可
+读取，容器内也能正确获取服务配置。
+
+Log: 通过 IPP 属性暴露并读取网络发现开关
+Influence: 容器内客户端无需管理员认证即可正确读取网络发现配置。
+Change-Id: Ia36691dd864458ef8606f1e84418abe65a997b3b
+---
+
+diff --git a/cups/dest.c b/cups/dest.c
+index 1d3c457..992e4df 100644
+--- a/cups/dest.c
++++ b/cups/dest.c
+@@ -3387,6 +3387,36 @@
+ 
+ 
+ /*
++ * '_cups_get_printer_discovery_enabled()' - Get whether network printer
++ *                                            discovery is enabled.
++ */
++
++static int				/* O - 1 if enabled, 0 otherwise */
++_cups_get_printer_discovery_enabled(
++    http_t *http)			/* I - Connection to scheduler */
++{
++  int			enabled = 0;	/* Discovery enabled? */
++  ipp_t			*request,	/* IPP request */
++			*response;	/* IPP response */
++  ipp_attribute_t	*attr;		/* Attribute */
++
++
++  request = ippNewRequest(IPP_OP_CUPS_GET_DEFAULT);
++
++  if ((response = cupsDoRequest(http, request, "/")) != NULL)
++  {
++    if ((attr = ippFindAttribute(response, "printer-discovery-enabled",
++                                 IPP_TAG_BOOLEAN)) != NULL)
++      enabled = ippGetBoolean(attr, 0);
++
++    ippDelete(response);
++  }
++
++  return (enabled);
++}
++
++
++/*
+  * 'cups_enum_dests()' - Enumerate destinations from a specific server.
+  */
+ 
+@@ -3440,36 +3470,9 @@
+   char		filename[1024];		/* Local lpoptions file */
+   _cups_globals_t *cg = _cupsGlobals();	/* Pointer to library globals */
+ 
+-  cups_file_t *fp;
+-  char line[1024], *value;
+-  int linenum = 0;
+-  char confpath[1024];
+-  bool disable_discover_network_printers = true; // 默认不显示网络发现打印机
+-
+-  /* Default to enabled, but read /etc/cups/cupsd.conf (or serverroot) to check. */
+-  snprintf(confpath, sizeof(confpath), "%s/cupsd.conf", cg->cups_serverroot);
+-
+-  if ((fp = cupsFileOpen(confpath, "r")) != NULL)
+-  {
+-    while (cupsFileGetConf(fp, line, sizeof(line), &value, &linenum))
+-    {
+-      /* Look for "DisableAvahiBrowsing" directive and treat "Off", "No", "False" as disabled */
+-      if (!_cups_strcasecmp(line, "DisableAvahiBrowsing") && value)
+-      {
+-        if (!_cups_strcasecmp(value, "Off") ||
+-            !_cups_strcasecmp(value, "No") ||
+-            !_cups_strcasecmp(value, "False"))
+-          disable_discover_network_printers = false;
+-        else
+-          disable_discover_network_printers = true;
+-        break;
+-      }
+-    }
+-    cupsFileClose(fp);
+-  }
+-  if (disable_discover_network_printers)
++  if (!_cups_get_printer_discovery_enabled(http))
+     mask |= CUPS_PRINTER_DISCOVERED;
+-  
++
+   DEBUG_printf(("cups_enum_dests(flags=%x, msec=%d, cancel=%p, type=%x, mask=%x, cb=%p, user_data=%p)", flags, msec, (void *)cancel, type, mask, (void *)cb, (void *)user_data));
+ 
+  /*
+diff --git a/scheduler/conf.c b/scheduler/conf.c
+index c430909..678628e 100644
+--- a/scheduler/conf.c
++++ b/scheduler/conf.c
+@@ -73,6 +73,7 @@
+ #endif /* HAVE_DNSSD */
+   { "BrowseWebIF",		&BrowseWebIF,		CUPSD_VARTYPE_BOOLEAN },
+   { "Browsing",			&Browsing,		CUPSD_VARTYPE_BOOLEAN },
++  { "DisableAvahiBrowsing",	&DisableAvahiBrowsing,	CUPSD_VARTYPE_BOOLEAN },
+   { "Classification",		&Classification,	CUPSD_VARTYPE_STRING },
+   { "ClassifyOverride",		&ClassifyOverride,	CUPSD_VARTYPE_BOOLEAN },
+   { "DefaultLanguage",		&DefaultLanguage,	CUPSD_VARTYPE_STRING },
+@@ -739,6 +740,7 @@
+   BrowseLocalProtocols     = parse_protocols(CUPS_DEFAULT_BROWSE_LOCAL_PROTOCOLS);
+   BrowseWebIF              = FALSE;
+   Browsing                 = CUPS_DEFAULT_BROWSING;
++  DisableAvahiBrowsing     = TRUE;
+   DefaultShared            = CUPS_DEFAULT_DEFAULT_SHARED;
+ 
+ #ifdef HAVE_DNSSD
+diff --git a/scheduler/dirsvc.h b/scheduler/dirsvc.h
+index ca1c56e..e485234 100644
+--- a/scheduler/dirsvc.h
++++ b/scheduler/dirsvc.h
+@@ -28,6 +28,10 @@
+ 			BrowseLocalProtocols
+ 					VALUE(BROWSE_ALL);
+ 					/* Protocols to support for local printers */
++VAR int			DisableAvahiBrowsing
++					VALUE(TRUE);
++					/* Whether or not Avahi (mDNS) network printer
++					 * discovery is disabled */
+ #ifdef HAVE_DNSSD
+ VAR char		*DNSSDComputerName VALUE(NULL),
+ 					/* Computer/server name */
+diff --git a/scheduler/ipp.c b/scheduler/ipp.c
+index cb1ee21..4a7e5b9 100644
+--- a/scheduler/ipp.c
++++ b/scheduler/ipp.c
+@@ -6134,6 +6134,9 @@
+     return;
+   }
+ 
++  ippAddBoolean(con->response, IPP_TAG_OPERATION, "printer-discovery-enabled",
++                (char)!DisableAvahiBrowsing);
++
+   if (DefaultPrinter)
+   {
+     ra = create_requested_array(con->request);
