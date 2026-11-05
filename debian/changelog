@@ -1,3 +1,10 @@
+cups (2.4.16-1deepin22) unstable; urgency=medium
+
+  * Add a printer-discovery-enabled IPP attribute so that clients can read
+    the network printer discovery setting without admin authentication
+
+ -- LIU Li <liuli@uniontech.com>  Thu, 05 Nov 2026 08:45:37 +0800
+
 cups (2.4.16-1deepin21) unstable; urgency=medium
 
   * fix(cve): CVE-2026-55480 (medium) - Open temporary PPD files more
